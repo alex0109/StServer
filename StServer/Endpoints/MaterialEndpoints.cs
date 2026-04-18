@@ -11,7 +11,7 @@ public static class MaterialEndpoints
 {
     public static void MapMaterialEndpoints(this WebApplication app)
     {
-        var materialGroup = app.MapGroup("api/materials");
+        var materialGroup = app.MapGroup("api/materials").RequireAuthorization();
 
         materialGroup.MapGet("/", GetAllMaterials);
         materialGroup.MapGet("/{id}", GetMaterial);
@@ -86,7 +86,14 @@ public static class MaterialEndpoints
 
         static async Task<IResult> GetStatisticalData(AppDbContext db)
         {
-            return TypedResults.Ok();
+            var materials = await db.Materials.ToArrayAsync();
+
+            var statuses = materials.GroupBy(m => m.Status).ToDictionary(g => g.Key, g => g.Count());
+            
+            var types = materials.GroupBy(m => m.Status)
+                .ToDictionary(g => g.Key, g => g.Count());
+
+            return TypedResults.Json(new {count = materials.Length, statuses, types});
         };
     }
 }

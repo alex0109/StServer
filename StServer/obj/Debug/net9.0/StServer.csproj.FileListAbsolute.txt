@@ -255,3 +255,11 @@
 /Users/reybey/RiderProjects/StServer/StServer/obj/Debug/net9.0/StServer.pdb
 /Users/reybey/RiderProjects/StServer/StServer/obj/Debug/net9.0/StServer.genruntimeconfig.cache
 /Users/reybey/RiderProjects/StServer/StServer/obj/Debug/net9.0/ref/StServer.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.IdentityModel.Abstractions.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.IdentityModel.JsonWebTokens.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.IdentityModel.Logging.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.IdentityModel.Protocols.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.IdentityModel.Protocols.OpenIdConnect.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/Microsoft.IdentityModel.Tokens.dll
+/Users/reybey/RiderProjects/StServer/StServer/bin/Debug/net9.0/System.IdentityModel.Tokens.Jwt.dll
