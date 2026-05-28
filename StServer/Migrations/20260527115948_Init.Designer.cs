@@ -12,8 +12,8 @@ using StServer.Data;
 namespace StServer.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260406185513_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260527115948_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,24 +25,55 @@ namespace StServer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("StServer.Material", b =>
+            modelBuilder.Entity("StServer.Entities.Assessment", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<string>("Answer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId");
+
+                    b.ToTable("Assessments");
+                });
+
+            modelBuilder.Entity("StServer.Entities.Material", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasColumnType("jsonb");
 
                     b.Property<string>("Link")
                         .HasColumnType("text");
 
                     b.Property<string>("Status")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.PrimitiveCollection<string[]>("Tags")
@@ -62,6 +93,15 @@ namespace StServer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Materials");
+                });
+
+            modelBuilder.Entity("StServer.Entities.Assessment", b =>
+                {
+                    b.HasOne("StServer.Entities.Material", null)
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

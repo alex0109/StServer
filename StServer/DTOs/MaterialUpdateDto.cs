@@ -1,3 +1,4 @@
+using System.Text.Json;
 using StServer.Models;
 
 namespace StServer.DTOs;
@@ -9,5 +10,6 @@ public class MaterialUpdateDto
     public string[]? Tags { get; set; }
     public string? Link { get; set; }
     public RichTextDocument? Description { get; set; }
+    // public JsonDocument? Description { get; set; }
     public string? Status { get; set; }
 }

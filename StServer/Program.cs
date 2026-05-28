@@ -45,6 +45,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+
+    await next();
+
+    sw.Stop();
+    Console.WriteLine($"{context.Request.Path} took {sw.ElapsedMilliseconds} ms");
+});
+
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();

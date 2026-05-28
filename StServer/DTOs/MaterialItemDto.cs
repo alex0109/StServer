@@ -1,10 +1,11 @@
+using System.Text.Json;
 using StServer.Models;
 
 namespace StServer.DTOs;
 
 public class MaterialItemDto
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
     public string Title { get; set; } = null!;
 
@@ -15,6 +16,7 @@ public class MaterialItemDto
     public string? Link { get; set; }
 
     public RichTextDocument? Description { get; set; }
+    // public JsonDocument? Description { get; set; }
 
     public string? Status { get; set; }
 

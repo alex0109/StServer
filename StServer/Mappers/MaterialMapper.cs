@@ -22,7 +22,7 @@ public static class MaterialMapper
 
             Description = dto.Description == null
                 ? null
-                : JsonSerializer.Serialize(dto.Description)
+                : JsonSerializer.SerializeToDocument(dto.Description)
         };
     }
 
