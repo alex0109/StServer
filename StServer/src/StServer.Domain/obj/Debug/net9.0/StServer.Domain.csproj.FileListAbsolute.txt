@@ -1,0 +1,12 @@
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/bin/Debug/net9.0/StServer.Domain.deps.json
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/bin/Debug/net9.0/StServer.Domain.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/bin/Debug/net9.0/StServer.Domain.pdb
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.GeneratedMSBuildEditorConfig.editorconfig
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.AssemblyInfoInputs.cache
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.AssemblyInfo.cs
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.csproj.CoreCompileInputs.cache
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.sourcelink.json
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/refint/StServer.Domain.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/StServer.Domain.pdb
+/Users/reybey/RiderProjects/StServer/StServer/src/StServer.Domain/obj/Debug/net9.0/ref/StServer.Domain.dll

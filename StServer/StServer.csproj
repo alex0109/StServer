@@ -23,7 +23,18 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Migrations\" />
+      <_ContentIncludedByDefault Remove="src\StServer.Api\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="src\StServer.Api\obj\StServer.Api.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="src\StServer.Domain\obj\project.assets.json" />
+      <_ContentIncludedByDefault Remove="src\StServer.Domain\obj\StServer.Domain.csproj.nuget.dgspec.json" />
+      <_ContentIncludedByDefault Remove="src\StServer.Api\Properties\launchSettings.json" />
+      <_ContentIncludedByDefault Remove="src\StServer.Api\obj\project.packagespec.json" />
+      <_ContentIncludedByDefault Remove="src\StServer.Domain\obj\project.packagespec.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="src\StServer.Api\Properties\launchSettings.json" />
+      <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
 
 </Project>
