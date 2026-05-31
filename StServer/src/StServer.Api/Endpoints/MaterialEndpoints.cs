@@ -20,9 +20,7 @@ public static class MaterialEndpoints
         materialGroup.MapPost("", CreateMaterial);
         materialGroup.MapPatch("/{id}", UpdateMaterial);
         materialGroup.MapDelete("/{id}", DeleteMaterial);
-
-        app.Run();
-
+        
         static async Task<IResult> GetAllMaterials(AppDbContext db)
         {
             var sw = Stopwatch.StartNew();
@@ -73,7 +71,7 @@ public static class MaterialEndpoints
             Console.WriteLine($"SERVICE: {serviceSw.ElapsedMilliseconds} ms");
             Console.WriteLine($"TOTAL: {sw.ElapsedMilliseconds} ms");
             
-            return TypedResults.Created($"/todo/{entity.Id}", MaterialMapper.ToDto(entity));
+            return TypedResults.Created($"/materials/{entity.Id}", MaterialMapper.ToDto(entity));
         };
 
         static async Task<IResult> UpdateMaterial(Guid id, MaterialUpdateDto materialItemDto, AppDbContext db)

@@ -7,6 +7,8 @@ using StServer.StServer.Api.Endpoints;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new Exception("Jwt:Secret missing");
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -25,7 +27,7 @@ builder.Services
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"])),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
             ValidateIssuer = false,
             ValidateAudience = true,
             ValidAudience = "authenticated"
@@ -34,11 +36,7 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-var configuration = new ConfigurationBuilder()
-    .AddJsonFile("appsettings.json")
-    .Build();
-
-String? connectionString = configuration.GetConnectionString("MyDB");
+String? connectionString = builder.Configuration.GetConnectionString("MyDB");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -61,3 +59,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapMaterialEndpoints();
+app.MapAssessmentEndpoints();
+
+app.Run();
