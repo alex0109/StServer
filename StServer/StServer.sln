@@ -5,13 +5,13 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{827E0CD3-B72D-47B6-A68D-7590B98EB39B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StServer.Api", "src\StServer.Api\StServer.Api.csproj", "{9A7D5006-E551-4685-89AE-47F6B848D40E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api", "src\Api\StServer.Api.csproj", "{9A7D5006-E551-4685-89AE-47F6B848D40E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StServer.Application", "src\StServer.Application\StServer.Application.csproj", "{83031C53-4B0F-407C-BEB8-F0E8C676C3AA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Application", "src\Application\StServer.Application.csproj", "{83031C53-4B0F-407C-BEB8-F0E8C676C3AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StServer.Domain", "src\StServer.Domain\StServer.Domain.csproj", "{F7D0149A-CEC2-4C4F-A72B-D4EF617DC221}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Domain", "src\Domain\StServer.Domain.csproj", "{F7D0149A-CEC2-4C4F-A72B-D4EF617DC221}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StServer.Infrastructure", "src\StServer.Infrastructure\StServer.Infrastructure.csproj", "{F387F770-77A3-4B1F-B77B-1AE771526E26}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Infrastructure\StServer.Infrastructure.csproj", "{F387F770-77A3-4B1F-B77B-1AE771526E26}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

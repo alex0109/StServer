@@ -9,13 +9,13 @@
     <ItemGroup>
       <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.15" />
       <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.14" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.14" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.14">
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.16" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.16">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.14" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.14">
+      <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.16" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.16">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
@@ -33,7 +33,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <None Include="src\StServer.Api\Properties\launchSettings.json" />
+      <None Include="src\Api\Properties\launchSettings.json" />
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
 
