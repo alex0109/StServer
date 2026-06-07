@@ -23,6 +23,38 @@ namespace StServer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<int>("CorrectAnswers")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("TotalQuestions")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId");
+
+                    b.ToTable("Assessments");
+                });
+
             modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
                 {
                     b.Property<Guid>("Id")
@@ -71,17 +103,22 @@ namespace StServer.Migrations
 
                     b.Property<string>("Answer")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Difficulty")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -91,6 +128,49 @@ namespace StServer.Migrations
                     b.HasIndex("MaterialId");
 
                     b.ToTable("Questions");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Result", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("AnsweredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserAnswer")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("isCorrect")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssessmentId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("Results");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+                {
+                    b.HasOne("StServer.Domain.Entities.Material", "Material")
+                        .WithMany("Assessments")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
@@ -104,9 +184,40 @@ namespace StServer.Migrations
                     b.Navigation("Material");
                 });
 
+            modelBuilder.Entity("StServer.Domain.Entities.Result", b =>
+                {
+                    b.HasOne("StServer.Domain.Entities.Assessment", "Assessment")
+                        .WithMany("Results")
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StServer.Domain.Entities.Question", "Question")
+                        .WithMany("Results")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+                {
+                    b.Navigation("Results");
+                });
+
             modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
                 {
+                    b.Navigation("Assessments");
+
                     b.Navigation("Questions");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
+                {
+                    b.Navigation("Results");
                 });
 #pragma warning restore 612, 618
         }

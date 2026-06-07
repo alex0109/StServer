@@ -12,6 +12,8 @@ public class AppDbContext : DbContext
 
     public DbSet<Material> Materials => Set<Material>();
     public DbSet<Question> Questions => Set<Question>();
+    public DbSet<Assessment> Assessments => Set<Assessment>();
+    public DbSet<Result> Results => Set<Result>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -31,6 +33,26 @@ public class AppDbContext : DbContext
             .HasOne(a => a.Material)
             .WithMany(m => m.Questions)
             .HasForeignKey(a => a.MaterialId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Assessment>()
+            .Property(x => x.Id)
+            .HasDefaultValueSql("gen_random_uuid()");
+        
+        modelBuilder.Entity<Assessment>()
+            .HasOne(a => a.Material)
+            .WithMany(m => m.Assessments)
+            .HasForeignKey(a => a.MaterialId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Result>()
+            .Property(x => x.Id)
+            .HasDefaultValueSql("gen_random_uuid()");
+        
+        modelBuilder.Entity<Result>()
+            .HasOne(a => a.Assessment)
+            .WithMany(m => m.Results)
+            .HasForeignKey(a => a.AssessmentId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

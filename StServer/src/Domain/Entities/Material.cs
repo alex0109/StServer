@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 
 namespace StServer.Domain.Entities;
 
@@ -6,6 +7,8 @@ public class Material
 {
     public Guid Id { get; set; }
     public ICollection<Question> Questions { get; set; } = new List<Question>();
+    public ICollection<Assessment> Assessments { get; set; } = new List<Assessment>();
+    [MaxLength(70)]
     public required string Title { get; set; }
     public required string Type { get; set; }
     public string[]? Tags { get; set; }

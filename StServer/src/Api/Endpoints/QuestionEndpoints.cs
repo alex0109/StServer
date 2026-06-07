@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using StServer.Infrastructure.Data;
-using StServer.Application.DTOs;
+using StServer.Application.DTOs.Question;
 using StServer.Application.Mappers;
 using StServer.Domain.Entities;
 
@@ -29,21 +29,24 @@ public static class QuestionEndpoints
         static async Task<IResult> GetQuestion(Guid materialId, Guid id, AppDbContext db)
         {
             var question = await db.Questions.SingleOrDefaultAsync(x => x.MaterialId == materialId && x.Id == id);
+            
+            if (question is null) return TypedResults.NotFound();
+            
+            var response = QuestionMapper.ToDto(question);
 
-            return question is not null ? TypedResults.Ok(question) : TypedResults.NotFound();
+            return TypedResults.Ok(response);
         };
 
-        static async Task<IResult> CreateQuestion(Guid materialId, QuestionItemDto questionItemDto, AppDbContext db)
+        static async Task<IResult> CreateQuestion(Guid materialId, QuestionCreateDto questionCreateDto, AppDbContext db)
         {
-            var entity = QuestionMapper.ToEntity(questionItemDto);
-            entity.MaterialId = materialId;
-            entity.CreatedAt = DateTime.UtcNow;
-            entity.UpdatedAt = DateTime.UtcNow;
+            var entity = QuestionMapper.ToEntity(questionCreateDto);
             
             db.Questions.Add(entity);
             await db.SaveChangesAsync();
+
+            var response = QuestionMapper.ToDto(entity);
             
-            return TypedResults.Created($"materials/{materialId}/questions/{entity.Id}", QuestionMapper.ToDto(entity));
+            return TypedResults.Created($"materials/{materialId}/questions/{entity.Id}", response);
         };
 
         static async Task<IResult> UpdateQuestion(Guid materialId, Guid id, QuestionUpdateDto questionUpdateDto, AppDbContext db)
@@ -52,13 +55,13 @@ public static class QuestionEndpoints
             
             if (question is null) return TypedResults.NotFound();
 
-            if (questionUpdateDto.Title is not null) question.Title = questionUpdateDto.Title;
-            if (questionUpdateDto.Answer is not null) question.Answer = questionUpdateDto.Answer;
-            question.UpdatedAt = DateTime.UtcNow;
+            QuestionMapper.ApplyUpdate(question, questionUpdateDto);
 
             await db.SaveChangesAsync();
+            
+            var response = QuestionMapper.ToDto(question);
 
-            return TypedResults.Ok(QuestionMapper.ToDto(question));
+            return TypedResults.Ok(response);
         }
 
         static async Task<IResult> DeleteQuestion(Guid materialId, Guid id, AppDbContext db)

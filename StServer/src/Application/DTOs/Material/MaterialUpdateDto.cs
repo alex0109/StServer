@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs;
+namespace StServer.Application.DTOs.Material;
 
 public class MaterialUpdateDto
 {
