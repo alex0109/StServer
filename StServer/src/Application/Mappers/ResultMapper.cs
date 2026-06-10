@@ -5,7 +5,7 @@ namespace StServer.Application.Mappers;
 
 public class ResultMapper
 {
-    public static Result ToEntity(ResultCreateDto dto)
+    public static Result ToEntity(ResultCreateDto dto, bool isCorrect)
     {
         return new Result
         {
@@ -13,7 +13,7 @@ public class ResultMapper
             AssessmentId =  dto.AssessmentId,
             QuestionId = dto.QuestionId,
             UserAnswer =  dto.UserAnswer,
-            IsCorrect =  dto.IsCorrect,
+            IsCorrect =  isCorrect,
             AnsweredAt = DateTime.UtcNow,
         };
     }

@@ -60,5 +60,6 @@ app.UseAuthorization();
 
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
+app.MapAssessmentEndpoints();
 
 app.Run();

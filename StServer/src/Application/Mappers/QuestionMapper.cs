@@ -5,15 +5,14 @@ namespace StServer.Application.Mappers;
 
 public static class QuestionMapper
 {
-    public static Question ToEntity(QuestionCreateDto dto)
+    public static Question ToEntity(QuestionCreateDto dto, Guid materialId)
     {
         return new Question
         {
             Id = Guid.NewGuid(),
-            MaterialId = dto.MaterialId,
+            MaterialId = materialId,
             Title = dto.Title,
             Answer = dto.Answer,
-            Difficulty = dto.Difficulty,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -27,7 +26,6 @@ public static class QuestionMapper
             MaterialId = entity.MaterialId,
             Title = entity.Title,
             Answer = entity.Answer,
-            Difficulty =  entity.Difficulty,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -40,9 +38,6 @@ public static class QuestionMapper
 
         if (dto.Answer is not null)
             entity.Answer = dto.Answer;
-
-        if (dto.Difficulty is int difficulty)
-            entity.Difficulty = difficulty;
 
         entity.UpdatedAt = DateTime.UtcNow;
     }

@@ -12,7 +12,6 @@ public class Question
     public required string Title { get; set; }
     [MaxLength(1000)] 
     public required string Answer { get; set; }
-    public required int Difficulty { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

@@ -8,8 +8,6 @@ public class QuestionResponseDto
 
     public required string Title { get; set; }
 
-    public int Difficulty { get; set; } = 0;
-
     public required string Answer { get; set; }
 
     public DateTime CreatedAt { get; set; }

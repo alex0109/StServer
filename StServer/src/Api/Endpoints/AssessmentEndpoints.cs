@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using StServer.Application.DTOs.Assessment;
+using StServer.Application.DTOs.Result;
 using StServer.Application.Mappers;
 using StServer.Infrastructure.Data;
-using StServer.Domain.Entities;
 
 namespace StServer.Api.Endpoints;
 
@@ -33,8 +33,19 @@ public static class AssessmentEndpoints
 
             return TypedResults.Ok(entity.Id);
         }
+
+        static async Task<IResult> GetAssessment(Guid assessmentId, AppDbContext db)
+        {
+            var item = await db.Assessments.FindAsync(assessmentId);
+            
+            if (item is null) return TypedResults.NotFound();
+            
+            var response = AssessmentMapper.ToDto(item);
+            
+            return TypedResults.Ok(response);
+        }
         
-        static async Task<IResult> SubmitAnswer(Guid assessmentId, AssessmentUpdateDto assessmentUpdateDto, AppDbContext db)
+        static async Task<IResult> SubmitAnswer(Guid assessmentId, ResultCreateDto createResultDto, AppDbContext db)
         {
             var assessment = await db.Assessments
                 .Include(a => a.Results)
@@ -43,31 +54,25 @@ public static class AssessmentEndpoints
             if (assessment is null)
                 return TypedResults.NotFound();
 
-            var question = await db.Questions.FindAsync(assessmentUpdateDto.QuestionId);
+            var question = await db.Questions.FindAsync(createResultDto.QuestionId);
 
             if (question is null)
                 return TypedResults.NotFound();
+            
+            bool isCorrect = createResultDto.UserAnswer == question.Answer;
+            
+            var entity = ResultMapper.ToEntity(createResultDto, isCorrect);
 
-            var result = new Result
-            {
-                AssessmentId = assessmentId,
-                QuestionId = assessmentUpdateDto.QuestionId,
-                UserAnswer = assessmentUpdateDto.Answer,
-                IsCorrect = assessmentUpdateDto.Answer == question.Answer,
-                AnsweredAt = DateTime.UtcNow
-            };
+            db.Results.Add(entity);
 
-            db.Results.Add(result);
-
-            if (result.IsCorrect)
+            if (entity.IsCorrect)
                 assessment.CorrectAnswers++;
 
-            assessment.Score =
-                (int)((double)assessment.CorrectAnswers / assessment.TotalQuestions * 100);
+            assessment.Score = (int)((double)assessment.CorrectAnswers / assessment.TotalQuestions * 100);
 
             await db.SaveChangesAsync();
 
-            return TypedResults.Ok();
+            return TypedResults.Ok("Answer Submitted!");
         }
         
         static async Task<IResult> FinishAssessment(Guid id, AppDbContext db)
@@ -82,6 +87,17 @@ public static class AssessmentEndpoints
             await db.SaveChangesAsync();
 
             return TypedResults.Ok();
+        }
+
+        static async Task<IResult> GetAssessmentResults(Guid assessmentId, AppDbContext db)
+        {
+            var item = await db.Assessments.Include(a => a.Results).FirstOrDefaultAsync(a => a.Id == assessmentId);
+            
+            if (item is null) return TypedResults.NotFound();
+            
+            var response = item.Results;
+            
+            return TypedResults.Ok(response);
         }
     }
 }

@@ -14,6 +14,7 @@ public static class QuestionEndpoints
         var questionGroup = app.MapGroup("api/materials/{materialId}/questions").RequireAuthorization();
 
         questionGroup.MapGet("/", GetAllQuestions);
+        questionGroup.MapGet("/assessment", GetReducedQuestions);
         questionGroup.MapGet("/{id}", GetQuestion);
         questionGroup.MapPost("", CreateQuestion);
         questionGroup.MapPatch("/{id}", UpdateQuestion);
@@ -22,6 +23,20 @@ public static class QuestionEndpoints
         static async Task<IResult> GetAllQuestions(Guid materialId, AppDbContext db)
         {
             var questions = await db.Questions.Where(x => x.MaterialId == materialId).ToArrayAsync();
+
+            return TypedResults.Ok(questions);
+        };
+        
+        static async Task<IResult> GetReducedQuestions(Guid materialId, AppDbContext db)
+        {
+            var questions = await db.Questions
+                .Where(x => x.MaterialId == materialId)
+                .Select(q => new QuestionReducedDto
+                {
+                    Id = q.Id,
+                    Title = q.Title
+                })
+                .ToArrayAsync();
 
             return TypedResults.Ok(questions);
         };
@@ -39,7 +54,7 @@ public static class QuestionEndpoints
 
         static async Task<IResult> CreateQuestion(Guid materialId, QuestionCreateDto questionCreateDto, AppDbContext db)
         {
-            var entity = QuestionMapper.ToEntity(questionCreateDto);
+            var entity = QuestionMapper.ToEntity(questionCreateDto, materialId);
             
             db.Questions.Add(entity);
             await db.SaveChangesAsync();
