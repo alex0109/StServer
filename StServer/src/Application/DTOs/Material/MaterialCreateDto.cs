@@ -1,11 +1,11 @@
+using StServer.Domain.Utility.Material;
+
 namespace StServer.Application.DTOs.Material;
 
 public class MaterialCreateDto
 {
-    public string Title { get; set; } = null!;
-    public string Type { get; set; } = null!;
-    public string Status { get; set; } = null!;
-    public string[]? Tags { get; set; }
-    public string? Link { get; set; }
-    public RichTextDocument? Description { get; set; }
+    public required string Title { get; set; }
+    public required MaterialType Type { get; set; }
+    public List<string> MaterialTags { get; set; } = new List<string>();
+    public required MaterialStatus Status { get; set; }
 }

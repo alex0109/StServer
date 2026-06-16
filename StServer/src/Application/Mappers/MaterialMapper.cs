@@ -2,6 +2,8 @@ using System.Text.Json;
 using StServer.Domain.Entities;
 using StServer.Application.DTOs;
 using StServer.Application.DTOs.Material;
+using StServer.Application.DTOs.Tag;
+using StServer.Domain.Utility.Material;
 
 namespace StServer.Application.Mappers;
 
@@ -14,56 +16,53 @@ public static class MaterialMapper
             Id = Guid.NewGuid(),
             Title = dto.Title,
             Type = dto.Type,
-            Tags = dto.Tags,
-            Link = dto.Link,
+            MaterialTags = new List<MaterialTag>(),
             Status = dto.Status,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            Description = dto.Description == null
-                ? null
-                : JsonSerializer.SerializeToDocument(dto.Description)
         };
     }
 
-    public static MaterialResponseDto ToDto(Material entity)
+    public static MaterialResponseDto ToDto(Material entity, List<TagDto>? tags)
     {
         return new MaterialResponseDto
         {
             Id = entity.Id,
             Title = entity.Title,
             Type = entity.Type,
-            Tags = entity.Tags,
+            MaterialTags = tags,
             Link = entity.Link,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            Description = entity.Description == null
+            Content = entity.Content == null
                 ? null
-                : JsonSerializer.Deserialize<RichTextDocument>(entity.Description)
+                : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
+            Version = entity.Version,
         };
     }
     
-    public static void ApplyUpdate(Material entity, MaterialUpdateDto dto)
+    public static void ApplyUpdate(Material entity, MaterialUpdateDto dto, ICollection<MaterialTag> tags)
     {
         if (dto.Title is not null)
             entity.Title = dto.Title;
 
-        if (dto.Type is not null)
-            entity.Type = dto.Type;
+        if (dto.Type is MaterialType type)
+            entity.Type = type;
 
-        if (dto.Tags is not null)
-            entity.Tags = dto.Tags;
+        if (dto.MaterialTags is not null)
+            entity.MaterialTags = tags;
 
         if (dto.Link is not null)
             entity.Link = dto.Link;
 
-        if (dto.Description is not null)
-            entity.Description = dto.Description == null
+        if (dto.Content is not null)
+            entity.Content = dto.Content == null
                 ? null
-                : JsonSerializer.SerializeToDocument(dto.Description);
+                : JsonSerializer.SerializeToDocument(dto.Content);
 
-        if (dto.Status is not null)
-            entity.Status = dto.Status;
+        if (dto.Status is MaterialStatus status)
+            entity.Status = status;
 
         entity.UpdatedAt = DateTime.UtcNow;
     }

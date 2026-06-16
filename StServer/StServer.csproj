@@ -37,4 +37,8 @@
       <None Remove="Properties\launchSettings.json" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="src\Domain\Utility\Assessment\" />
+    </ItemGroup>
+
 </Project>

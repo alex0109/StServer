@@ -18,25 +18,33 @@ public static class AssessmentEndpoints
         assessmentGroup.MapPatch("/{id}/finish", FinishAssessment);
         assessmentGroup.MapGet("/{id}/results", GetAssessmentResults);
 
-        static async Task<IResult> StartAssessment(AssessmentCreateDto assessmentCreateDto, AppDbContext db)
+        static async Task<IResult> StartAssessment(AssessmentCreateDto dto, AppDbContext db)
         {
-            var material = await db.Materials
-                .Include(m => m.Questions)
-                .FirstOrDefaultAsync(m => m.Id == assessmentCreateDto.MaterialId);
+            
+            var assessment = await db.Assessments.FirstOrDefaultAsync(m => m.MaterialId == dto.MaterialId);
 
-            if (material is null) return TypedResults.NotFound();
+            if (assessment is null)
+            {
+                var material = await db.Materials
+                    .Include(m => m.Questions)
+                    .FirstOrDefaultAsync(m => m.Id == dto.MaterialId);
 
-            var entity = AssessmentMapper.ToEntity(assessmentCreateDto, material.Questions.Count); 
+                if (material is null) return TypedResults.NotFound();
 
-            db.Assessments.Add(entity);
-            await db.SaveChangesAsync();
+                var entity = AssessmentMapper.ToEntity(dto.MaterialId, material.Questions.Count); 
 
-            return TypedResults.Ok(entity.Id);
+                db.Assessments.Add(entity);
+                await db.SaveChangesAsync();
+
+                return TypedResults.Ok(entity.Id);
+            }
+            
+            return TypedResults.Ok(assessment.Id);
         }
 
-        static async Task<IResult> GetAssessment(Guid assessmentId, AppDbContext db)
+        static async Task<IResult> GetAssessment(Guid id, AppDbContext db)
         {
-            var item = await db.Assessments.FindAsync(assessmentId);
+            var item = await db.Assessments.FindAsync(id);
             
             if (item is null) return TypedResults.NotFound();
             
@@ -45,11 +53,11 @@ public static class AssessmentEndpoints
             return TypedResults.Ok(response);
         }
         
-        static async Task<IResult> SubmitAnswer(Guid assessmentId, ResultCreateDto createResultDto, AppDbContext db)
+        static async Task<IResult> SubmitAnswer(Guid id, ResultCreateDto createResultDto, AppDbContext db)
         {
             var assessment = await db.Assessments
                 .Include(a => a.Results)
-                .FirstOrDefaultAsync(a => a.Id == assessmentId);
+                .FirstOrDefaultAsync(a => a.Id == id);
 
             if (assessment is null)
                 return TypedResults.NotFound();
@@ -89,9 +97,9 @@ public static class AssessmentEndpoints
             return TypedResults.Ok();
         }
 
-        static async Task<IResult> GetAssessmentResults(Guid assessmentId, AppDbContext db)
+        static async Task<IResult> GetAssessmentResults(Guid id, AppDbContext db)
         {
-            var item = await db.Assessments.Include(a => a.Results).FirstOrDefaultAsync(a => a.Id == assessmentId);
+            var item = await db.Assessments.Include(a => a.Results).FirstOrDefaultAsync(a => a.Id == id);
             
             if (item is null) return TypedResults.NotFound();
             

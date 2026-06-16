@@ -4,6 +4,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using StServer.Infrastructure.Data;
 using StServer.Api.Endpoints;
+using System.Text.Json.Serialization;
+using StServer.Application;
+using StServer.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,6 +23,7 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Аутентифікуємо користувача по Berear токену
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -36,6 +40,21 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
+// Дозволяє отримати HttpContext з будь якого місця в коді
+builder.Services.AddHttpContextAccessor();
+
+// Підключаємо DI(scope) з Infrastructure та Application
+builder.Services.AddInfrastructure();
+builder.Services.AddApplication();
+
+// Дозволяємо штуку яка може конвертувати назви enum в їх строкову версію замість цифр
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(
+        new JsonStringEnumConverter()
+    );
+});
+
 String? connectionString = builder.Configuration.GetConnectionString("MyDB");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -43,21 +62,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-app.Use(async (context, next) =>
-{
-    var sw = System.Diagnostics.Stopwatch.StartNew();
-
-    await next();
-
-    sw.Stop();
-    Console.WriteLine($"{context.Request.Path} took {sw.ElapsedMilliseconds} ms");
-});
-
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Підключаємо ендпоінти
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
