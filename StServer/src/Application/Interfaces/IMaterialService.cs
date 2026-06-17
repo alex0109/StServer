@@ -14,5 +14,5 @@ public interface IMaterialService
 
     Task<bool> DeleteAsync(Guid id);
 
-    Task<object> GetStatisticsAsync();
+    Task<MaterialStatisticsDto> GetStatisticsAsync();
 }

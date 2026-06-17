@@ -10,6 +10,7 @@ public class QuestionResponseDto
     public string? Answer { get; set; }
     public QuestionType QuestionType  { get; set; }
     public Guid? CorrectOptionId { get; set; }
+    public List<OptionDto>? Options { get; set; }
     public QuestionDifficulty QuestionDifficulty { get; set; }
     public string? Explanation { get; set; }
     public int Version { get; set; }

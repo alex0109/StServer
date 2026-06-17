@@ -6,6 +6,7 @@ namespace StServer.Domain.Entities;
 public class Question
 {
     public Guid Id { get; set; }
+    public Guid UserId { get; set; }
     public ICollection<Result> Results { get; set; } = new List<Result>();
     public Guid MaterialId { get; set; }
     public Material Material { get; set; } = null!;
@@ -21,6 +22,6 @@ public class Question
     public int Version { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public required DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
 }

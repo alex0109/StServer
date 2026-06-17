@@ -7,6 +7,7 @@ namespace StServer.Domain.Entities;
 public class Material
 {
     public Guid Id { get; set; }
+    public Guid UserId { get; set; }
     public ICollection<Question> Questions { get; set; } = new List<Question>();
     public ICollection<Assessment> Assessments { get; set; } = new List<Assessment>();
     [MaxLength(70)]

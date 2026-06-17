@@ -6,6 +6,7 @@ namespace StServer.Domain.Entities;
 public class Result
 {
     public Guid Id { get; set; }
+    public Guid UserId { get; set; }
     public Guid AttemptId { get; set; }
     public Attempt Attempt { get; set; } = null!;
     public Guid QuestionId { get; set; }

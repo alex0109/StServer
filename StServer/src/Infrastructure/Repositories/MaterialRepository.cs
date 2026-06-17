@@ -14,14 +14,17 @@ public class MaterialRepository : IMaterialRepository
         _db = db;
     }
 
-    public async Task<List<Material>> GetAllAsync()
+    public async Task<List<Material>> GetAllAsync(Guid userId)
     {
-        return await _db.Materials.ToListAsync();
+        return await _db.Materials.Where(x => x.UserId == userId).ToListAsync();
     }
 
-    public async Task<Material?> GetByIdAsync(Guid id)
+    public async Task<Material?> GetByIdAsync(Guid id, Guid userId)
     {
-        var material = await _db.Materials.FirstOrDefaultAsync(x => x.Id == id);
+        var material = await _db.Materials
+            .Include(m => m.MaterialTags)
+            .ThenInclude(mt => mt.Tag)
+            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
 
         if (material is null)
         {
@@ -37,15 +40,18 @@ public class MaterialRepository : IMaterialRepository
         return material;
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id, Guid userId)
     {
-        if (await _db.Materials.FindAsync(id) is Material material)
+        var material = _db.Materials.FirstOrDefault(x => x.Id == id && x.UserId == userId);
+        
+        if (material is null)
         {
-            _db.Materials.Remove(material);
-            return true;
+            return false;
         }
         
-        return false;
+        _db.Materials.Remove(material);
+        return true;
+        
     }
 
     public Task SaveChangesAsync()

@@ -16,7 +16,9 @@ public static class QuestionEndpoints
         questionGroup.MapGet("/", GetAllQuestions);
         questionGroup.MapGet("/assessment", GetReducedQuestions);
         questionGroup.MapGet("/{id}", GetQuestion);
-        questionGroup.MapPost("", CreateQuestion);
+        questionGroup.MapPost("/open", _);
+        questionGroup.MapPost("/truefalse", _);
+        questionGroup.MapPost("multiple", _);
         questionGroup.MapPatch("/{id}", UpdateQuestion);
         questionGroup.MapDelete("/{id}", DeleteQuestion);
         
@@ -55,6 +57,15 @@ public static class QuestionEndpoints
         static async Task<IResult> CreateQuestion(Guid materialId, QuestionCreateDto questionCreateDto, AppDbContext db)
         {
             var entity = QuestionMapper.ToEntity(questionCreateDto, materialId);
+            
+            question.Options = dto.Options
+                .Select(x => new Option
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = userId,
+                    Text = x.Text
+                })
+                .ToList();
             
             db.Questions.Add(entity);
             await db.SaveChangesAsync();

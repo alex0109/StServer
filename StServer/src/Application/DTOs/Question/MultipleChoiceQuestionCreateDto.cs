@@ -10,4 +10,5 @@ public class MultipleChoiceQuestionCreateDto
     public Guid CorrectOptionId { get; set; }
     public QuestionDifficulty QuestionDifficulty { get; set; }
     public List<OptionDto> Options { get; set; } = new();
+    public string? Explanation { get; set; }
 }

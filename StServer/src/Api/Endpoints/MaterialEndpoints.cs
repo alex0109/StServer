@@ -1,8 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-using StServer.Infrastructure.Data;
 using StServer.Application.DTOs.Material;
-using StServer.Application.Mappers;
-using StServer.Domain.Entities;
+using StServer.Application.Interfaces;
 
 namespace StServer.Api.Endpoints;
 
@@ -19,77 +16,52 @@ public static class MaterialEndpoints
         materialGroup.MapPatch("/{id}", UpdateMaterial);
         materialGroup.MapDelete("/{id}", DeleteMaterial);
         
-        static async Task<IResult> GetAllMaterials(AppDbContext db)
+        static async Task<IResult> GetAllMaterials(IMaterialService service)
         {
-            var materials = await db.Materials.ToArrayAsync();
-
-            var response = materials.Select(MaterialMapper.ToDto).ToArray();
+            var result = await service.GetAllAsync();
             
-            return TypedResults.Ok(response);
+            return TypedResults.Ok(result);
         };
 
-        static async Task<IResult> GetMaterial(Guid id, AppDbContext db)
+        static async Task<IResult> GetMaterial(Guid id, IMaterialService service)
         {
-            var item = await db.Materials.FindAsync(id);
+            var result = await service.GetByIdAsync(id);
             
-            if (item is null) return TypedResults.NotFound();
+            if (result is null) return TypedResults.NotFound();
             
-            var response = MaterialMapper.ToDto(item);
-            
-            return TypedResults.Ok(response);
+            return TypedResults.Ok(result);
         };
 
-        static async Task<IResult> CreateMaterial(MaterialCreateDto materialCreateDto, AppDbContext db)
+        static async Task<IResult> CreateMaterial(MaterialCreateDto materialCreateDto, IMaterialService service)
         {
-            var entity = MaterialMapper.ToEntity(materialCreateDto);
+            var result = await service.CreateAsync(materialCreateDto);
             
-            db.Materials.Add(entity);
-            await db.SaveChangesAsync();
-            
-            var response = MaterialMapper.ToDto(entity);
-            
-            return TypedResults.Created($"/materials/{entity.Id}", response);
+            return TypedResults.Created($"/api/materials/{result.Id}", result);
         };
 
-        static async Task<IResult> UpdateMaterial(Guid id, MaterialUpdateDto materialUpdateDto, AppDbContext db)
+        static async Task<IResult> UpdateMaterial(Guid id, MaterialUpdateDto materialUpdateDto, IMaterialService service)
         {
-            var material = await db.Materials.FindAsync(id);
+            var result = await service.UpdateAsync(id, materialUpdateDto);
 
-            if (material is null) return TypedResults.NotFound();
+            if (result is null) return TypedResults.NotFound();
 
-            MaterialMapper.ApplyUpdate(material, materialUpdateDto);
-
-            await db.SaveChangesAsync();
-
-            var response = MaterialMapper.ToDto(material);
-
-            return TypedResults.Ok(response);
+            return TypedResults.Ok(result);
         }
 
-        static async Task<IResult> DeleteMaterial(Guid id, AppDbContext db)
+        static async Task<IResult> DeleteMaterial(Guid id, IMaterialService service)
         {
-            if (await db.Materials.FindAsync(id) is Material material)
-            {
-                db.Materials.Remove(material);
-                await db.SaveChangesAsync();
-                return TypedResults.NoContent();
-            }
-
+            bool result = await service.DeleteAsync(id);
+            
+            if (result) return TypedResults.NoContent();
+            
             return TypedResults.NotFound();
         }
 
-        static async Task<IResult> GetStatisticalData(AppDbContext db)
+        static async Task<IResult> GetStatisticalData(IMaterialService service)
         {
-            var materials = await db.Materials.ToArrayAsync();
-
-            var statuses = materials.GroupBy(m => m.Status).ToDictionary(g => g.Key, g => g.Count());
+            var result = await service.GetStatisticsAsync();
             
-            var types = materials.GroupBy(m => m.Status)
-                .ToDictionary(g => g.Key, g => g.Count());
-
-            var response = new { count = materials.Length, statuses, types };
-            
-            return TypedResults.Json(response);
+            return TypedResults.Json(result);
         };
     }
 }

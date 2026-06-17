@@ -1,5 +1,6 @@
 using StServer.Application.Interfaces;
 using StServer.Infrastructure.Authentication;
+using StServer.Infrastructure.Repositories;
 
 namespace StServer.Infrastructure;
 
@@ -11,7 +12,7 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
 
         services.AddScoped<IUserContext, UserContext>();
-        services.AddScoped<IMaterialRepository, IMaterialRepository>();
+        services.AddScoped<IMaterialRepository, MaterialRepository>();
 
         return services;
     }

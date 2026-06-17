@@ -16,21 +16,26 @@ public static class MaterialMapper
             Id = Guid.NewGuid(),
             Title = dto.Title,
             Type = dto.Type,
-            MaterialTags = new List<MaterialTag>(),
             Status = dto.Status,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
     }
 
-    public static MaterialResponseDto ToDto(Material entity, List<TagDto>? tags)
+    public static MaterialResponseDto ToDto(Material entity)
     {
         return new MaterialResponseDto
         {
             Id = entity.Id,
             Title = entity.Title,
             Type = entity.Type,
-            MaterialTags = tags,
+            MaterialTags = entity.MaterialTags
+                .Select(mt => new TagDto
+                {
+                    Id = mt.Tag.Id,
+                    Name = mt.Tag.Name
+                })
+                .ToList(),
             Link = entity.Link,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
@@ -42,16 +47,13 @@ public static class MaterialMapper
         };
     }
     
-    public static void ApplyUpdate(Material entity, MaterialUpdateDto dto, ICollection<MaterialTag> tags)
+    public static void ApplyUpdate(Material entity, MaterialUpdateDto dto)
     {
         if (dto.Title is not null)
             entity.Title = dto.Title;
 
         if (dto.Type is MaterialType type)
             entity.Type = type;
-
-        if (dto.MaterialTags is not null)
-            entity.MaterialTags = tags;
 
         if (dto.Link is not null)
             entity.Link = dto.Link;
