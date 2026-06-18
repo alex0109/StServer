@@ -2,7 +2,6 @@ namespace StServer.Domain.Utility.Question;
 
 public enum QuestionType
 {
-    TrueFalse,
+    Options,
     Open,
-    MultipleChoice
 }

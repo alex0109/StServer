@@ -4,5 +4,5 @@ namespace StServer.Application.Interfaces;
 
 public interface IMaterialTagService
 {
-    void SyncTags(Domain.Entities.Material material, List<Guid> tagIds);
+    void SyncTags(Material material, List<Guid> tagIds);
 }

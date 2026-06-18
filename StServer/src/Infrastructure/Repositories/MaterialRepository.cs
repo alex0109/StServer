@@ -42,7 +42,8 @@ public class MaterialRepository : IMaterialRepository
 
     public async Task<bool> DeleteAsync(Guid id, Guid userId)
     {
-        var material = _db.Materials.FirstOrDefault(x => x.Id == id && x.UserId == userId);
+        var material = _db.Materials
+            .FirstOrDefault(x => x.Id == id && x.UserId == userId);
         
         if (material is null)
         {

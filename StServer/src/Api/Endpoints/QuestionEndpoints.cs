@@ -1,8 +1,5 @@
-using Microsoft.EntityFrameworkCore;
-using StServer.Infrastructure.Data;
 using StServer.Application.DTOs.Question;
-using StServer.Application.Mappers;
-using StServer.Domain.Entities;
+using StServer.Application.Interfaces;
 
 namespace StServer.Api.Endpoints;
 
@@ -16,89 +13,64 @@ public static class QuestionEndpoints
         questionGroup.MapGet("/", GetAllQuestions);
         questionGroup.MapGet("/assessment", GetReducedQuestions);
         questionGroup.MapGet("/{id}", GetQuestion);
-        questionGroup.MapPost("/open", _);
-        questionGroup.MapPost("/truefalse", _);
-        questionGroup.MapPost("multiple", _);
+        questionGroup.MapPost("/open", CreateOpenQuestion);
+        questionGroup.MapPost("/options", CreateOptionQuestion);
         questionGroup.MapPatch("/{id}", UpdateQuestion);
         questionGroup.MapDelete("/{id}", DeleteQuestion);
         
-        static async Task<IResult> GetAllQuestions(Guid materialId, AppDbContext db)
+        static async Task<IResult> GetAllQuestions(Guid materialId, IQuestionService service)
         {
-            var questions = await db.Questions.Where(x => x.MaterialId == materialId).ToArrayAsync();
+            var result = await service.GetAllQuestionsAsync(materialId);
 
-            return TypedResults.Ok(questions);
+            return TypedResults.Ok(result);
         };
         
-        static async Task<IResult> GetReducedQuestions(Guid materialId, AppDbContext db)
+        static async Task<IResult> GetReducedQuestions(Guid materialId, IQuestionService service)
         {
-            var questions = await db.Questions
-                .Where(x => x.MaterialId == materialId)
-                .Select(q => new QuestionReducedDto
-                {
-                    Id = q.Id,
-                    Title = q.Title
-                })
-                .ToArrayAsync();
+            var result = await service.GetAllReducedQuestionsAsync(materialId);
 
-            return TypedResults.Ok(questions);
+            return TypedResults.Ok(result);
         };
 
-        static async Task<IResult> GetQuestion(Guid materialId, Guid id, AppDbContext db)
+        static async Task<IResult> GetQuestion(Guid materialId, Guid id, IQuestionService service)
         {
-            var question = await db.Questions.SingleOrDefaultAsync(x => x.MaterialId == materialId && x.Id == id);
+            var result = await service.GetByIdQuestionAsync(materialId, id);
             
-            if (question is null) return TypedResults.NotFound();
-            
-            var response = QuestionMapper.ToDto(question);
+            if (result is null) return TypedResults.NotFound();
 
-            return TypedResults.Ok(response);
+            return TypedResults.Ok(result);
         };
 
-        static async Task<IResult> CreateQuestion(Guid materialId, QuestionCreateDto questionCreateDto, AppDbContext db)
+        static async Task<IResult> CreateOpenQuestion(Guid materialId, OpenQuestionCreateDto questionCreateDto, IQuestionService service)
         {
-            var entity = QuestionMapper.ToEntity(questionCreateDto, materialId);
+            var result = await service.CreateOpenQuestionAsync(materialId, questionCreateDto);
             
-            question.Options = dto.Options
-                .Select(x => new Option
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = userId,
-                    Text = x.Text
-                })
-                .ToList();
             
-            db.Questions.Add(entity);
-            await db.SaveChangesAsync();
-
-            var response = QuestionMapper.ToDto(entity);
+            return TypedResults.Created($"materials/{materialId}/questions/{result.Id}", result);
+        };
+        
+        static async Task<IResult> CreateOptionQuestion(Guid materialId, OptionQuestionCreateDto questionCreateDto, IQuestionService service)
+        {
+            var result = await service.CreateQuestionWithOptionsAsync(materialId, questionCreateDto);
             
-            return TypedResults.Created($"materials/{materialId}/questions/{entity.Id}", response);
+            return TypedResults.Created($"materials/{materialId}/questions/{result.Id}", result);
         };
 
-        static async Task<IResult> UpdateQuestion(Guid materialId, Guid id, QuestionUpdateDto questionUpdateDto, AppDbContext db)
+        static async Task<IResult> UpdateQuestion(Guid materialId, Guid id, QuestionUpdateDto questionUpdateDto, IQuestionService service)
         {
-            var question = await db.Questions.FindAsync(id);
+            var result = await service.UpdateQuestionAsync(materialId, id, questionUpdateDto);
             
-            if (question is null) return TypedResults.NotFound();
+            if (result is null) return TypedResults.NotFound();
 
-            QuestionMapper.ApplyUpdate(question, questionUpdateDto);
-
-            await db.SaveChangesAsync();
-            
-            var response = QuestionMapper.ToDto(question);
-
-            return TypedResults.Ok(response);
+            return TypedResults.Ok(result);
         }
 
-        static async Task<IResult> DeleteQuestion(Guid materialId, Guid id, AppDbContext db)
+        static async Task<IResult> DeleteQuestion(Guid materialId, Guid id, IQuestionService service)
         {
-            if (await db.Questions.FindAsync(id) is Question question)
-            {
-                db.Questions.Remove(question);
-                await db.SaveChangesAsync();
-                return TypedResults.NoContent();
-            }
-
+            bool result = await service.DeleteQuestionAsync(materialId, id);
+            
+            if (result) return TypedResults.NoContent();
+            
             return TypedResults.NotFound();
         }
         

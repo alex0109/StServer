@@ -1,8 +1,6 @@
 using StServer.Application.DTOs.Material;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
-using StServer.Infrastructure.Authentication;
-using StServer.Infrastructure.Repositories;
 
 namespace StServer.Application.Services;
 
@@ -12,7 +10,7 @@ public class MaterialService : IMaterialService
     private readonly IUserContext _user;
     private readonly IMaterialTagService _tags;
 
-    public MaterialService(MaterialRepository repo, UserContext user, MaterialTagService materialTagService)
+    public MaterialService(IMaterialRepository repo, IUserContext user, IMaterialTagService materialTagService)
     {
         _repo = repo;
         _user = user;
@@ -37,11 +35,13 @@ public class MaterialService : IMaterialService
         var material = MaterialMapper.ToEntity(materialCreateDto);
 
         var response = await _repo.AddAsync(material);
-
+        
+        await _repo.SaveChangesAsync();
+        
         return MaterialMapper.ToDto(response);
     }
 
-    public async Task<MaterialResponseDto> UpdateAsync(Guid id, MaterialUpdateDto materialUpdateDto)
+    public async Task<MaterialResponseDto?> UpdateAsync(Guid id, MaterialUpdateDto materialUpdateDto)
     {
         var material = await _repo.GetByIdAsync(
             id,
