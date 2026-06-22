@@ -23,16 +23,9 @@ public class QuestionRepository : IQuestionRepository
     
     public async Task<Question?> GetByIdQuestionAsync(Guid materialId, Guid id, Guid userId)
     {
-        var question = await _db.Questions
+        return await _db.Questions
             .Include(m => m.Options)
             .FirstOrDefaultAsync(x => x.MaterialId == materialId && x.Id == id && x.UserId == userId);
-
-        if (question is null)
-        {
-            return null;
-        }
-        
-        return question;
     }
     
     public async Task<Question> AddQuestionAsync(Question question)

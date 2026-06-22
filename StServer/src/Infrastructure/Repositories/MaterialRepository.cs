@@ -55,6 +55,16 @@ public class MaterialRepository : IMaterialRepository
         
     }
 
+    public Task<List<Attempt>> GetAttemptsAsync(Guid id, Guid userId)
+    {
+        var attemtps = _db.Attempts
+            .Include(m => m.Results)
+            .Where(x => x.Assessment.MaterialId == id && x.UserId == userId)
+            .ToListAsync();
+
+        return attemtps;
+    }
+
     public Task SaveChangesAsync()
     {
         return _db.SaveChangesAsync();

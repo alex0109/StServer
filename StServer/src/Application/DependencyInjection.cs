@@ -9,6 +9,8 @@ public static class DependencyInjection
     {
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IQuestionService, QuestionService>();
+        services.AddScoped<IAssessmentService, AssessmentService>();
+        services.AddScoped<IAttemptService, AttemptService>();
 
         return services;
     }

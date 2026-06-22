@@ -7,6 +7,8 @@ public interface IMaterialRepository
     Task<List<Material>> GetAllAsync(Guid userId);
 
     Task<Material?> GetByIdAsync(Guid id, Guid userId);
+    
+    Task<List<Attempt>> GetAttemptsAsync(Guid id, Guid userId);
 
     Task<Material> AddAsync(Material material);
     

@@ -13,6 +13,8 @@ public static class DependencyInjection
         services.AddScoped<IUserContext, UserContext>();
         services.AddScoped<IMaterialRepository, MaterialRepository>();
         services.AddScoped<IQuestionRepository, QuestionRepository>();
+        services.AddScoped<IAssessmentRepository, AssessmentRepository>();
+        services.AddScoped<IAttemptRepository, AttemptRepository>();
 
         return services;
     }

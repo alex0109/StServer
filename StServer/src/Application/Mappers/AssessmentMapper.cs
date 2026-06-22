@@ -5,7 +5,7 @@ namespace StServer.Application.Mappers;
 
 public class AssessmentMapper
 {
-    public static Assessment ToEntity(Guid materialId, int totalQuestions)
+    public static Assessment ToEntity(Guid materialId)
     {
         return new Assessment
         {
@@ -14,18 +14,12 @@ public class AssessmentMapper
         };
     }
 
-    public static AssessmentResponseDto ToDto(Assessment entity, 
-        int totalAttempts, int averageScore, 
-        int bestScore, DateTime lastAttemptAt)
+    public static AssessmentResponseDto ToDto(Assessment entity)
     {
         return new AssessmentResponseDto
         {
             Id = entity.Id,
-            MaterialId = entity.MaterialId,
-            TotalAttempts =  totalAttempts,
-            AverageScore = averageScore,
-            BestScore = bestScore,
-            LastAttemptAt = lastAttemptAt
+            MaterialId = entity.MaterialId
         };
     }
 }

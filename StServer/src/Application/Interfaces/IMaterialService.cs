@@ -1,3 +1,4 @@
+using StServer.Application.DTOs.Attempt;
 using StServer.Application.DTOs.Material;
 
 namespace StServer.Application.Interfaces;
@@ -15,4 +16,7 @@ public interface IMaterialService
     Task<bool> DeleteAsync(Guid id);
 
     Task<MaterialStatisticsDto> GetStatisticsAsync();
+    
+    Task<List<AttemptResponseDto>> GetAttempts(Guid id);
+    
 }

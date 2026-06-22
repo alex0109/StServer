@@ -1,7 +1,7 @@
 namespace StServer.Application.DTOs.Result;
 
-public class ResultCreateDto
+public class ResultRequestDto
 {
     public Guid QuestionId { get; set; }
-    public required string UserAnswer { get; set; }
+    public string? UserAnswer { get; set; }
 }

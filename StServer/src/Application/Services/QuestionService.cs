@@ -36,7 +36,12 @@ public class QuestionService : IQuestionService
     {
         var question = await _repo.GetByIdQuestionAsync(materialId, id, _user.UserId);
 
-        return QuestionMapper.ToDto(question);
+        if (question is not null)
+        {
+            return QuestionMapper.ToDto(question);
+        }
+
+        return null;
     }
 
     public async Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)

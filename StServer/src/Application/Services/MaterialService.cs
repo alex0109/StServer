@@ -1,4 +1,6 @@
+using StServer.Application.DTOs.Attempt;
 using StServer.Application.DTOs.Material;
+using StServer.Application.DTOs.Result;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
 
@@ -87,5 +89,12 @@ public class MaterialService : IMaterialService
             Statuses = statuses,
             Types = types
         };
+    }
+
+    public async Task<List<AttemptResponseDto>> GetAttempts(Guid id)
+    {
+        var attempts = await _repo.GetAttemptsAsync(id, _user.UserId);
+
+        return attempts.Select(x => AttemptMapper.ToDto(x)).ToList();
     }
 }
