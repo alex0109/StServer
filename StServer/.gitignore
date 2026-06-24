@@ -1,0 +1,9 @@
+# Build results
+bin/
+obj/
+
+# JetBrains
+.idea/
+
+# OS
+.DS_Store
