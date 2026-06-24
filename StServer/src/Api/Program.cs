@@ -5,7 +5,9 @@ using System.Text;
 using StServer.Infrastructure.Data;
 using StServer.Api.Endpoints;
 using System.Text.Json.Serialization;
+using StServer.Api.Common;
 using StServer.Application;
+using StServer.Application.Interfaces;
 using StServer.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -43,6 +45,8 @@ builder.Services.AddAuthorization();
 // Дозволяє отримати HttpContext з будь якого місця в коді
 builder.Services.AddHttpContextAccessor();
 
+builder.Services.AddScoped<IUserContext, UserContext>();
+
 // Підключаємо DI(scope) з Infrastructure та Application
 builder.Services.AddInfrastructure();
 builder.Services.AddApplication();
@@ -71,5 +75,6 @@ app.UseAuthorization();
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
+app.MapAttemptEndpoints();
 
 app.Run();

@@ -94,7 +94,9 @@ public class MaterialService : IMaterialService
     public async Task<List<AttemptResponseDto>> GetAttempts(Guid id)
     {
         var attempts = await _repo.GetAttemptsAsync(id, _user.UserId);
-
-        return attempts.Select(x => AttemptMapper.ToDto(x)).ToList();
+        
+        return attempts
+            .Select(AttemptMapper.ToDto)
+            .ToList();
     }
 }

@@ -57,12 +57,12 @@ public class MaterialRepository : IMaterialRepository
 
     public Task<List<Attempt>> GetAttemptsAsync(Guid id, Guid userId)
     {
-        var attemtps = _db.Attempts
+        var attempts = _db.Attempts
             .Include(m => m.Results)
             .Where(x => x.Assessment.MaterialId == id && x.UserId == userId)
             .ToListAsync();
 
-        return attemtps;
+        return attempts;
     }
 
     public Task SaveChangesAsync()

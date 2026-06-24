@@ -18,9 +18,9 @@ public class AttemptMapper
         };
     }
 
-    public static AttemptResponseDto ToDto(Attempt entity, List<ResultResponseDto> resultsList)
+    public static AttemptResponseDto ToDto(Attempt entity)
     {
-        var results = entity.Results;
+        var results = entity.Results ?? [];;
 
         var correct = results.Count(x => x.IsCorrect);
         var wrong = results.Count(x => !x.IsCorrect);
@@ -31,11 +31,14 @@ public class AttemptMapper
             Id = entity.Id,
             AssessmentId = entity.AssessmentId,
             AttemptStatus = entity.AttemptStatus,
+            // TODO: LOGIC OF SCORE ESTIMATE
             Score = total == 0 ? 0 : correct * 100 / total,
             CorrectAnswers = correct,
             WrongAnswers = wrong,
-            TotalTimeSeconds = results.Sum(x => x.TimeSpent.Seconds),
-            Results = resultsList,
+            TotalTimeSeconds = results.Sum(x => x.TimeSpent.TotalSeconds),
+            Results = entity.Results
+                .Select(ResultMapper.ToDto)
+                .ToList(),
             StartedAt = entity.StartedAt,
             FinishedAt = entity.FinishedAt
         };

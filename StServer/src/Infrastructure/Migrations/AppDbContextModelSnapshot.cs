@@ -30,29 +30,46 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
-                    b.Property<int?>("CorrectAnswers")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime?>("FinishedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
 
-                    b.Property<int?>("Score")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("StartedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("TotalQuestions")
-                        .HasColumnType("integer");
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("MaterialId");
 
                     b.ToTable("Assessments");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Attempt", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<Guid>("AssessmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptStatus")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssessmentId");
+
+                    b.ToTable("Attempts");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
@@ -62,37 +79,81 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<JsonDocument>("Content")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<JsonDocument>("Description")
-                        .HasColumnType("jsonb");
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Link")
                         .HasColumnType("text");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.PrimitiveCollection<string[]>("Tags")
-                        .HasColumnType("text[]");
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(70)
                         .HasColumnType("character varying(70)");
 
-                    b.Property<string>("Type")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.ToTable("Materials");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.MaterialTag", b =>
+                {
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("MaterialId", "TagId");
+
+                    b.HasIndex("TagId");
+
+                    b.ToTable("MaterialTags");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Option", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("Options");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
@@ -103,15 +164,32 @@ namespace StServer.Migrations
                         .HasDefaultValueSql("gen_random_uuid()");
 
                     b.Property<string>("Answer")
-                        .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("CorrectOptionId")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Explanation")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("QuestionDifficulty")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("QuestionType")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -120,6 +198,12 @@ namespace StServer.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -135,11 +219,17 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<int>("AnswerChangedCount")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("AnsweredAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("AssessmentId")
+                    b.Property<Guid>("AttemptId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("ConfidenceLevel")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");
@@ -147,18 +237,44 @@ namespace StServer.Migrations
                     b.Property<Guid>("QuestionId")
                         .HasColumnType("uuid");
 
+                    b.Property<TimeSpan>("TimeSpent")
+                        .HasColumnType("interval");
+
                     b.Property<string>("UserAnswer")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("AssessmentId");
+                    b.HasIndex("AttemptId");
 
                     b.HasIndex("QuestionId");
 
                     b.ToTable("Results");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Tag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Tags");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
@@ -170,6 +286,47 @@ namespace StServer.Migrations
                         .IsRequired();
 
                     b.Navigation("Material");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Attempt", b =>
+                {
+                    b.HasOne("StServer.Domain.Entities.Assessment", "Assessment")
+                        .WithMany("Attempts")
+                        .HasForeignKey("AssessmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assessment");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.MaterialTag", b =>
+                {
+                    b.HasOne("StServer.Domain.Entities.Material", "Material")
+                        .WithMany("MaterialTags")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StServer.Domain.Entities.Tag", "Tag")
+                        .WithMany("MaterialTags")
+                        .HasForeignKey("TagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
+
+                    b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Option", b =>
+                {
+                    b.HasOne("StServer.Domain.Entities.Question", "Question")
+                        .WithMany("Options")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
@@ -185,9 +342,9 @@ namespace StServer.Migrations
 
             modelBuilder.Entity("StServer.Domain.Entities.Result", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Assessment", "Assessment")
+                    b.HasOne("StServer.Domain.Entities.Attempt", "Attempt")
                         .WithMany("Results")
-                        .HasForeignKey("AssessmentId")
+                        .HasForeignKey("AttemptId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -197,12 +354,17 @@ namespace StServer.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("Assessment");
+                    b.Navigation("Attempt");
 
                     b.Navigation("Question");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+                {
+                    b.Navigation("Attempts");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Attempt", b =>
                 {
                     b.Navigation("Results");
                 });
@@ -211,12 +373,21 @@ namespace StServer.Migrations
                 {
                     b.Navigation("Assessments");
 
+                    b.Navigation("MaterialTags");
+
                     b.Navigation("Questions");
                 });
 
             modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
                 {
+                    b.Navigation("Options");
+
                     b.Navigation("Results");
+                });
+
+            modelBuilder.Entity("StServer.Domain.Entities.Tag", b =>
+                {
+                    b.Navigation("MaterialTags");
                 });
 #pragma warning restore 612, 618
         }

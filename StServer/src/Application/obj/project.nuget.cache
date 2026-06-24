@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "8C6CZIlAjSM=",
+  "dgSpecHash": "CvQ3HIH5SAM=",
   "success": true,
   "projectFilePath": "/Users/reybey/RiderProjects/StServer/StServer/src/Application/StServer.Application.csproj",
-  "expectedPackageFiles": [],
+  "expectedPackageFiles": [
+    "/Users/reybey/.nuget/packages/microsoft.extensions.dependencyinjection.abstractions/9.0.0/microsoft.extensions.dependencyinjection.abstractions.9.0.0.nupkg.sha512"
+  ],
   "logs": []
 }

@@ -1,3 +1,7 @@
+using StServer.Application.DTOs.Attempt;
+using StServer.Application.DTOs.Result;
+using StServer.Application.Interfaces;
+
 namespace StServer.Api.Endpoints;
 
 public static class AttemptEndpoints
@@ -11,11 +15,65 @@ public static class AttemptEndpoints
         assessmentGroup.MapPost("/{attemptId}/answer", AnswerQuestion);
         assessmentGroup.MapPost("/{attemptId}/submit", SubmitAttempt);
         assessmentGroup.MapGet("/{attemptId}/result", GetResults);
-        
-        static async Task<IResult> GetAttempt(Guid attemptId, IAttemptService){}
-        static async Task<IResult> StartAttempt(Guid questionId, IAttemptService){}
-        static async Task<IResult> AnswerQuestion(Guid attemptId, IAttemptService){}
-        static async Task<IResult> SubmitAttempt(Guid attemptId, IAttemptService){}
-        static async Task<IResult> GetResults(Guid iattemptIdd, IAttemptService){}
+
+        static async Task<IResult> GetAttempt(Guid attemptId, IAttemptService service)
+        {
+            var result = await service.GetAttempt(attemptId);
+
+            if (result is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> StartAttempt(StartAttemptDto attemptDto, IAttemptService service)
+        {
+            var result = await service.StartAttempt(attemptDto.AssessmentId);
+
+            if (result is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Created($"/api/attempts/{result}", result);
+        }
+
+        static async Task<IResult> AnswerQuestion(Guid attemptId, ResultRequestDto resultDto, IAttemptService service)
+        {
+            var result = await service.AnswerQuestion(attemptId, resultDto);
+
+            if (result)
+            {
+                return TypedResults.Ok(result);
+            }
+
+            return TypedResults.NotFound();
+        }
+
+        static async Task<IResult> SubmitAttempt(Guid attemptId, IAttemptService service)
+        {
+            var result = await service.SubmitAttempt(attemptId);
+
+            if (result is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> GetResults(Guid attemptId, IAttemptService service)
+        {
+            var result = await service.GetResults(attemptId);
+
+            if (result is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(result);
+        }
     }
 }
