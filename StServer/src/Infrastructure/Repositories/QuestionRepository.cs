@@ -36,8 +36,8 @@ public class QuestionRepository : IQuestionRepository
     
     public async Task<bool> DeleteQuestionAsync(Guid materialId, Guid id, Guid userId)
     {
-        var question = _db.Questions
-            .FirstOrDefault(x => x.MaterialId == materialId && x.Id == id && x.UserId == userId);
+        var question = await _db.Questions
+            .FirstOrDefaultAsync(x => x.MaterialId == materialId && x.Id == id && x.UserId == userId);
         
         if (question is null)
         {

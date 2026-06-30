@@ -12,7 +12,8 @@ public class ResultMapper
             Id = Guid.NewGuid(),
             QuestionId = dto.QuestionId,
             AttemptId = attemptId,
-            UserAnswer =  dto.UserAnswer,
+            UserAnswer =  dto.UserAnswer ?? null,
+            UserAnswerOptionId =  dto.UserAnswerOptionId ?? null,
             IsCorrect =  isCorrect,
             AnsweredAt = DateTime.UtcNow,
         };
@@ -25,7 +26,8 @@ public class ResultMapper
             Id = entity.Id,
             AttemptId =  entity.AttemptId,
             QuestionId = entity.QuestionId,
-            UserAnswer =  entity.UserAnswer,
+            UserAnswer =  entity.UserAnswer ?? null,
+            UserAnswerOptionId = entity.UserAnswerOptionId ?? null,
             IsCorrect =  entity.IsCorrect,
             AnsweredAt = entity.AnsweredAt,
         };

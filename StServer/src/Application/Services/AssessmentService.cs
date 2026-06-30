@@ -26,10 +26,13 @@ public class AssessmentService : IAssessmentService
         return assessment.Id;
     }
     
-    public async Task<AssessmentResponseDto> GetAssessment(Guid id)
+    public async Task<AssessmentResponseDto?> GetAssessment(Guid id)
     {
         var result = await _repo.GetAssessmentByIdAsync(id, _user.UserId);
 
-        return AssessmentMapper.ToDto(result);
+        if(result is null)
+            return null;
+        
+        return AssessmentMapper.ToDto(result); 
     }
 }

@@ -19,12 +19,12 @@ public class MaterialRepository : IMaterialRepository
         return await _db.Materials.Where(x => x.UserId == userId).ToListAsync();
     }
 
-    public async Task<Material?> GetByIdAsync(Guid id, Guid userId)
+    public async Task<Material?> GetByIdAsync(Guid materialId, Guid userId)
     {
         var material = await _db.Materials
             .Include(m => m.MaterialTags)
             .ThenInclude(mt => mt.Tag)
-            .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
+            .FirstOrDefaultAsync(x => x.Id == materialId && x.UserId == userId);
 
         if (material is null)
         {
@@ -40,10 +40,10 @@ public class MaterialRepository : IMaterialRepository
         return material;
     }
 
-    public async Task<bool> DeleteAsync(Guid id, Guid userId)
+    public async Task<bool> DeleteAsync(Guid materialId, Guid userId)
     {
-        var material = _db.Materials
-            .FirstOrDefault(x => x.Id == id && x.UserId == userId);
+        var material = await _db.Materials
+            .FirstOrDefaultAsync(x => x.Id == materialId && x.UserId == userId);
         
         if (material is null)
         {
@@ -55,11 +55,11 @@ public class MaterialRepository : IMaterialRepository
         
     }
 
-    public Task<List<Attempt>> GetAttemptsAsync(Guid id, Guid userId)
+    public Task<List<Attempt>> GetAttemptsAsync(Guid materialId, Guid userId)
     {
         var attempts = _db.Attempts
             .Include(m => m.Results)
-            .Where(x => x.Assessment.MaterialId == id && x.UserId == userId)
+            .Where(x => x.Assessment.MaterialId == materialId && x.UserId == userId)
             .ToListAsync();
 
         return attempts;

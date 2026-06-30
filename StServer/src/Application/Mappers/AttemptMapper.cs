@@ -36,7 +36,7 @@ public class AttemptMapper
             CorrectAnswers = correct,
             WrongAnswers = wrong,
             TotalTimeSeconds = results.Sum(x => x.TimeSpent.TotalSeconds),
-            Results = entity.Results
+            Results = results
                 .Select(ResultMapper.ToDto)
                 .ToList(),
             StartedAt = entity.StartedAt,

@@ -12,7 +12,8 @@ public class Result
     public Guid QuestionId { get; set; }
     public Question Question { get; set; } = null!;
     [MaxLength(1000)]
-    public required string UserAnswer { get; set; }
+    public string? UserAnswer { get; set; }
+    public Guid? UserAnswerOptionId { get; set; }
     public required bool IsCorrect { get; set; }
     public TimeSpan TimeSpent { get; set; }
     public ConfidenceLevel? ConfidenceLevel { get; set; }

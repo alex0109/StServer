@@ -1,6 +1,5 @@
 using StServer.Application.DTOs.Attempt;
 using StServer.Application.DTOs.Material;
-using StServer.Application.DTOs.Result;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
 
@@ -10,13 +9,11 @@ public class MaterialService : IMaterialService
 {
     private readonly IMaterialRepository _repo;
     private readonly IUserContext _user;
-    private readonly IMaterialTagService _tags;
 
-    public MaterialService(IMaterialRepository repo, IUserContext user, IMaterialTagService materialTagService)
+    public MaterialService(IMaterialRepository repo, IUserContext user)
     {
         _repo = repo;
         _user = user;
-        _tags = materialTagService;
     }
 
     public async Task<List<MaterialResponseDto>> GetAllAsync()
@@ -25,16 +22,19 @@ public class MaterialService : IMaterialService
         return materials.Select(MaterialMapper.ToDto).ToList();
     }
 
-    public async Task<MaterialResponseDto?> GetByIdAsync(Guid id)
+    public async Task<MaterialResponseDto?> GetByIdAsync(Guid materialId)
     {
-        var material = await _repo.GetByIdAsync(_user.UserId, id);
+        var material = await _repo.GetByIdAsync(materialId, _user.UserId);
 
+        if (material is null)
+            return null;
+        
         return MaterialMapper.ToDto(material);
     }
 
     public async Task<MaterialResponseDto> CreateAsync(MaterialCreateDto materialCreateDto)
     {
-        var material = MaterialMapper.ToEntity(materialCreateDto);
+        var material = MaterialMapper.ToEntity(materialCreateDto, _user.UserId);
 
         var response = await _repo.AddAsync(material);
         
@@ -43,10 +43,10 @@ public class MaterialService : IMaterialService
         return MaterialMapper.ToDto(response);
     }
 
-    public async Task<MaterialResponseDto?> UpdateAsync(Guid id, MaterialUpdateDto materialUpdateDto)
+    public async Task<MaterialResponseDto?> UpdateAsync(Guid materialId, MaterialUpdateDto materialUpdateDto)
     {
         var material = await _repo.GetByIdAsync(
-            id,
+            materialId,
             _user.UserId);
 
         if (material is null)
@@ -54,21 +54,30 @@ public class MaterialService : IMaterialService
 
         MaterialMapper.ApplyUpdate(material, materialUpdateDto);
 
-        if (materialUpdateDto.TagIds is not null)
-        {
-            _tags.SyncTags(
-                material,
-                materialUpdateDto.TagIds);
-        }
-
         await _repo.SaveChangesAsync();
 
         return MaterialMapper.ToDto(material);
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task SyncMaterialTags(Guid materialId, List<Guid> tagIds)
     {
-        return await _repo.DeleteAsync(id, _user.UserId);
+        var material = await _repo.GetByIdAsync(materialId, _user.UserId);
+
+        if (material is null)
+            return;
+
+        material.SyncTags(tagIds);
+
+        await _repo.SaveChangesAsync();
+    }
+
+    public async Task<bool> DeleteAsync(Guid materialId)
+    {
+        var result = await _repo.DeleteAsync(materialId, _user.UserId);
+        
+        await _repo.SaveChangesAsync();
+
+        return result;
     }
 
     public async Task<MaterialStatisticsDto> GetStatisticsAsync()
@@ -91,9 +100,9 @@ public class MaterialService : IMaterialService
         };
     }
 
-    public async Task<List<AttemptResponseDto>> GetAttempts(Guid id)
+    public async Task<List<AttemptResponseDto>> GetAttempts(Guid materialId)
     {
-        var attempts = await _repo.GetAttemptsAsync(id, _user.UserId);
+        var attempts = await _repo.GetAttemptsAsync(materialId, _user.UserId);
         
         return attempts
             .Select(AttemptMapper.ToDto)

@@ -13,7 +13,7 @@ public static class DependencyInjection
         services.AddScoped<IAssessmentService, AssessmentService>();
         services.AddScoped<IAttemptService, AttemptService>();
         services.AddScoped<IOptionService, OptionService>();
-        services.AddScoped<IMaterialTagService, MaterialTagService>();
+        services.AddScoped<ITagService, TagService>();
 
         return services;
     }

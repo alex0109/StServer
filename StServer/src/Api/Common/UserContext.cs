@@ -16,8 +16,8 @@ public class UserContext : IUserContext
     {
         get
         {
-            var sub = _http.HttpContext?.User.FindFirst("sub")?.Value;
-
+            var sub = _http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            
             if (sub is null)
                 throw new Exception("Unauthenticated user");
 

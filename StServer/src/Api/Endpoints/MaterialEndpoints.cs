@@ -15,6 +15,7 @@ public static class MaterialEndpoints
         materialGroup.MapGet("/stats/data", GetStatisticalData);
         materialGroup.MapPost("", CreateMaterial);
         materialGroup.MapPatch("/{id}", UpdateMaterial);
+        materialGroup.MapPatch("/{id}/tags", SyncMaterialTags);
         materialGroup.MapDelete("/{id}", DeleteMaterial);
         
         static async Task<IResult> GetAllMaterials(IMaterialService service)
@@ -47,6 +48,13 @@ public static class MaterialEndpoints
             if (result is null) return TypedResults.NotFound();
 
             return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> SyncMaterialTags(Guid id, List<Guid> tagIds, IMaterialService service)
+        {
+            await service.SyncMaterialTags(id, tagIds);
+
+            return TypedResults.Ok();
         }
 
         static async Task<IResult> DeleteMaterial(Guid id, IMaterialService service)

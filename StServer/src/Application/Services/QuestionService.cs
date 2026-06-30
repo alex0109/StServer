@@ -36,12 +36,10 @@ public class QuestionService : IQuestionService
     {
         var question = await _repo.GetByIdQuestionAsync(materialId, id, _user.UserId);
 
-        if (question is not null)
-        {
-            return QuestionMapper.ToDto(question);
-        }
-
-        return null;
+        if (question is null)
+            return null;
+        
+        return QuestionMapper.ToDto(question);
     }
 
     public async Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
@@ -95,8 +93,8 @@ public class QuestionService : IQuestionService
     {
         var result = await _repo.DeleteQuestionAsync(materialId, id, _user.UserId);
 
+        await _repo.SaveChangesAsync();
+
         return result;
     }
-    
-    
 }

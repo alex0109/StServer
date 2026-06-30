@@ -8,7 +8,7 @@ public class MaterialResponseDto
     public Guid Id { get; set; }
     public required string Title { get; set; }
     public required MaterialType Type { get; set; }
-    public List<TagDto>? MaterialTags { get; set; }
+    public List<TagResponseDto>? MaterialTags { get; set; }
     public string? Link { get; set; }
     public RichTextDocument? Content { get; set; }
     public required MaterialStatus Status { get; set; }

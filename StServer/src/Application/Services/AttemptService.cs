@@ -25,30 +25,26 @@ public class AttemptService : IAttemptService
     {
         var attempt = await _repo.GetAttemptWithResultsByIdAsync(id, _user.UserId);
 
-        if (attempt is not null)
-        {
-            return AttemptMapper.ToDto(attempt);
-        }
-
-        return null;
+        if (attempt is null)
+            return null;
+        
+        return AttemptMapper.ToDto(attempt);
     }
 
     public async Task<Guid?> StartAttempt(Guid assessmentId)
     {
         var assessment = await _assessmentRepo.GetAssessmentByIdAsync(assessmentId, _user.UserId);
 
-        if (assessment is not null)
-        {
-            var attemptEntity = AttemptMapper.ToEntity(assessmentId);
+        if (assessment is null)
+            return null;
         
-            await _repo.AddAsync(attemptEntity);
+        var attemptEntity = AttemptMapper.ToEntity(assessmentId);
+        
+        await _repo.AddAsync(attemptEntity);
 
-            await _repo.SaveChangesAsync();
+        await _repo.SaveChangesAsync();
 
-            return attemptEntity.Id;
-        }
-
-        return null;
+        return attemptEntity.Id;
     }
 
     public async Task<bool> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto)
@@ -100,28 +96,24 @@ public class AttemptService : IAttemptService
     {
         var attempt = await _repo.GetAttemptWithResultsByIdAsync(id, _user.UserId);
 
-        if (attempt is not null)
-        {
-            attempt.AttemptStatus = AttemptStatus.Finished;
-            attempt.FinishedAt = DateTime.UtcNow;
+        if (attempt is null)
+            return null;
+        
+        attempt.AttemptStatus = AttemptStatus.Finished;
+        attempt.FinishedAt = DateTime.UtcNow;
             
-            await _repo.SaveChangesAsync();
+        await _repo.SaveChangesAsync();
             
-            return AttemptMapper.ToDto(attempt);
-        }
-
-        return null;
+        return AttemptMapper.ToDto(attempt);
     }
 
     public async Task<AttemptResponseDto?> GetResults(Guid id)
     {
         var attempt = await _repo.GetAttemptWithResultsByIdAsync(id, _user.UserId);
 
-        if (attempt is not null)
-        {
-            return AttemptMapper.ToDto(attempt);
-        }
-
-        return null;
+        if (attempt is null)
+            return null;
+        
+        return AttemptMapper.ToDto(attempt);
     }
 }

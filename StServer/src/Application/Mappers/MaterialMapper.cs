@@ -9,14 +9,16 @@ namespace StServer.Application.Mappers;
 
 public static class MaterialMapper
 {
-    public static Material ToEntity(MaterialCreateDto dto)
+    public static Material ToEntity(MaterialCreateDto dto, Guid id)
     {
         return new Material
         {
             Id = Guid.NewGuid(),
+            UserId = id,
             Title = dto.Title,
             Type = dto.Type,
             Status = dto.Status,
+            IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
@@ -30,7 +32,7 @@ public static class MaterialMapper
             Title = entity.Title,
             Type = entity.Type,
             MaterialTags = entity.MaterialTags
-                .Select(mt => new TagDto
+                .Select(mt => new TagResponseDto
                 {
                     Id = mt.Tag.Id,
                     Name = mt.Tag.Name
