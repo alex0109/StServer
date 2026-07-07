@@ -76,5 +76,6 @@ app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
 app.MapAttemptEndpoints();
+app.MapTagEndpoints();
 
 app.Run();

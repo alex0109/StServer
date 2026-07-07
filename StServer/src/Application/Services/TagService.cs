@@ -1,6 +1,8 @@
+using StServer.Application.DTOs.Material;
 using StServer.Application.DTOs.Tag;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
+using StServer.Domain.Entities;
 
 namespace StServer.Application.Services;
 
@@ -15,23 +17,38 @@ public class TagService : ITagService
         _user = user;
     }
 
-    public async Task<List<TagResponseDto>> GetAllTagsAsync()
+    public async Task<List<TagResponseDto>?> GetAllTagsAsync()
     {
-        var tags = await _repo.GetAllTags(_user.UserId) ?? [];
+        var tags = await _repo.GetAllTags(_user.UserId);
+
+        if (tags is null)
+        {
+            return null;
+        }
 
         return tags.Select(x => TagMapper.ToDto(x)).ToList();
+    }
+
+    public async Task<List<MaterialResponseDto>?> GetMaterialsByTagAsync(Guid tagId)
+    {
+        var materials = await _repo.GetMaterialsByTagAsync(tagId, _user.UserId);
+
+        if (materials is null)
+        {
+            return null;
+        }
+
+        return materials.Select(MaterialMapper.ToDto).ToList();
     }
     
     public async Task<TagResponseDto?> GetByIdAsync(Guid tagId)
     {
         var tag = await _repo.GetTagByIdAsync(tagId, _user.UserId);
 
-        if (tag is not null)
+        if (tag is null)
             return null;
         
         return TagMapper.ToDto(tag);
-
-        
     }
     
     public async Task<TagResponseDto> CreateAsync(TagCreateDto dto)

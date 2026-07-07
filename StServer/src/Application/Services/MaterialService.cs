@@ -19,6 +19,7 @@ public class MaterialService : IMaterialService
     public async Task<List<MaterialResponseDto>> GetAllAsync()
     {
         var materials = await _repo.GetAllAsync(_user.UserId);
+        
         return materials.Select(MaterialMapper.ToDto).ToList();
     }
 
@@ -59,16 +60,19 @@ public class MaterialService : IMaterialService
         return MaterialMapper.ToDto(material);
     }
 
-    public async Task SyncMaterialTags(Guid materialId, List<Guid> tagIds)
+    public async Task<MaterialResponseDto?> SyncMaterialTags(Guid materialId, List<Guid> tagIds)
     {
         var material = await _repo.GetByIdAsync(materialId, _user.UserId);
 
         if (material is null)
-            return;
+            return null;
 
         material.SyncTags(tagIds);
+        material.UpdatedAt = DateTime.UtcNow;
 
         await _repo.SaveChangesAsync();
+
+        return MaterialMapper.ToDto(material);
     }
 
     public async Task<bool> DeleteAsync(Guid materialId)

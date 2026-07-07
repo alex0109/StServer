@@ -1,10 +1,14 @@
+using StServer.Application.DTOs.Material;
 using StServer.Application.DTOs.Tag;
+using StServer.Domain.Entities;
 
 namespace StServer.Application.Interfaces;
 
 public interface ITagService
 {
-    Task<List<TagResponseDto>> GetAllTagsAsync();
+    Task<List<TagResponseDto>?> GetAllTagsAsync();
+    
+    Task<List<MaterialResponseDto>?> GetMaterialsByTagAsync(Guid tagId);
 
     Task<TagResponseDto?> GetByIdAsync(Guid tagId);
 

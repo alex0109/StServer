@@ -16,7 +16,10 @@ public class MaterialRepository : IMaterialRepository
 
     public async Task<List<Material>> GetAllAsync(Guid userId)
     {
-        return await _db.Materials.Where(x => x.UserId == userId).ToListAsync();
+        return await _db.Materials
+            .Include(m => m.MaterialTags)
+            .ThenInclude(mt => mt.Tag).Where(x => x.UserId == userId)
+            .ToListAsync();
     }
 
     public async Task<Material?> GetByIdAsync(Guid materialId, Guid userId)

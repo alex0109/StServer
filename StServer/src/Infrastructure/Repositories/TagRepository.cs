@@ -18,6 +18,17 @@ public class TagRepository : ITagRepository
     {
         return await _db.Tags.Where(x => x.UserId == userId).ToListAsync();
     }
+    
+    public async Task<List<Material>?> GetMaterialsByTagAsync(Guid tagId, Guid userId)
+    {
+        return await _db.Materials
+            .Include(m => m.MaterialTags)
+            .ThenInclude(mt => mt.Tag)
+            .Where(m =>
+                m.UserId == userId &&
+                m.MaterialTags.Any(mt => mt.TagId == tagId))
+            .ToListAsync();
+    }
 
     public async Task<Tag?> GetTagByIdAsync(Guid id, Guid userId)
     {

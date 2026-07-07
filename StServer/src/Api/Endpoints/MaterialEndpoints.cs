@@ -52,9 +52,14 @@ public static class MaterialEndpoints
 
         static async Task<IResult> SyncMaterialTags(Guid id, List<Guid> tagIds, IMaterialService service)
         {
-            await service.SyncMaterialTags(id, tagIds);
+            var result = await service.SyncMaterialTags(id, tagIds);
 
-            return TypedResults.Ok();
+            if (result is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(result);
         }
 
         static async Task<IResult> DeleteMaterial(Guid id, IMaterialService service)

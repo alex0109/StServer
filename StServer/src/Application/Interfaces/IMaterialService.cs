@@ -20,6 +20,6 @@ public interface IMaterialService
     
     Task<List<AttemptResponseDto>> GetAttempts(Guid materialId);
 
-    Task SyncMaterialTags(Guid materialId, List<Guid> tagIds);
+    Task<MaterialResponseDto?> SyncMaterialTags(Guid materialId, List<Guid> tagIds);
 
 }
