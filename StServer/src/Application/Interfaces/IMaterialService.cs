@@ -19,7 +19,9 @@ public interface IMaterialService
     Task<MaterialStatisticsDto> GetStatisticsAsync();
     
     Task<List<AttemptResponseDto>> GetAttempts(Guid materialId);
-
-    Task<MaterialResponseDto?> SyncMaterialTags(Guid materialId, List<Guid> tagIds);
+    
+    Task<MaterialResponseDto?> AddTagToMaterialAsync(Guid materialId, Guid tagId);
+    
+    Task<MaterialResponseDto?> DeleteTagFromMaterialAsync(Guid materialId, Guid tagId);
 
 }

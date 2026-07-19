@@ -5,13 +5,14 @@ namespace StServer.Application.Mappers;
 
 public class ResultMapper
 {
-    public static Result ToEntity(ResultRequestDto dto, Guid attemptId, bool isCorrect)
+    public static Result ToEntity(ResultRequestDto dto, Guid attemptId, Guid userId, bool isCorrect)
     {
         return new Result
         {
             Id = Guid.NewGuid(),
             QuestionId = dto.QuestionId,
             AttemptId = attemptId,
+            UserId = userId,
             UserAnswer =  dto.UserAnswer ?? null,
             UserAnswerOptionId =  dto.UserAnswerOptionId ?? null,
             IsCorrect =  isCorrect,

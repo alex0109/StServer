@@ -44,7 +44,7 @@ public class QuestionService : IQuestionService
 
     public async Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
     {
-        var question = QuestionMapper.ToEntity(questionDto, materialId);
+        var question = QuestionMapper.ToEntityOpenQuestion(questionDto, materialId, _user.UserId);
 
         var response = await _repo.AddQuestionAsync(question);
         
@@ -55,7 +55,7 @@ public class QuestionService : IQuestionService
     
     public async Task<QuestionResponseDto> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto)
     {
-        var question = QuestionMapper.ToEntity(questionDto, materialId);
+        var question = QuestionMapper.ToEntityOptionsQuestion(questionDto, materialId, _user.UserId);
 
         question.Options = new List<Option>();
 
@@ -91,10 +91,16 @@ public class QuestionService : IQuestionService
 
     public async Task<bool> DeleteQuestionAsync(Guid materialId, Guid id)
     {
-        var result = await _repo.DeleteQuestionAsync(materialId, id, _user.UserId);
+        var question = await _repo.GetByIdQuestionAsync(materialId, id, _user.UserId);
 
+        if (question is null)
+            return false;
+        
+        question.IsActive = false;
+        question.DeletedAt = DateTime.Now;
+        
         await _repo.SaveChangesAsync();
 
-        return result;
+        return true;
     }
 }

@@ -7,12 +7,13 @@ namespace StServer.Application.Mappers;
 
 public class AttemptMapper
 {
-    public static Attempt ToEntity(Guid assessmentId)
+    public static Attempt ToEntity(Guid assessmentId, Guid userId)
     {
         return new Attempt
         {
             Id = Guid.NewGuid(),
             AssessmentId = assessmentId,
+            UserId = userId,
             AttemptStatus = AttemptStatus.InProgress,
             StartedAt = DateTime.UtcNow
         };

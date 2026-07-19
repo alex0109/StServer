@@ -8,6 +8,6 @@ public interface IAttemptService
     Task<AttemptResponseDto?> GetAttempt(Guid id);
     Task<Guid?> StartAttempt(Guid assessmentId);
     Task<bool> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto);
-    Task<AttemptResponseDto?> SubmitAttempt(Guid id);
+    Task<AttemptResponseDto?> FinishAttempt(Guid id);
     Task<AttemptResponseDto?> GetResults(Guid id);
 }

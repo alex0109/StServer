@@ -23,30 +23,26 @@ public class Material
     public DateTime? DeletedAt { get; set; }
     public int Version { get; set; } = 1;
     
-    public void SyncTags(IEnumerable<Guid> tagIds)
+    public void AddTag(Guid tagId)
     {
-        var incoming = tagIds?.ToHashSet() ?? new HashSet<Guid>();
+        if (MaterialTags.Any(x => x.TagId == tagId))
+            return;
 
-        var toRemove = MaterialTags
-            .Where(x => !incoming.Contains(x.TagId))
-            .ToList();
-
-        foreach (var item in toRemove)
+        MaterialTags.Add(new MaterialTag
         {
-            MaterialTags.Remove(item);
-        }
-        
-        var existing = MaterialTags
-            .Select(x => x.TagId)
-            .ToHashSet();
+            MaterialId = Id,
+            TagId = tagId
+        });
+    }
+    
+    public void RemoveTag(Guid tagId)
+    {
+        var materialTag = MaterialTags
+            .FirstOrDefault(x => x.TagId == tagId);
 
-        foreach (var tagId in incoming.Except(existing))
-        {
-            MaterialTags.Add(new MaterialTag
-            {
-                MaterialId = Id,
-                TagId = tagId
-            });
-        }
+        if (materialTag is null)
+            return;
+
+        MaterialTags.Remove(materialTag);
     }
 }

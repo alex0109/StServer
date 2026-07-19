@@ -7,12 +7,13 @@ namespace StServer.Application.Mappers;
 
 public static class QuestionMapper
 {
-    public static Question ToEntity(OpenQuestionCreateDto dto, Guid materialId)
+    public static Question ToEntityOpenQuestion(OpenQuestionCreateDto dto, Guid materialId, Guid userId)
     {
         return new Question
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            UserId = userId,
             Title = dto.Title,
             Answer = dto.Answer,
             QuestionType = QuestionType.Open,
@@ -22,12 +23,13 @@ public static class QuestionMapper
         };
     }
     
-    public static Question ToEntity(OptionQuestionCreateDto dto, Guid materialId)
+    public static Question ToEntityOptionsQuestion(OptionQuestionCreateDto dto, Guid materialId, Guid userId)
     {
         return new Question
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            UserId = userId,
             Title = dto.Title,
             QuestionType = QuestionType.Options,
             Explanation = dto?.Explanation,
@@ -44,12 +46,17 @@ public static class QuestionMapper
             MaterialId = entity.MaterialId,
             Title = entity.Title,
             Answer = entity.Answer,
+            QuestionType = entity.QuestionType,
+            Explanation = entity.Explanation,
+            QuestionDifficulty = entity.QuestionDifficulty,
             Options = entity.Options.Select(o => new OptionResponseDto
             {
                 Id = o.Id,
                 Name = o.Name,
                 IsCorrect = o.Id == entity.CorrectOptionId
             }).ToList(),
+            IsActive = entity.IsActive,
+            Version = entity.Version,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt
         };
@@ -61,6 +68,7 @@ public static class QuestionMapper
         {
             Id = entity.Id,
             Title = entity.Title,
+            QuestionType = entity.QuestionType,
             Options = entity.Options.Select(o => new OptionResponseDto
             {
                 Id = o.Id,
@@ -77,6 +85,12 @@ public static class QuestionMapper
 
         if (dto.Answer is not null)
             entity.Answer = dto.Answer;
+        
+        if (dto.CorrectOptionId is not null)
+            entity.CorrectOptionId = dto.CorrectOptionId;
+        
+        if (dto.QuestionDifficulty is QuestionDifficulty diff)
+            entity.QuestionDifficulty = diff;
         
         if (dto.Explanation is not null)
             entity.Explanation = dto.Explanation;

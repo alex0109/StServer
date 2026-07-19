@@ -12,6 +12,7 @@ public class TagMapper
             Id = Guid.NewGuid(),
             UserId = userId,
             Name = dto.Name,
+            Color = dto.Color,
         };
     }
 
@@ -20,7 +21,8 @@ public class TagMapper
         return new TagResponseDto
         {
             Id = entity.Id,
-            Name = entity.Name
+            Name = entity.Name,
+            Color = entity.Color
         };
     }
 
@@ -28,5 +30,8 @@ public class TagMapper
     {
         if (dto.Name is not null)
             entity.Name = dto.Name;
+        
+        if (dto.Color is not null)
+            entity.Name = dto.Color;
     }
 }

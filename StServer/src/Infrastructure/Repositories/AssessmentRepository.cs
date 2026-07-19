@@ -16,7 +16,7 @@ public class AssessmentRepository : IAssessmentRepository
 
     public async Task<Assessment?> GetAssessmentByIdAsync(Guid id, Guid userId)
     {
-        return await _db.Assessments.FirstOrDefaultAsync(x => x.MaterialId == id && x.UserId == userId);
+        return await _db.Assessments.FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
     
     public async Task AddAssessmentAsync(Assessment assessment)

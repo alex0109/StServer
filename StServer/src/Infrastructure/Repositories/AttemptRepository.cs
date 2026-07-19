@@ -42,9 +42,14 @@ public class AttemptRepository : IAttemptRepository
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
 
-    public async Task AddAsync(Attempt attempt)
+    public async Task AddAttemptAsync(Attempt attempt)
     {
         await _db.Attempts.AddAsync(attempt);
+    }
+    
+    public async Task AddResultAsync(Result result)
+    {
+        await _db.Results.AddAsync(result);
     }
     
     public async Task SaveChangesAsync()

@@ -17,6 +17,7 @@ public class QuestionRepository : IQuestionRepository
     public async Task<List<Question>> GetAllQuestionsAsync(Guid materialId, Guid userId)
     {
         return await _db.Questions
+            .Include(q => q.Options)
             .Where(x => x.MaterialId == materialId && x.UserId == userId)
             .ToListAsync();
     }

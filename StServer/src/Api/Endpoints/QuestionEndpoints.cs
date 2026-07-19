@@ -11,7 +11,7 @@ public static class QuestionEndpoints
         var questionGroup = app.MapGroup("api/materials/{materialId}/questions").RequireAuthorization();
 
         questionGroup.MapGet("/", GetAllQuestions);
-        questionGroup.MapGet("/assessment", GetReducedQuestions);
+        questionGroup.MapGet("/attempt", GetReducedQuestions);
         questionGroup.MapGet("/{id}", GetQuestion);
         questionGroup.MapPost("/open", CreateOpenQuestion);
         questionGroup.MapPost("/options", CreateOptionQuestion);

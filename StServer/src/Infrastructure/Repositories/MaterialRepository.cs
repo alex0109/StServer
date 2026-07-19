@@ -18,7 +18,9 @@ public class MaterialRepository : IMaterialRepository
     {
         return await _db.Materials
             .Include(m => m.MaterialTags)
-            .ThenInclude(mt => mt.Tag).Where(x => x.UserId == userId)
+            .ThenInclude(mt => mt.Tag)
+            .Include(mr => mr.Assessments)
+            .Where(x => x.UserId == userId)
             .ToListAsync();
     }
 
@@ -27,6 +29,7 @@ public class MaterialRepository : IMaterialRepository
         var material = await _db.Materials
             .Include(m => m.MaterialTags)
             .ThenInclude(mt => mt.Tag)
+            .Include(mr => mr.Assessments)
             .FirstOrDefaultAsync(x => x.Id == materialId && x.UserId == userId);
 
         if (material is null)
@@ -37,10 +40,9 @@ public class MaterialRepository : IMaterialRepository
         return material;
     }
 
-    public async Task<Material> AddAsync(Material material)
+    public async Task AddAsync(Material material)
     {
         await _db.Materials.AddAsync(material);
-        return material;
     }
 
     public async Task<bool> DeleteAsync(Guid materialId, Guid userId)

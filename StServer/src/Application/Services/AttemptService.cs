@@ -34,14 +34,10 @@ public class AttemptService : IAttemptService
     public async Task<Guid?> StartAttempt(Guid assessmentId)
     {
         var assessment = await _assessmentRepo.GetAssessmentByIdAsync(assessmentId, _user.UserId);
-
-        if (assessment is null)
-            return null;
+        if (assessment is null) return null;
         
-        var attemptEntity = AttemptMapper.ToEntity(assessmentId);
-        
-        await _repo.AddAsync(attemptEntity);
-
+        var attemptEntity = AttemptMapper.ToEntity(assessmentId, _user.UserId);
+        await _repo.AddAttemptAsync(attemptEntity);
         await _repo.SaveChangesAsync();
 
         return attemptEntity.Id;
@@ -51,10 +47,10 @@ public class AttemptService : IAttemptService
     {
         var attempt = await _repo.GetFullAttemptByIdAsync(id, _user.UserId);
         
-        if (attempt is not null && attempt.AttemptStatus == AttemptStatus.Finished)
-        {
-            return false;
-        }
+        //if (attempt is not null && attempt.AttemptStatus == AttemptStatus.Finished)
+        //{
+        //    return false;
+        //}
         
         if (attempt is not null)
         {
@@ -77,10 +73,10 @@ public class AttemptService : IAttemptService
                 }
                 // TODO: IMPORTANT PLACE TO REPLACE IN THE FUTURE FOR AI CHECKING
             
-                var resultEntity = ResultMapper.ToEntity(resultRequestDto, id, isAnswerCorrect);
+                var resultEntity = ResultMapper.ToEntity(resultRequestDto, id, _user.UserId, isAnswerCorrect);
                 resultEntity.AttemptId = id;
-            
-                attempt.Results.Add(resultEntity);
+
+                await _repo.AddResultAsync(resultEntity);
             
                 await _repo.SaveChangesAsync();
 
@@ -92,7 +88,7 @@ public class AttemptService : IAttemptService
         return false;
     }
 
-    public async Task<AttemptResponseDto?> SubmitAttempt(Guid id)
+    public async Task<AttemptResponseDto?> FinishAttempt(Guid id)
     {
         var attempt = await _repo.GetAttemptWithResultsByIdAsync(id, _user.UserId);
 

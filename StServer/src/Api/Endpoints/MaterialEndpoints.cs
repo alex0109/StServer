@@ -10,13 +10,14 @@ public static class MaterialEndpoints
         var materialGroup = app.MapGroup("api/materials").RequireAuthorization();
 
         materialGroup.MapGet("/", GetAllMaterials);
-        materialGroup.MapGet("/{id}", GetMaterial);
-        materialGroup.MapGet("/{id}/attempts", GetAttempts);
+        materialGroup.MapGet("/{materialId}", GetMaterial);
+        materialGroup.MapGet("/{materialId}/attempts", GetAttempts);
         materialGroup.MapGet("/stats/data", GetStatisticalData);
-        materialGroup.MapPost("", CreateMaterial);
-        materialGroup.MapPatch("/{id}", UpdateMaterial);
-        materialGroup.MapPatch("/{id}/tags", SyncMaterialTags);
-        materialGroup.MapDelete("/{id}", DeleteMaterial);
+        materialGroup.MapPost("/", CreateMaterial);
+        materialGroup.MapPatch("/{materialId}", UpdateMaterial);
+        materialGroup.MapPost("/{materialId}/tags/{tagId}", AddTagToMaterial);
+        materialGroup.MapDelete("/{materialId}/tags/{tagId}", DeleteTagFromMaterial);
+        materialGroup.MapDelete("/{materialId}", DeleteMaterial);
         
         static async Task<IResult> GetAllMaterials(IMaterialService service)
         {
@@ -25,9 +26,9 @@ public static class MaterialEndpoints
             return TypedResults.Ok(result);
         };
 
-        static async Task<IResult> GetMaterial(Guid id, IMaterialService service)
+        static async Task<IResult> GetMaterial(Guid materialId, IMaterialService service)
         {
-            var result = await service.GetByIdAsync(id);
+            var result = await service.GetByIdAsync(materialId);
             
             if (result is null) return TypedResults.NotFound();
             
@@ -41,18 +42,18 @@ public static class MaterialEndpoints
             return TypedResults.Created($"/api/materials/{result.Id}", result);
         };
 
-        static async Task<IResult> UpdateMaterial(Guid id, MaterialUpdateDto materialUpdateDto, IMaterialService service)
+        static async Task<IResult> UpdateMaterial(Guid materialId, MaterialUpdateDto materialUpdateDto, IMaterialService service)
         {
-            var result = await service.UpdateAsync(id, materialUpdateDto);
+            var result = await service.UpdateAsync(materialId, materialUpdateDto);
 
             if (result is null) return TypedResults.NotFound();
 
             return TypedResults.Ok(result);
         }
-
-        static async Task<IResult> SyncMaterialTags(Guid id, List<Guid> tagIds, IMaterialService service)
+        
+        static async Task<IResult> AddTagToMaterial(Guid materialId, Guid tagId, IMaterialService service)
         {
-            var result = await service.SyncMaterialTags(id, tagIds);
+            var result = await service.AddTagToMaterialAsync(materialId, tagId);
 
             if (result is null)
             {
@@ -61,10 +62,22 @@ public static class MaterialEndpoints
 
             return TypedResults.Ok(result);
         }
-
-        static async Task<IResult> DeleteMaterial(Guid id, IMaterialService service)
+        
+        static async Task<IResult> DeleteTagFromMaterial(Guid materialId, Guid tagId, IMaterialService service)
         {
-            bool result = await service.DeleteAsync(id);
+            var result = await service.DeleteTagFromMaterialAsync(materialId, tagId);
+
+            if (result is null)
+            {
+                return TypedResults.NotFound();
+            }
+
+            return TypedResults.Ok(result);
+        }
+        
+        static async Task<IResult> DeleteMaterial(Guid materialId, IMaterialService service)
+        {
+            bool result = await service.DeleteAsync(materialId);
             
             if (result) return TypedResults.NoContent();
             
@@ -78,9 +91,9 @@ public static class MaterialEndpoints
             return TypedResults.Json(result);
         };
 
-        static async Task<IResult> GetAttempts(Guid id, IMaterialService service)
+        static async Task<IResult> GetAttempts(Guid materialId, IMaterialService service)
         {
-            var result = await service.GetAttempts(id);
+            var result = await service.GetAttempts(materialId);
                 
             return TypedResults.Ok(result);
         }

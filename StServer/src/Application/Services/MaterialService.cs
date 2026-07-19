@@ -8,11 +8,13 @@ namespace StServer.Application.Services;
 public class MaterialService : IMaterialService
 {
     private readonly IMaterialRepository _repo;
+    private readonly IAssessmentRepository _assessmentRepo;
     private readonly IUserContext _user;
 
-    public MaterialService(IMaterialRepository repo, IUserContext user)
+    public MaterialService(IMaterialRepository repo, IAssessmentRepository assessmentRepo, IUserContext user)
     {
         _repo = repo;
+        _assessmentRepo = assessmentRepo;
         _user = user;
     }
 
@@ -36,12 +38,14 @@ public class MaterialService : IMaterialService
     public async Task<MaterialResponseDto> CreateAsync(MaterialCreateDto materialCreateDto)
     {
         var material = MaterialMapper.ToEntity(materialCreateDto, _user.UserId);
-
-        var response = await _repo.AddAsync(material);
+        await _repo.AddAsync(material);
+        
+        var assessment = AssessmentMapper.ToEntity(material.Id, _user.UserId);
+        await _assessmentRepo.AddAssessmentAsync(assessment);
         
         await _repo.SaveChangesAsync();
         
-        return MaterialMapper.ToDto(response);
+        return MaterialMapper.ToDto(material);
     }
 
     public async Task<MaterialResponseDto?> UpdateAsync(Guid materialId, MaterialUpdateDto materialUpdateDto)
@@ -59,20 +63,53 @@ public class MaterialService : IMaterialService
 
         return MaterialMapper.ToDto(material);
     }
-
-    public async Task<MaterialResponseDto?> SyncMaterialTags(Guid materialId, List<Guid> tagIds)
+    
+    public async Task<MaterialResponseDto?> AddTagToMaterialAsync(Guid materialId, Guid tagId)
     {
         var material = await _repo.GetByIdAsync(materialId, _user.UserId);
 
         if (material is null)
             return null;
 
-        material.SyncTags(tagIds);
+        material.AddTag(tagId);
         material.UpdatedAt = DateTime.UtcNow;
 
         await _repo.SaveChangesAsync();
 
-        return MaterialMapper.ToDto(material);
+        var updatedMaterial = await _repo.GetByIdAsync(
+            materialId,
+            _user.UserId
+        );
+        
+        if (updatedMaterial is null)
+            return null;
+
+
+        return MaterialMapper.ToDto(updatedMaterial);
+    }
+    
+    public async Task<MaterialResponseDto?> DeleteTagFromMaterialAsync(Guid materialId, Guid tagId)
+    {
+        var material = await _repo.GetByIdAsync(materialId, _user.UserId);
+
+        if (material is null)
+            return null;
+
+        material.RemoveTag(tagId);
+        material.UpdatedAt = DateTime.UtcNow;
+
+        await _repo.SaveChangesAsync();
+
+        var updatedMaterial = await _repo.GetByIdAsync(
+            materialId,
+            _user.UserId
+        );
+        
+        if (updatedMaterial is null)
+            return null;
+
+
+        return MaterialMapper.ToDto(updatedMaterial);
     }
 
     public async Task<bool> DeleteAsync(Guid materialId)

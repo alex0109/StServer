@@ -5,12 +5,13 @@ namespace StServer.Application.Mappers;
 
 public class AssessmentMapper
 {
-    public static Assessment ToEntity(Guid materialId)
+    public static Assessment ToEntity(Guid materialId, Guid userId)
     {
         return new Assessment
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            UserId = userId
         };
     }
 

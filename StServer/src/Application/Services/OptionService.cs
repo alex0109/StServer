@@ -47,13 +47,13 @@ public class OptionService : IOptionService
                 question.Options.Add(option);
             }
 
-            if (dto.IsCorrect)
+            if (dto.IsCorrect is not null && dto.IsCorrect is true)
             {
                 correctOption = option;
             }
         }
 
-        if (incoming.Count(x => x.IsCorrect) != 1)
+        if (incoming.Count(x => x.IsCorrect is true) != 1)
         {
             throw new Exception("At least one correct option required");
         }

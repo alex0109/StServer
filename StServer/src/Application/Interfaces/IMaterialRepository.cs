@@ -10,7 +10,7 @@ public interface IMaterialRepository
     
     Task<List<Attempt>> GetAttemptsAsync(Guid materialId, Guid userId);
 
-    Task<Material> AddAsync(Material material);
+    Task AddAsync(Material material);
     
     Task<bool> DeleteAsync(Guid materialId, Guid userId);
 

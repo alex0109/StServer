@@ -22,7 +22,7 @@ public static class AssessmentEndpoints
         static async Task<IResult> GetAssessment(Guid materialId, IAssessmentService service)
         {
             var result = await service.GetAssessment(materialId);
-            return TypedResults.Ok();
+            return TypedResults.Ok(result);
         }
     }
 }

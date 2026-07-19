@@ -6,6 +6,7 @@ namespace StServer.Application.DTOs.Material;
 public class MaterialResponseDto
 {
     public Guid Id { get; set; }
+    public Guid? AssessmentId { get; set; }
     public required string Title { get; set; }
     public required MaterialType Type { get; set; }
     public List<TagResponseDto>? MaterialTags { get; set; }

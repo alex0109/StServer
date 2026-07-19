@@ -10,7 +10,7 @@ public class ResultResponseDto
     public string? UserAnswer { get; set; }
     public Guid? UserAnswerOptionId { get; set; }
     public required bool IsCorrect  { get; set; }
-    public ConfidenceLevel ConfidenceLevel { get; set; }
+    public ConfidenceLevel? ConfidenceLevel { get; set; }
     public int? AnswerChangedCount { get; set; }
     public TimeSpan TimeSpent { get; set; }
     public required DateTime AnsweredAt { get; set; }

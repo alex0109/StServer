@@ -9,12 +9,12 @@ namespace StServer.Application.Mappers;
 
 public static class MaterialMapper
 {
-    public static Material ToEntity(MaterialCreateDto dto, Guid id)
+    public static Material ToEntity(MaterialCreateDto dto, Guid userId)
     {
         return new Material
         {
             Id = Guid.NewGuid(),
-            UserId = id,
+            UserId = userId,
             Title = dto.Title,
             Type = dto.Type,
             Status = dto.Status,
@@ -29,13 +29,15 @@ public static class MaterialMapper
         return new MaterialResponseDto
         {
             Id = entity.Id,
+            AssessmentId = entity.Assessments.FirstOrDefault()?.Id,
             Title = entity.Title,
             Type = entity.Type,
             MaterialTags = entity.MaterialTags
                 .Select(mt => new TagResponseDto
                 {
                     Id = mt.Tag.Id,
-                    Name = mt.Tag.Name
+                    Name = mt.Tag.Name,
+                    Color = mt.Tag.Color,
                 })
                 .ToList(),
             Link = entity.Link,
@@ -61,9 +63,7 @@ public static class MaterialMapper
             entity.Link = dto.Link;
 
         if (dto.Content is not null)
-            entity.Content = dto.Content == null
-                ? null
-                : JsonSerializer.SerializeToDocument(dto.Content);
+            entity.Content = JsonSerializer.SerializeToDocument(dto.Content);
 
         if (dto.Status is MaterialStatus status)
             entity.Status = status;

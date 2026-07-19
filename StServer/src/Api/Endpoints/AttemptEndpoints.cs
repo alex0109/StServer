@@ -13,8 +13,8 @@ public static class AttemptEndpoints
         assessmentGroup.MapGet("/{attemptId}", GetAttempt);
         assessmentGroup.MapPost("/start", StartAttempt);
         assessmentGroup.MapPost("/{attemptId}/answer", AnswerQuestion);
-        assessmentGroup.MapPost("/{attemptId}/submit", SubmitAttempt);
-        assessmentGroup.MapGet("/{attemptId}/result", GetResults);
+        assessmentGroup.MapPost("/{attemptId}/finish", FinishAttempt);
+        assessmentGroup.MapGet("/{attemptId}/results", GetResults);
 
         static async Task<IResult> GetAttempt(Guid attemptId, IAttemptService service)
         {
@@ -52,9 +52,9 @@ public static class AttemptEndpoints
             return TypedResults.NotFound();
         }
 
-        static async Task<IResult> SubmitAttempt(Guid attemptId, IAttemptService service)
+        static async Task<IResult> FinishAttempt(Guid attemptId, IAttemptService service)
         {
-            var result = await service.SubmitAttempt(attemptId);
+            var result = await service.FinishAttempt(attemptId);
 
             if (result is null)
             {
