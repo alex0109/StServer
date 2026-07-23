@@ -145,6 +145,10 @@
         "net9.0": {
           "targetAlias": "net9.0",
           "dependencies": {
+            "FuzzySharp": {
+              "target": "Package",
+              "version": "[2.0.2, )"
+            },
             "Microsoft.Extensions.DependencyInjection.Abstractions": {
               "target": "Package",
               "version": "[9.0.0, )"

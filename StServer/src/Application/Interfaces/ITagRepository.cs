@@ -9,5 +9,6 @@ public interface ITagRepository
     Task<Tag?> GetTagByIdAsync(Guid id, Guid userId);
     Task<Tag> AddTagAsync(Tag tag);
     Task<bool> DeleteTagAsync(Guid id, Guid userId);
+    Task<int> CountByUserIdAsync(Guid userId);
     Task SaveChangesAsync();
 }

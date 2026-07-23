@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "Y6mFBjXrMeU=",
+  "dgSpecHash": "sHbpnt0YpII=",
   "success": true,
   "projectFilePath": "/Users/reybey/RiderProjects/StServer/StServer/src/Api/StServer.Api.csproj",
   "expectedPackageFiles": [
+    "/Users/reybey/.nuget/packages/fuzzysharp/2.0.2/fuzzysharp.2.0.2.nupkg.sha512",
     "/Users/reybey/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/Users/reybey/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/9.0.15/microsoft.aspnetcore.authentication.jwtbearer.9.0.15.nupkg.sha512",
     "/Users/reybey/.nuget/packages/microsoft.aspnetcore.openapi/9.0.14/microsoft.aspnetcore.openapi.9.0.14.nupkg.sha512",

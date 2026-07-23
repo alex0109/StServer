@@ -69,6 +69,11 @@ public class MaterialRepository : IMaterialRepository
 
         return attempts;
     }
+    
+    public async Task<int> CountByUserIdAsync(Guid userId)
+    {
+        return await _db.Materials.CountAsync(x => x.UserId == userId);
+    }
 
     public Task SaveChangesAsync()
     {

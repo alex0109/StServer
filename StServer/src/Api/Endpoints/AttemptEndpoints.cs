@@ -44,12 +44,7 @@ public static class AttemptEndpoints
         {
             var result = await service.AnswerQuestion(attemptId, resultDto);
 
-            if (result)
-            {
-                return TypedResults.Ok(result);
-            }
-
-            return TypedResults.NotFound();
+            return TypedResults.Ok(result);
         }
 
         static async Task<IResult> FinishAttempt(Guid attemptId, IAttemptService service)

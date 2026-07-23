@@ -237,6 +237,9 @@ namespace StServer.Migrations
                     b.Property<Guid>("QuestionId")
                         .HasColumnType("uuid");
 
+                    b.Property<double>("Score")
+                        .HasColumnType("double precision");
+
                     b.Property<TimeSpan>("TimeSpent")
                         .HasColumnType("interval");
 
@@ -249,6 +252,9 @@ namespace StServer.Migrations
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Weight")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

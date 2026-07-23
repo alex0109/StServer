@@ -1,4 +1,5 @@
 using StServer.Application.DTOs.Attempt;
+using StServer.Application.DTOs.Question;
 using StServer.Application.DTOs.Result;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
@@ -12,13 +13,19 @@ public class AttemptService : IAttemptService
     private readonly IQuestionRepository _questionRepo;
     private readonly IAssessmentRepository _assessmentRepo;
     private readonly IUserContext _user;
+    private readonly IAnswerEvaluationService _answerEvaluationService;
 
-    public AttemptService(IAttemptRepository repo, IQuestionRepository questionRepo, IAssessmentRepository assessmentRepo, IUserContext user)
+    public AttemptService(IAttemptRepository repo, 
+        IQuestionRepository questionRepo, 
+        IAssessmentRepository assessmentRepo, 
+        IUserContext user,
+        IAnswerEvaluationService answerEvaluationService)
     {
         _repo = repo;
         _questionRepo = questionRepo;
         _assessmentRepo = assessmentRepo;
         _user = user;
+        _answerEvaluationService = answerEvaluationService;
     }
 
     public async Task<AttemptResponseDto?> GetAttempt(Guid id)
@@ -43,49 +50,62 @@ public class AttemptService : IAttemptService
         return attemptEntity.Id;
     }
 
-    public async Task<bool> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto)
+    public async Task<AnswerEvaluationResult> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto)
     {
         var attempt = await _repo.GetFullAttemptByIdAsync(id, _user.UserId);
         
-        //if (attempt is not null && attempt.AttemptStatus == AttemptStatus.Finished)
-        //{
-        //    return false;
-        //}
+        AnswerEvaluationResult result = new AnswerEvaluationResult
+        {
+            IsCorrect = false,
+            Score = 0,
+            Method = EvaluationMethod.None
+        };
         
         if (attempt is not null)
         {
             Guid questionId = resultRequestDto.QuestionId;
 
             var question = await _questionRepo.GetByIdQuestionAsync(attempt.Assessment.MaterialId, questionId, _user.UserId);
-
+            
             if (question is not null)
             {
-                bool isAnswerCorrect = false;
-                // TODO: IMPORTANT PLACE TO REPLACE IN THE FUTURE FOR AI CHECKING
-                if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
-                {
-                    isAnswerCorrect = question.Answer.Trim().ToLower() == resultRequestDto.UserAnswer.Trim().ToLower();
-                }
-
                 if (question.CorrectOptionId is not null && resultRequestDto.UserAnswerOptionId is not null)
                 {
-                    isAnswerCorrect = question.CorrectOptionId == resultRequestDto.UserAnswerOptionId;
+                    bool isIdCorrect = question.CorrectOptionId == resultRequestDto.UserAnswerOptionId;
+
+                    result = new AnswerEvaluationResult
+                    {
+                        IsCorrect = isIdCorrect,
+                        Score = 100,
+                        Method = EvaluationMethod.Exact
+                    };
                 }
-                // TODO: IMPORTANT PLACE TO REPLACE IN THE FUTURE FOR AI CHECKING
+                else if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
+                {
+                    result = _answerEvaluationService.EvaluateAnswer(
+                        question.Answer,
+                        resultRequestDto.UserAnswer
+                    );
+                }
             
-                var resultEntity = ResultMapper.ToEntity(resultRequestDto, id, _user.UserId, isAnswerCorrect);
+                var resultEntity = ResultMapper.ToEntity(
+                    resultRequestDto, 
+                    id, 
+                    _user.UserId, 
+                    result.IsCorrect, 
+                    result.Score,
+                    (int)question.QuestionDifficulty);
+                
                 resultEntity.AttemptId = id;
 
                 await _repo.AddResultAsync(resultEntity);
             
                 await _repo.SaveChangesAsync();
-
-                return true;
             }
 
         }
 
-        return false;
+        return result;
     }
 
     public async Task<AttemptResponseDto?> FinishAttempt(Guid id)

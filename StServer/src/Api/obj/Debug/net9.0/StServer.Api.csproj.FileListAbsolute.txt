@@ -142,3 +142,4 @@
 /Users/reybey/RiderProjects/StServer/StServer/src/Api/obj/Debug/net9.0/StServer.Api.pdb
 /Users/reybey/RiderProjects/StServer/StServer/src/Api/obj/Debug/net9.0/StServer.Api.genruntimeconfig.cache
 /Users/reybey/RiderProjects/StServer/StServer/src/Api/obj/Debug/net9.0/ref/StServer.Api.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/FuzzySharp.dll

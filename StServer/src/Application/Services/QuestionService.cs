@@ -1,5 +1,7 @@
+using StServer.Application.Constants;
 using StServer.Application.DTOs.Option;
 using StServer.Application.DTOs.Question;
+using StServer.Application.Exceptions;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
 using StServer.Domain.Entities;
@@ -55,6 +57,13 @@ public class QuestionService : IQuestionService
     
     public async Task<QuestionResponseDto> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto)
     {
+        var count = await _repo.CountByMaterialIdAsync(materialId);
+
+        if (count >= UserLimits.MaxQuestionsPerMaterial)
+        {
+            throw new LimitExceededException("Question limit reached");
+        }
+        
         var question = QuestionMapper.ToEntityOptionsQuestion(questionDto, materialId, _user.UserId);
 
         question.Options = new List<Option>();

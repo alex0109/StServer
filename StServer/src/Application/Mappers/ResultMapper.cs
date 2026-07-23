@@ -1,11 +1,17 @@
 using StServer.Domain.Entities;
 using StServer.Application.DTOs.Result;
+using StServer.Domain.Utility.Question;
 
 namespace StServer.Application.Mappers;
 
 public class ResultMapper
 {
-    public static Result ToEntity(ResultRequestDto dto, Guid attemptId, Guid userId, bool isCorrect)
+    public static Result ToEntity(ResultRequestDto dto, 
+        Guid attemptId,
+        Guid userId, 
+        bool isCorrect, 
+        double score,
+        int weight)
     {
         return new Result
         {
@@ -16,6 +22,8 @@ public class ResultMapper
             UserAnswer =  dto.UserAnswer ?? null,
             UserAnswerOptionId =  dto.UserAnswerOptionId ?? null,
             IsCorrect =  isCorrect,
+            Score = score,
+            Weight = weight,
             AnsweredAt = DateTime.UtcNow,
         };
     }

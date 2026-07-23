@@ -8,7 +8,7 @@ public class AttemptResponseDto
     public Guid Id { get; set; }
     public Guid AssessmentId { get; set; }
     public AttemptStatus AttemptStatus  { get; set; }
-    public int Score { get; set; }
+    public double Score { get; set; }
     public int CorrectAnswers { get; set; }
     public int WrongAnswers { get; set; }
     public double TotalTimeSeconds { get; set; }

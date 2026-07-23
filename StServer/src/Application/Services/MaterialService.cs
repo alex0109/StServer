@@ -1,5 +1,7 @@
+using StServer.Application.Constants;
 using StServer.Application.DTOs.Attempt;
 using StServer.Application.DTOs.Material;
+using StServer.Application.Exceptions;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
 
@@ -37,6 +39,14 @@ public class MaterialService : IMaterialService
 
     public async Task<MaterialResponseDto> CreateAsync(MaterialCreateDto materialCreateDto)
     {
+        
+        var count = await _repo.CountByUserIdAsync(_user.UserId);
+
+        if (count >= UserLimits.MaxMaterials)
+        {
+            throw new LimitExceededException("Material limit reached");
+        }
+        
         var material = MaterialMapper.ToEntity(materialCreateDto, _user.UserId);
         await _repo.AddAsync(material);
         
@@ -83,8 +93,7 @@ public class MaterialService : IMaterialService
         
         if (updatedMaterial is null)
             return null;
-
-
+        
         return MaterialMapper.ToDto(updatedMaterial);
     }
     

@@ -54,6 +54,12 @@ public class TagRepository : ITagRepository
         _db.Tags.Remove(tag);
         return true;
     }
+    
+    public async Task<int> CountByUserIdAsync(Guid userId)
+    {
+        return await _db.Tags
+            .CountAsync(x => x.UserId == userId);
+    }
 
     public async Task SaveChangesAsync()
     {

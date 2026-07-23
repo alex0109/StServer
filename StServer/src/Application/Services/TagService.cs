@@ -1,5 +1,7 @@
+using StServer.Application.Constants;
 using StServer.Application.DTOs.Material;
 using StServer.Application.DTOs.Tag;
+using StServer.Application.Exceptions;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
 using StServer.Domain.Entities;
@@ -53,9 +55,14 @@ public class TagService : ITagService
     
     public async Task<TagResponseDto> CreateAsync(TagCreateDto dto)
     {
-        var entity = TagMapper.ToEntity(dto, _user.UserId);
+        var count = await _repo.CountByUserIdAsync(_user.UserId);
+
+        if (count >= UserLimits.MaxTags)
+        {
+            throw new LimitExceededException("Tag limit reached");
+        }
         
-        // TODO: ADD TAG CHECK FOR DUPLICATES
+        var entity = TagMapper.ToEntity(dto, _user.UserId);
         
         var response = await _repo.AddTagAsync(entity);
 

@@ -49,6 +49,12 @@ public class QuestionRepository : IQuestionRepository
         return true;
         
     }
+    
+    public async Task<int> CountByMaterialIdAsync(Guid materialId)
+    {
+        return await _db.Questions
+            .CountAsync(x => x.MaterialId == materialId);
+    }
 
     public Task SaveChangesAsync()
     {

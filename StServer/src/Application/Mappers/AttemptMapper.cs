@@ -32,8 +32,7 @@ public class AttemptMapper
             Id = entity.Id,
             AssessmentId = entity.AssessmentId,
             AttemptStatus = entity.AttemptStatus,
-            // TODO: LOGIC OF SCORE ESTIMATE
-            Score = total == 0 ? 0 : correct * 100 / total,
+            Score = results.Sum(x => x.Score * x.Weight) / results.Sum(x => x.Weight),
             CorrectAnswers = correct,
             WrongAnswers = wrong,
             TotalTimeSeconds = results.Sum(x => x.TimeSpent.TotalSeconds),
