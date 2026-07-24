@@ -4,7 +4,7 @@ namespace StServer.Application.Interfaces;
 
 public interface IQuestionService
 {
-    Task<List<QuestionResponseDto>> GetAllQuestionsAsync(Guid materialId);
+    Task<List<QuestionResponseDto>> GetActiveQuestionsAsync(Guid materialId);
     
     Task<List<QuestionReducedDto>> GetAllReducedQuestionsAsync(Guid materialId);
     

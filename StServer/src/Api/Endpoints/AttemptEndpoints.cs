@@ -10,12 +10,24 @@ public static class AttemptEndpoints
     {
         var assessmentGroup = app.MapGroup("api/attempts").RequireAuthorization();
 
+        assessmentGroup.MapGet("/m/{materialId}", GetFinishedAttempts);
         assessmentGroup.MapGet("/{attemptId}", GetAttempt);
         assessmentGroup.MapPost("/start", StartAttempt);
         assessmentGroup.MapPost("/{attemptId}/answer", AnswerQuestion);
         assessmentGroup.MapPost("/{attemptId}/finish", FinishAttempt);
         assessmentGroup.MapGet("/{attemptId}/results", GetResults);
 
+        static async Task<IResult> GetFinishedAttempts(Guid materialId, IAttemptService service)
+        {
+            var result = await service.GetFinishedAttempts(materialId);
+            
+            if (result is null){
+                return TypedResults.NotFound();
+            }
+            
+            return TypedResults.Ok(result);
+        }
+        
         static async Task<IResult> GetAttempt(Guid attemptId, IAttemptService service)
         {
             var result = await service.GetAttempt(attemptId);
@@ -51,7 +63,7 @@ public static class AttemptEndpoints
         {
             var result = await service.FinishAttempt(attemptId);
 
-            if (result is null)
+            if (result is false)
             {
                 return TypedResults.NotFound();
             }

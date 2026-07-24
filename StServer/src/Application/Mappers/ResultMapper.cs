@@ -38,6 +38,8 @@ public class ResultMapper
             UserAnswer =  entity.UserAnswer ?? null,
             UserAnswerOptionId = entity.UserAnswerOptionId ?? null,
             IsCorrect =  entity.IsCorrect,
+            Score = entity.Score,
+            Weight = entity.Weight,
             AnsweredAt = entity.AnsweredAt,
         };
     }

@@ -25,14 +25,13 @@ public class AttemptMapper
 
         var correct = results.Count(x => x.IsCorrect);
         var wrong = results.Count(x => !x.IsCorrect);
-        var total = results.Count;
 
         return new AttemptResponseDto
         {
             Id = entity.Id,
             AssessmentId = entity.AssessmentId,
             AttemptStatus = entity.AttemptStatus,
-            Score = results.Sum(x => x.Score * x.Weight) / results.Sum(x => x.Weight),
+            Score = 0,
             CorrectAnswers = correct,
             WrongAnswers = wrong,
             TotalTimeSeconds = results.Sum(x => x.TimeSpent.TotalSeconds),

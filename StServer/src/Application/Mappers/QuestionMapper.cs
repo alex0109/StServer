@@ -16,6 +16,7 @@ public static class QuestionMapper
             UserId = userId,
             Title = dto.Title,
             Answer = dto.Answer,
+            QuestionDifficulty =  dto.QuestionDifficulty,
             QuestionType = QuestionType.Open,
             Explanation = dto?.Explanation,
             CreatedAt = DateTime.UtcNow,

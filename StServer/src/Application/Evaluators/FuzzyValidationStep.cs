@@ -11,7 +11,7 @@ public class FuzzyValidationStep: IAnswerValidationStep
     {
         int score = Fuzz.TokenSortRatio(correctAnswer, userAnswer);
 
-        if (score >= 95)
+        if (score >= 85)
         {
             return new AnswerEvaluationResult
             {

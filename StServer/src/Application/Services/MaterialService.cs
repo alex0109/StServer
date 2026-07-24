@@ -1,5 +1,4 @@
 using StServer.Application.Constants;
-using StServer.Application.DTOs.Attempt;
 using StServer.Application.DTOs.Material;
 using StServer.Application.Exceptions;
 using StServer.Application.Interfaces;
@@ -12,8 +11,12 @@ public class MaterialService : IMaterialService
     private readonly IMaterialRepository _repo;
     private readonly IAssessmentRepository _assessmentRepo;
     private readonly IUserContext _user;
+    
 
-    public MaterialService(IMaterialRepository repo, IAssessmentRepository assessmentRepo, IUserContext user)
+    public MaterialService(
+        IMaterialRepository repo,
+        IAssessmentRepository assessmentRepo,
+        IUserContext user)
     {
         _repo = repo;
         _assessmentRepo = assessmentRepo;
@@ -148,14 +151,5 @@ public class MaterialService : IMaterialService
             Statuses = statuses,
             Types = types
         };
-    }
-
-    public async Task<List<AttemptResponseDto>> GetAttempts(Guid materialId)
-    {
-        var attempts = await _repo.GetAttemptsAsync(materialId, _user.UserId);
-        
-        return attempts
-            .Select(AttemptMapper.ToDto)
-            .ToList();
     }
 }

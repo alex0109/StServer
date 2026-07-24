@@ -20,7 +20,7 @@ public static class QuestionEndpoints
         
         static async Task<IResult> GetAllQuestions(Guid materialId, IQuestionService service)
         {
-            var result = await service.GetAllQuestionsAsync(materialId);
+            var result = await service.GetActiveQuestionsAsync(materialId);
 
             return TypedResults.Ok(result);
         };

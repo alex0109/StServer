@@ -59,16 +59,6 @@ public class MaterialRepository : IMaterialRepository
         return true;
         
     }
-
-    public Task<List<Attempt>> GetAttemptsAsync(Guid materialId, Guid userId)
-    {
-        var attempts = _db.Attempts
-            .Include(m => m.Results)
-            .Where(x => x.Assessment.MaterialId == materialId && x.UserId == userId)
-            .ToListAsync();
-
-        return attempts;
-    }
     
     public async Task<int> CountByUserIdAsync(Guid userId)
     {

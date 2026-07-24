@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using StServer.Application.Evaluators;
 using StServer.Application.Interfaces;
+using StServer.Application.ScoreCalculators;
 using StServer.Application.Services;
 
 namespace StServer.Application;
@@ -19,6 +20,11 @@ public static class DependencyInjection
         services.AddScoped<IAnswerNormalizer, AnswerNormalizer>();
         services.AddScoped<IAnswerValidationStep, ExactValidationStep>();
         services.AddScoped<IAnswerValidationStep, FuzzyValidationStep>();
+        services.AddScoped<IAverageScoreCalculator, AverageScoreCalculator>();
+        services.AddScoped<IDifficultyWeightProvider, ExponentialDifficultyWeightProvider>();
+        services.AddScoped<INonLinearDifficultyScoreCalculator, NonLinearDifficultyScoreCalculator>();
+        services.AddScoped<ISuccessBonusScoreCalculator>(sp => new SuccessBonusScoreCalculator(bonusFactor: 0.5));
+        services.AddScoped<IAttemptScoringService, AttemptScoringService>();
 
         return services;
     }

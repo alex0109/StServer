@@ -22,6 +22,14 @@ public class QuestionRepository : IQuestionRepository
             .ToListAsync();
     }
     
+    public async Task<List<Question>> GetActiveQuestionsAsync(Guid materialId, Guid userId)
+    {
+        return await _db.Questions
+            .Include(q => q.Options)
+            .Where(x => x.MaterialId == materialId && x.UserId == userId && x.IsActive == true)
+            .ToListAsync();
+    }
+    
     public async Task<Question?> GetByIdQuestionAsync(Guid materialId, Guid id, Guid userId)
     {
         return await _db.Questions

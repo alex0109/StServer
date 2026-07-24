@@ -21,15 +21,15 @@ public class QuestionService : IQuestionService
         _optionService = optionService;
     }
 
-    public async Task<List<QuestionResponseDto>> GetAllQuestionsAsync(Guid materialId)
+    public async Task<List<QuestionResponseDto>> GetActiveQuestionsAsync(Guid materialId)
     {
-        var questions = await _repo.GetAllQuestionsAsync(materialId, _user.UserId);
+        var questions = await _repo.GetActiveQuestionsAsync(materialId, _user.UserId);
         return questions.Select(QuestionMapper.ToDto).ToList();
     }
     
     public async Task<List<QuestionReducedDto>> GetAllReducedQuestionsAsync(Guid materialId)
     {
-        var questions = await _repo.GetAllQuestionsAsync(materialId, _user.UserId);
+        var questions = await _repo.GetActiveQuestionsAsync(materialId, _user.UserId);
         
         return questions.Select(QuestionMapper.ToReducedDto).ToList();
     }
@@ -106,7 +106,7 @@ public class QuestionService : IQuestionService
             return false;
         
         question.IsActive = false;
-        question.DeletedAt = DateTime.Now;
+        question.DeletedAt = DateTime.UtcNow;
         
         await _repo.SaveChangesAsync();
 

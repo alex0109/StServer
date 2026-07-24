@@ -11,7 +11,6 @@ public static class MaterialEndpoints
 
         materialGroup.MapGet("/", GetAllMaterials);
         materialGroup.MapGet("/{materialId}", GetMaterial);
-        materialGroup.MapGet("/{materialId}/attempts", GetAttempts);
         materialGroup.MapGet("/stats/data", GetStatisticalData);
         materialGroup.MapPost("/", CreateMaterial);
         materialGroup.MapPatch("/{materialId}", UpdateMaterial);
@@ -90,12 +89,5 @@ public static class MaterialEndpoints
             
             return TypedResults.Json(result);
         };
-
-        static async Task<IResult> GetAttempts(Guid materialId, IMaterialService service)
-        {
-            var result = await service.GetAttempts(materialId);
-                
-            return TypedResults.Ok(result);
-        }
     }
 }

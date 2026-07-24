@@ -5,9 +5,12 @@ using System.Text;
 using StServer.Infrastructure.Data;
 using StServer.Api.Endpoints;
 using System.Text.Json.Serialization;
+using Hangfire;
+using Hangfire.PostgreSql;
 using StServer.Api.Common;
 using StServer.Application;
 using StServer.Application.Interfaces;
+using StServer.Application.Jobs;
 using StServer.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -64,6 +67,14 @@ String? connectionString = builder.Configuration.GetConnectionString("MyDB");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// Підключаємо hangfire
+builder.Services.AddHangfire(config =>
+{
+    config.UsePostgreSqlStorage(connectionString);
+});
+
+builder.Services.AddHangfireServer();
+
 var app = builder.Build();
 
 app.UseCors("AllowFrontend");
@@ -71,11 +82,19 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Підключаємо dashboard для моніторингу
+app.UseHangfireDashboard();
+
 // Підключаємо ендпоінти
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
 app.MapAttemptEndpoints();
 app.MapTagEndpoints();
+
+RecurringJob.AddOrUpdate<AttemptCleanupJob>(
+    "cleanup-attempts",
+    x => x.Cleanup(),
+    Cron.Minutely);
 
 app.Run();

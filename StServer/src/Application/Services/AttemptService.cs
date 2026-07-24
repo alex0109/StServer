@@ -4,6 +4,7 @@ using StServer.Application.DTOs.Result;
 using StServer.Application.Interfaces;
 using StServer.Application.Mappers;
 using StServer.Domain.Utility.Attempt;
+using StServer.Domain.Utility.Question;
 
 namespace StServer.Application.Services;
 
@@ -14,18 +15,39 @@ public class AttemptService : IAttemptService
     private readonly IAssessmentRepository _assessmentRepo;
     private readonly IUserContext _user;
     private readonly IAnswerEvaluationService _answerEvaluationService;
+    private readonly IAttemptScoringService _attemptScoringService;
 
-    public AttemptService(IAttemptRepository repo, 
+    public AttemptService(
+        IAttemptRepository repo, 
         IQuestionRepository questionRepo, 
         IAssessmentRepository assessmentRepo, 
         IUserContext user,
-        IAnswerEvaluationService answerEvaluationService)
+        IAnswerEvaluationService answerEvaluationService,
+        IAttemptScoringService attemptScoringService)
     {
         _repo = repo;
         _questionRepo = questionRepo;
         _assessmentRepo = assessmentRepo;
         _user = user;
         _answerEvaluationService = answerEvaluationService;
+        _attemptScoringService = attemptScoringService;
+    }
+    
+    public async Task<List<AttemptResponseDto>> GetFinishedAttempts(Guid materialId)
+    {
+        var attempts = await _repo.GetFinishedAttemptsAsync(materialId, _user.UserId);
+
+        if (attempts is null || attempts.Count == 0)
+            return null;
+        
+        var results = attempts.Select(x => AttemptMapper.ToDto(x)).ToList();
+
+        foreach (var attempt in results)
+        {
+            _attemptScoringService.AverageScoreAttempt(attempt);
+        }
+
+        return results;
     }
 
     public async Task<AttemptResponseDto?> GetAttempt(Guid id)
@@ -35,7 +57,11 @@ public class AttemptService : IAttemptService
         if (attempt is null)
             return null;
         
-        return AttemptMapper.ToDto(attempt);
+        var result = AttemptMapper.ToDto(attempt);
+
+        _attemptScoringService.AverageScoreAttempt(result);
+        
+        return result;
     }
 
     public async Task<Guid?> StartAttempt(Guid assessmentId)
@@ -87,6 +113,7 @@ public class AttemptService : IAttemptService
                         resultRequestDto.UserAnswer
                     );
                 }
+                
             
                 var resultEntity = ResultMapper.ToEntity(
                     resultRequestDto, 
@@ -108,28 +135,48 @@ public class AttemptService : IAttemptService
         return result;
     }
 
-    public async Task<AttemptResponseDto?> FinishAttempt(Guid id)
+    public async Task<bool> FinishAttempt(Guid id)
     {
         var attempt = await _repo.GetAttemptWithResultsByIdAsync(id, _user.UserId);
 
         if (attempt is null)
-            return null;
+            return false;
         
         attempt.AttemptStatus = AttemptStatus.Finished;
         attempt.FinishedAt = DateTime.UtcNow;
             
         await _repo.SaveChangesAsync();
             
-        return AttemptMapper.ToDto(attempt);
+        return true;
+    }
+    
+    public async Task MarkAbandonedAttempts()
+    {
+        var attempts = await _repo.GetAbandonedAttemptsAsync();
+        
+        if (attempts is null || attempts.Count == 0)
+            return;
+
+        
+        foreach (var attempt in attempts)
+        {
+            attempt.AttemptStatus = AttemptStatus.Abandoned;
+        }
+        
+        await _repo.SaveChangesAsync();
     }
 
     public async Task<AttemptResponseDto?> GetResults(Guid id)
     {
-        var attempt = await _repo.GetAttemptWithResultsByIdAsync(id, _user.UserId);
+        var attempt = await _repo.GetFullAttemptByIdAsync(id, _user.UserId);
 
         if (attempt is null)
             return null;
         
-        return AttemptMapper.ToDto(attempt);
+        var result = AttemptMapper.ToDto(attempt);
+
+        _attemptScoringService.AverageScoreAttempt(result);
+        
+        return result;
     }
 }
