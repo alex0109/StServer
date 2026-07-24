@@ -7,7 +7,9 @@ public static class MaterialEndpoints
 {
     public static void MapMaterialEndpoints(this WebApplication app)
     {
-        var materialGroup = app.MapGroup("api/materials").RequireAuthorization();
+        var materialGroup = app.MapGroup("api/materials")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
 
         materialGroup.MapGet("/", GetAllMaterials);
         materialGroup.MapGet("/{materialId}", GetMaterial);

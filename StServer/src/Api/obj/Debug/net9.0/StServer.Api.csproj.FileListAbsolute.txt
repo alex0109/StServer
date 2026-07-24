@@ -165,3 +165,6 @@
 /Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/tr-TR/Hangfire.Core.resources.dll
 /Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/zh-TW/Hangfire.Core.resources.dll
 /Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/zh/Hangfire.Core.resources.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/DotNetEnv.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/Superpower.dll
+/Users/reybey/RiderProjects/StServer/StServer/src/Api/bin/Debug/net9.0/appsettings.Production.json

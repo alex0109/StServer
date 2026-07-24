@@ -7,7 +7,9 @@ public static class AssessmentEndpoints
 {
     public static void MapAssessmentEndpoints(this WebApplication app)
     {
-        var assessmentGroup = app.MapGroup("api/assessments").RequireAuthorization();
+        var assessmentGroup = app.MapGroup("api/assessments")
+            .RequireRateLimiting("api")
+            .RequireAuthorization();
 
         assessmentGroup.MapPost("/{materialId}/start", StartAssessment);
         assessmentGroup.MapGet("/{materialId}", GetAssessment);

@@ -8,10 +8,13 @@ public static class QuestionEndpoints
     public static void MapQuestionEndpoints(this WebApplication app)
     {
      
-        var questionGroup = app.MapGroup("api/materials/{materialId}/questions").RequireAuthorization();
+        var questionGroup = app.MapGroup("api/materials/{materialId}/questions")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
 
         questionGroup.MapGet("/", GetAllQuestions);
-        questionGroup.MapGet("/attempt", GetReducedQuestions);
+        questionGroup.MapGet("/reduced/active", GetActiveReducedQuestions);
+        questionGroup.MapGet("/reduced", GetAllReducedQuestions);
         questionGroup.MapGet("/{id}", GetQuestion);
         questionGroup.MapPost("/open", CreateOpenQuestion);
         questionGroup.MapPost("/options", CreateOptionQuestion);
@@ -25,7 +28,14 @@ public static class QuestionEndpoints
             return TypedResults.Ok(result);
         };
         
-        static async Task<IResult> GetReducedQuestions(Guid materialId, IQuestionService service)
+        static async Task<IResult> GetActiveReducedQuestions(Guid materialId, IQuestionService service)
+        {
+            var result = await service.GetActiveReducedQuestionsAsync(materialId);
+
+            return TypedResults.Ok(result);
+        };
+        
+        static async Task<IResult> GetAllReducedQuestions(Guid materialId, IQuestionService service)
         {
             var result = await service.GetAllReducedQuestionsAsync(materialId);
 

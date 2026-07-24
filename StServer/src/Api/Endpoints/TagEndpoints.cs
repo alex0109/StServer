@@ -7,7 +7,9 @@ public static class TagEndpoints
 {
     public static void MapTagEndpoints(this WebApplication app)
     {
-        var tagGroup = app.MapGroup("api/tags").RequireAuthorization();
+        var tagGroup = app.MapGroup("api/tags")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
 
         tagGroup.MapGet("/", GetTags);
         tagGroup.MapGet("/{tagId}", GetTagById);

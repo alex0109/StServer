@@ -6,6 +6,8 @@ public interface IQuestionService
 {
     Task<List<QuestionResponseDto>> GetActiveQuestionsAsync(Guid materialId);
     
+    Task<List<QuestionReducedDto>> GetActiveReducedQuestionsAsync(Guid materialId);
+    
     Task<List<QuestionReducedDto>> GetAllReducedQuestionsAsync(Guid materialId);
     
     Task<QuestionResponseDto?> GetByIdQuestionAsync(Guid materialId, Guid id);

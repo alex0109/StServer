@@ -27,9 +27,16 @@ public class QuestionService : IQuestionService
         return questions.Select(QuestionMapper.ToDto).ToList();
     }
     
-    public async Task<List<QuestionReducedDto>> GetAllReducedQuestionsAsync(Guid materialId)
+    public async Task<List<QuestionReducedDto>> GetActiveReducedQuestionsAsync(Guid materialId)
     {
         var questions = await _repo.GetActiveQuestionsAsync(materialId, _user.UserId);
+        
+        return questions.Select(QuestionMapper.ToReducedDto).ToList();
+    }
+    
+    public async Task<List<QuestionReducedDto>> GetAllReducedQuestionsAsync(Guid materialId)
+    {
+        var questions = await _repo.GetAllQuestionsAsync(materialId, _user.UserId);
         
         return questions.Select(QuestionMapper.ToReducedDto).ToList();
     }

@@ -7,6 +7,7 @@ using StServer.Api.Endpoints;
 using System.Text.Json.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
+using Microsoft.AspNetCore.RateLimiting;
 using StServer.Api.Common;
 using StServer.Application;
 using StServer.Application.Interfaces;
@@ -15,14 +16,24 @@ using StServer.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? throw new Exception("Jwt:Secret missing");
+if (builder.Environment.IsDevelopment())
+{
+    DotNetEnv.Env.Load();
+}
+
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new Exception("Jwt:Secret missing");
+
+var allowedOrigins =
+    builder.Configuration
+        .GetSection("Cors:AllowedOrigins")
+        .Get<string[]>();
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:3000")
+            .WithOrigins(allowedOrigins!)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
@@ -37,9 +48,12 @@ builder.Services
         {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-            ValidateIssuer = false,
             ValidateAudience = true,
-            ValidAudience = "authenticated"
+            ValidateIssuer = true,
+            ValidIssuer = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? throw new Exception("SUPABASE_URL missing"),
+            ValidAudience = "authenticated",
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.Zero
         };
     });
 
@@ -62,7 +76,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
     );
 });
 
-String? connectionString = builder.Configuration.GetConnectionString("MyDB");
+String? connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? throw new Exception("DATABASE_URL missing");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
@@ -75,15 +89,36 @@ builder.Services.AddHangfire(config =>
 
 builder.Services.AddHangfireServer();
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("api", limiter =>
+    {
+        limiter.Window = TimeSpan.FromMinutes(1);
+        limiter.PermitLimit = 100;
+    });
+});
+
 var app = builder.Build();
+
+app.UseHttpsRedirection();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseRateLimiter();
+
 // Підключаємо dashboard для моніторингу
-app.UseHangfireDashboard();
+if (app.Environment.IsDevelopment())
+{
+    app.UseHangfireDashboard();
+}
 
 // Підключаємо ендпоінти
 app.MapMaterialEndpoints();
@@ -95,6 +130,6 @@ app.MapTagEndpoints();
 RecurringJob.AddOrUpdate<AttemptCleanupJob>(
     "cleanup-attempts",
     x => x.Cleanup(),
-    Cron.Minutely);
+    Cron.Daily);
 
 app.Run();

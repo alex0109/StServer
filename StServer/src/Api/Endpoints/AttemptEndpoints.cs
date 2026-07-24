@@ -8,7 +8,9 @@ public static class AttemptEndpoints
 {
     public static void MapAttemptEndpoints(this WebApplication app)
     {
-        var assessmentGroup = app.MapGroup("api/attempts").RequireAuthorization();
+        var assessmentGroup = app.MapGroup("api/attempts")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
 
         assessmentGroup.MapGet("/m/{materialId}", GetFinishedAttempts);
         assessmentGroup.MapGet("/{attemptId}", GetAttempt);
