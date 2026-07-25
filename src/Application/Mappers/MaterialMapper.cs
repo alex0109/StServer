@@ -1,11 +1,11 @@
 using System.Text.Json;
-using StServer.Domain.Entities;
-using StServer.Application.DTOs;
-using StServer.Application.DTOs.Material;
-using StServer.Application.DTOs.Tag;
-using StServer.Domain.Utility.Material;
+using Domain.Entities;
+using Application.DTOs;
+using Application.DTOs.Material;
+using Application.DTOs.Tag;
+using Domain.Utility.Material;
 
-namespace StServer.Application.Mappers;
+namespace Application.Mappers;
 
 public static class MaterialMapper
 {

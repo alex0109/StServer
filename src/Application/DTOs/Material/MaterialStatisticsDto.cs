@@ -1,6 +1,6 @@
-using StServer.Domain.Utility.Material;
+using Domain.Utility.Material;
 
-namespace StServer.Application.DTOs.Material;
+namespace Application.DTOs.Material;
 
 public class MaterialStatisticsDto
 {

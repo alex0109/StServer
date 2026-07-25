@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Material;
-using StServer.Application.Interfaces;
+using Application.DTOs.Material;
+using Application.Interfaces;
 
-namespace StServer.Api.Endpoints;
+namespace Api.Endpoints;
 
 public static class MaterialEndpoints
 {

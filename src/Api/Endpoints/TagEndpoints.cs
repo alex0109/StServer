@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Tag;
-using StServer.Application.Interfaces;
+using Application.DTOs.Tag;
+using Application.Interfaces;
 
-namespace StServer.Api.Endpoints;
+namespace Api.Endpoints;
 
 public static class TagEndpoints
 {

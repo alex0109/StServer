@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace StServer.Domain.Entities;
+namespace Domain.Entities;
 
 public class Tag
 {

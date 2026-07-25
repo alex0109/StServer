@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs.Attempt;
+namespace Application.DTOs.Attempt;
 
 public class StartAttemptDto
 {

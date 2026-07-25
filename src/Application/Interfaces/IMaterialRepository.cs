@@ -1,6 +1,6 @@
-using StServer.Domain.Entities;
+using Domain.Entities;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IMaterialRepository
 {

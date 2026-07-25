@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs.Option;
+namespace Application.DTOs.Option;
 
 public class OptionCreateDto
 {

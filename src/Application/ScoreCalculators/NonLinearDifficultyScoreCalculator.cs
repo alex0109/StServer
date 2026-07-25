@@ -1,8 +1,8 @@
-using StServer.Application.DTOs.Result;
-using StServer.Application.Interfaces;
-using StServer.Domain.Utility.Question;
+using Application.DTOs.Result;
+using Application.Interfaces;
+using Domain.Utility.Question;
 
-namespace StServer.Application.ScoreCalculators;
+namespace Application.ScoreCalculators;
 
 public interface IDifficultyWeightProvider
 {

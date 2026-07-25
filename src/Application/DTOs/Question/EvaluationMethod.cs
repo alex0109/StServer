@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs.Question;
+namespace Application.DTOs.Question;
 
 public enum EvaluationMethod
 {

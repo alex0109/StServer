@@ -1,8 +1,8 @@
-using StServer.Application.DTOs.Attempt;
-using StServer.Application.DTOs.Result;
-using StServer.Application.Interfaces;
+using Application.DTOs.Attempt;
+using Application.DTOs.Result;
+using Application.Interfaces;
 
-namespace StServer.Api.Endpoints;
+namespace Api.Endpoints;
 
 public static class AttemptEndpoints
 {

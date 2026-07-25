@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using StServer.Infrastructure.Data;
+using Infrastructure.Data;
 
 #nullable disable
 
@@ -26,7 +26,7 @@ namespace StServer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
+            modelBuilder.Entity("Domain.Entities.Material", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -65,7 +65,7 @@ namespace StServer.Migrations
                     b.ToTable("Materials");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
+            modelBuilder.Entity("Domain.Entities.Question", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -96,9 +96,9 @@ namespace StServer.Migrations
                     b.ToTable("Questions");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
+            modelBuilder.Entity("Domain.Entities.Question", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Material", "Material")
+                    b.HasOne("Domain.Entities.Material", "Material")
                         .WithMany("Questions")
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -107,7 +107,7 @@ namespace StServer.Migrations
                     b.Navigation("Material");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
+            modelBuilder.Entity("Domain.Entities.Material", b =>
                 {
                     b.Navigation("Questions");
                 });

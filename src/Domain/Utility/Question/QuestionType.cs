@@ -1,4 +1,4 @@
-namespace StServer.Domain.Utility.Question;
+namespace Domain.Utility.Question;
 
 public enum QuestionType
 {

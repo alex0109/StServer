@@ -1,9 +1,9 @@
-using StServer.Application.DTOs.Attempt;
-using StServer.Application.DTOs.Result;
-using StServer.Domain.Entities;
-using StServer.Domain.Utility.Attempt;
+using Application.DTOs.Attempt;
+using Application.DTOs.Result;
+using Domain.Entities;
+using Domain.Utility.Attempt;
 
-namespace StServer.Application.Mappers;
+namespace Application.Mappers;
 
 public class AttemptMapper
 {

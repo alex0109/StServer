@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs.Result;
+namespace Application.DTOs.Result;
 
 public class ResultRequestDto
 {

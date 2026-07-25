@@ -1,8 +1,8 @@
-using StServer.Application.DTOs.Attempt;
-using StServer.Application.Interfaces;
-using StServer.Application.ScoreCalculators;
+using Application.DTOs.Attempt;
+using Application.Interfaces;
+using Application.ScoreCalculators;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class AttemptScoringService: IAttemptScoringService
 {

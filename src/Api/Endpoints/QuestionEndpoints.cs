@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Question;
-using StServer.Application.Interfaces;
+using Application.DTOs.Question;
+using Application.Interfaces;
 
-namespace StServer.Api.Endpoints;
+namespace Api.Endpoints;
 
 public static class QuestionEndpoints
 {

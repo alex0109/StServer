@@ -1,4 +1,4 @@
-namespace StServer.Application.Constants;
+namespace Application.Constants;
 
 public class UserLimits
 {

@@ -1,6 +1,6 @@
-using StServer.Application.DTOs.Question;
+using Application.DTOs.Question;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IAnswerEvaluationService
 {

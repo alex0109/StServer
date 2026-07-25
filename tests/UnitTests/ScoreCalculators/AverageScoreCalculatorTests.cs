@@ -1,6 +1,6 @@
 using Shouldly;
-using StServer.Application.DTOs.Result;
-using StServer.Application.ScoreCalculators;
+using Application.DTOs.Result;
+using Application.ScoreCalculators;
 using Xunit;
 
 namespace StServer.UnitTests.ScoreCalculators;

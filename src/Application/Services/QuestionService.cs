@@ -1,12 +1,12 @@
-using StServer.Application.Constants;
-using StServer.Application.DTOs.Option;
-using StServer.Application.DTOs.Question;
-using StServer.Application.Exceptions;
-using StServer.Application.Interfaces;
-using StServer.Application.Mappers;
-using StServer.Domain.Entities;
+using Application.Constants;
+using Application.DTOs.Option;
+using Application.DTOs.Question;
+using Application.Exceptions;
+using Application.Interfaces;
+using Application.Mappers;
+using Domain.Entities;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class QuestionService : IQuestionService
 {

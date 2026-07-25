@@ -1,6 +1,6 @@
-using StServer.Application.Interfaces;
+using Application.Interfaces;
 
-namespace StServer.Application.Jobs;
+namespace Application.Jobs;
 
 public class AttemptCleanupJob
 {

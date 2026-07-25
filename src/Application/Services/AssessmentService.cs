@@ -1,8 +1,8 @@
-using StServer.Application.DTOs.Assessment;
-using StServer.Application.Interfaces;
-using StServer.Application.Mappers;
+using Application.DTOs.Assessment;
+using Application.Interfaces;
+using Application.Mappers;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class AssessmentService : IAssessmentService
 {

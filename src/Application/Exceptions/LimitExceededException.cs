@@ -1,4 +1,4 @@
-namespace StServer.Application.Exceptions;
+namespace Application.Exceptions;
 
 public class LimitExceededException : Exception
 {

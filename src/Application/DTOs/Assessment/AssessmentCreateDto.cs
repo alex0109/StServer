@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs.Assessment;
+namespace Application.DTOs.Assessment;
 
 public class AssessmentCreateDto
 {

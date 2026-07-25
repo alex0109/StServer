@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Result;
-using StServer.Domain.Utility.Attempt;
+using Application.DTOs.Result;
+using Domain.Utility.Attempt;
 
-namespace StServer.Application.DTOs.Attempt;
+namespace Application.DTOs.Attempt;
 
 public class AttemptResponseDto
 {

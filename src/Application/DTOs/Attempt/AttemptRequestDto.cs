@@ -1,6 +1,6 @@
-using StServer.Application.DTOs.Result;
+using Application.DTOs.Result;
 
-namespace StServer.Application.DTOs.Attempt;
+namespace Application.DTOs.Attempt;
 
 public class AttemptRequestDto
 {

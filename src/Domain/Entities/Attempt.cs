@@ -1,6 +1,6 @@
-using StServer.Domain.Utility.Attempt;
+using Domain.Utility.Attempt;
 
-namespace StServer.Domain.Entities;
+namespace Domain.Entities;
 
 public class Attempt
 {

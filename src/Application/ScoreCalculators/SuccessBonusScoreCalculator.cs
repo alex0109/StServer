@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Result;
-using StServer.Application.Interfaces;
+using Application.DTOs.Result;
+using Application.Interfaces;
 
-namespace StServer.Application.ScoreCalculators;
+namespace Application.ScoreCalculators;
 
 public interface ISuccessBonusScoreCalculator : IScoreCalculator { }
 

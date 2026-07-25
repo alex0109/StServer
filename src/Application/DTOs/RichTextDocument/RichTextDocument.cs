@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs;
+namespace Application.DTOs;
 
 public class NodeAttrs
 {

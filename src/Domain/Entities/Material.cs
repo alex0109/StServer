@@ -1,8 +1,8 @@
 using System.Text.Json;
 using System.ComponentModel.DataAnnotations;
-using StServer.Domain.Utility.Material;
+using Domain.Utility.Material;
 
-namespace StServer.Domain.Entities;
+namespace Domain.Entities;
 
 public class Material
 {

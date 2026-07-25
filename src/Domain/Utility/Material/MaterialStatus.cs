@@ -1,4 +1,4 @@
-namespace StServer.Domain.Utility.Material;
+namespace Domain.Utility.Material;
 
 public enum MaterialStatus
 {

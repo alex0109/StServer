@@ -1,6 +1,6 @@
-using StServer.Domain.Utility.Attempt;
+using Domain.Utility.Attempt;
 
-namespace StServer.Application.DTOs.Attempt;
+namespace Application.DTOs.Attempt;
 
 public class AttemptUpdateDto
 {

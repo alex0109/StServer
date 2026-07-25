@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using StServer.Infrastructure.Data;
+using Infrastructure.Data;
 
 #nullable disable
 
@@ -23,7 +23,7 @@ namespace StServer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+            modelBuilder.Entity("Domain.Entities.Assessment", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -43,7 +43,7 @@ namespace StServer.Migrations
                     b.ToTable("Assessments");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Attempt", b =>
+            modelBuilder.Entity("Domain.Entities.Attempt", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -72,7 +72,7 @@ namespace StServer.Migrations
                     b.ToTable("Attempts");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
+            modelBuilder.Entity("Domain.Entities.Material", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -119,7 +119,7 @@ namespace StServer.Migrations
                     b.ToTable("Materials");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.MaterialTag", b =>
+            modelBuilder.Entity("Domain.Entities.MaterialTag", b =>
                 {
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
@@ -134,7 +134,7 @@ namespace StServer.Migrations
                     b.ToTable("MaterialTags");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Option", b =>
+            modelBuilder.Entity("Domain.Entities.Option", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -156,7 +156,7 @@ namespace StServer.Migrations
                     b.ToTable("Options");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
+            modelBuilder.Entity("Domain.Entities.Question", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -212,7 +212,7 @@ namespace StServer.Migrations
                     b.ToTable("Questions");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Result", b =>
+            modelBuilder.Entity("Domain.Entities.Result", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -265,7 +265,7 @@ namespace StServer.Migrations
                     b.ToTable("Results");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Tag", b =>
+            modelBuilder.Entity("Domain.Entities.Tag", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -289,9 +289,9 @@ namespace StServer.Migrations
                     b.ToTable("Tags");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+            modelBuilder.Entity("Domain.Entities.Assessment", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Material", "Material")
+                    b.HasOne("Domain.Entities.Material", "Material")
                         .WithMany("Assessments")
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -300,9 +300,9 @@ namespace StServer.Migrations
                     b.Navigation("Material");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Attempt", b =>
+            modelBuilder.Entity("Domain.Entities.Attempt", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Assessment", "Assessment")
+                    b.HasOne("Domain.Entities.Assessment", "Assessment")
                         .WithMany("Attempts")
                         .HasForeignKey("AssessmentId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -311,15 +311,15 @@ namespace StServer.Migrations
                     b.Navigation("Assessment");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.MaterialTag", b =>
+            modelBuilder.Entity("Domain.Entities.MaterialTag", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Material", "Material")
+                    b.HasOne("Domain.Entities.Material", "Material")
                         .WithMany("MaterialTags")
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("StServer.Domain.Entities.Tag", "Tag")
+                    b.HasOne("Domain.Entities.Tag", "Tag")
                         .WithMany("MaterialTags")
                         .HasForeignKey("TagId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -330,9 +330,9 @@ namespace StServer.Migrations
                     b.Navigation("Tag");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Option", b =>
+            modelBuilder.Entity("Domain.Entities.Option", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Question", "Question")
+                    b.HasOne("Domain.Entities.Question", "Question")
                         .WithMany("Options")
                         .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -341,9 +341,9 @@ namespace StServer.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
+            modelBuilder.Entity("Domain.Entities.Question", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Material", "Material")
+                    b.HasOne("Domain.Entities.Material", "Material")
                         .WithMany("Questions")
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -352,15 +352,15 @@ namespace StServer.Migrations
                     b.Navigation("Material");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Result", b =>
+            modelBuilder.Entity("Domain.Entities.Result", b =>
                 {
-                    b.HasOne("StServer.Domain.Entities.Attempt", "Attempt")
+                    b.HasOne("Domain.Entities.Attempt", "Attempt")
                         .WithMany("Results")
                         .HasForeignKey("AttemptId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("StServer.Domain.Entities.Question", "Question")
+                    b.HasOne("Domain.Entities.Question", "Question")
                         .WithMany("Results")
                         .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -371,17 +371,17 @@ namespace StServer.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Assessment", b =>
+            modelBuilder.Entity("Domain.Entities.Assessment", b =>
                 {
                     b.Navigation("Attempts");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Attempt", b =>
+            modelBuilder.Entity("Domain.Entities.Attempt", b =>
                 {
                     b.Navigation("Results");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Material", b =>
+            modelBuilder.Entity("Domain.Entities.Material", b =>
                 {
                     b.Navigation("Assessments");
 
@@ -390,14 +390,14 @@ namespace StServer.Migrations
                     b.Navigation("Questions");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Question", b =>
+            modelBuilder.Entity("Domain.Entities.Question", b =>
                 {
                     b.Navigation("Options");
 
                     b.Navigation("Results");
                 });
 
-            modelBuilder.Entity("StServer.Domain.Entities.Tag", b =>
+            modelBuilder.Entity("Domain.Entities.Tag", b =>
                 {
                     b.Navigation("MaterialTags");
                 });

@@ -1,6 +1,6 @@
-using StServer.Application.DTOs.Assessment;
+using Application.DTOs.Assessment;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IAssessmentService
 {

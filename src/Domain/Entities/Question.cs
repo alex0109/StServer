@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using StServer.Domain.Utility.Question;
+using Domain.Utility.Question;
 
-namespace StServer.Domain.Entities;
+namespace Domain.Entities;
 
 public class Question
 {

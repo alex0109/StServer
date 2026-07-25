@@ -1,8 +1,8 @@
-using StServer.Application.DTOs.Attempt;
-using StServer.Application.DTOs.Material;
-using StServer.Application.DTOs.Tag;
+using Application.DTOs.Attempt;
+using Application.DTOs.Material;
+using Application.DTOs.Tag;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IMaterialService
 {

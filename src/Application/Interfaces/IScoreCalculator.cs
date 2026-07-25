@@ -1,6 +1,6 @@
-using StServer.Application.DTOs.Result;
+using Application.DTOs.Result;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IScoreCalculator
 {

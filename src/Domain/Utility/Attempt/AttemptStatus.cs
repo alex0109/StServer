@@ -1,4 +1,4 @@
-namespace StServer.Domain.Utility.Attempt;
+namespace Domain.Utility.Attempt;
 
 public enum AttemptStatus
 {

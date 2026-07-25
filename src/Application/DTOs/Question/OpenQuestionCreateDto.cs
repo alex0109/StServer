@@ -1,6 +1,6 @@
-using StServer.Domain.Utility.Question;
+using Domain.Utility.Question;
 
-namespace StServer.Application.DTOs.Question;
+namespace Application.DTOs.Question;
 
 public class OpenQuestionCreateDto
 {

@@ -1,7 +1,7 @@
-using StServer.Application.Mappers;
-using StServer.Application.Interfaces;
+using Application.Mappers;
+using Application.Interfaces;
 
-namespace StServer.Api.Endpoints;
+namespace Api.Endpoints;
 
 public static class AssessmentEndpoints
 {

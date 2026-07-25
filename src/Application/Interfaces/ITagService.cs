@@ -1,8 +1,8 @@
-using StServer.Application.DTOs.Material;
-using StServer.Application.DTOs.Tag;
-using StServer.Domain.Entities;
+using Application.DTOs.Material;
+using Application.DTOs.Tag;
+using Domain.Entities;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface ITagService
 {

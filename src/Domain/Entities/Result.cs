@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using StServer.Domain.Utility.Result;
+using Domain.Utility.Result;
 
-namespace StServer.Domain.Entities;
+namespace Domain.Entities;
 
 public class Result
 {

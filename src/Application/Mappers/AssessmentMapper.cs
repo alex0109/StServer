@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Assessment;
-using StServer.Domain.Entities;
+using Application.DTOs.Assessment;
+using Domain.Entities;
 
-namespace StServer.Application.Mappers;
+namespace Application.Mappers;
 
 public class AssessmentMapper
 {

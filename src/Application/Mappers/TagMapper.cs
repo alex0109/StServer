@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Tag;
-using StServer.Domain.Entities;
+using Application.DTOs.Tag;
+using Domain.Entities;
 
-namespace StServer.Application.Mappers;
+namespace Application.Mappers;
 
 public class TagMapper
 {

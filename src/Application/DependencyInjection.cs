@@ -1,10 +1,10 @@
 using Microsoft.Extensions.DependencyInjection;
-using StServer.Application.Evaluators;
-using StServer.Application.Interfaces;
-using StServer.Application.ScoreCalculators;
-using StServer.Application.Services;
+using Application.Evaluators;
+using Application.Interfaces;
+using Application.ScoreCalculators;
+using Application.Services;
 
-namespace StServer.Application;
+namespace Application;
 
 public static class DependencyInjection
 {

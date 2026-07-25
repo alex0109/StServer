@@ -1,12 +1,12 @@
-using StServer.Application.Constants;
-using StServer.Application.DTOs.Material;
-using StServer.Application.DTOs.Tag;
-using StServer.Application.Exceptions;
-using StServer.Application.Interfaces;
-using StServer.Application.Mappers;
-using StServer.Domain.Entities;
+using Application.Constants;
+using Application.DTOs.Material;
+using Application.DTOs.Tag;
+using Application.Exceptions;
+using Application.Interfaces;
+using Application.Mappers;
+using Domain.Entities;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class TagService : ITagService
 {

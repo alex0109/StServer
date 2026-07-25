@@ -1,8 +1,8 @@
 using Microsoft.Extensions.DependencyInjection;
-using StServer.Application.Interfaces;
-using StServer.Infrastructure.Repositories;
+using Application.Interfaces;
+using Infrastructure.Repositories;
 
-namespace StServer.Infrastructure;
+namespace Infrastructure;
 
 public static class DependencyInjection
 {

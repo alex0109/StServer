@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using StServer.Application.Interfaces;
-using StServer.Domain.Entities;
-using StServer.Infrastructure.Data;
+using Application.Interfaces;
+using Domain.Entities;
+using Infrastructure.Data;
 
-namespace StServer.Infrastructure.Repositories;
+namespace Infrastructure.Repositories;
 
 public class QuestionRepository : IQuestionRepository
 {

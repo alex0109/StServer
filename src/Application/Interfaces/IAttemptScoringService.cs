@@ -1,6 +1,6 @@
-using StServer.Application.DTOs.Attempt;
+using Application.DTOs.Attempt;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IAttemptScoringService
 {

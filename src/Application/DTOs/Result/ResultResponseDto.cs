@@ -1,6 +1,6 @@
-using StServer.Domain.Utility.Result;
+using Domain.Utility.Result;
 
-namespace StServer.Application.DTOs.Result;
+namespace Application.DTOs.Result;
 
 public class ResultResponseDto
 {

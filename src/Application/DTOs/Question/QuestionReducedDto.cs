@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Option;
-using StServer.Domain.Utility.Question;
+using Application.DTOs.Option;
+using Domain.Utility.Question;
 
-namespace StServer.Application.DTOs.Question;
+namespace Application.DTOs.Question;
 
 public class QuestionReducedDto
 {

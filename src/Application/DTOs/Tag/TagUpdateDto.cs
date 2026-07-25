@@ -1,4 +1,4 @@
-namespace StServer.Application.DTOs.Tag;
+namespace Application.DTOs.Tag;
 
 public class TagUpdateDto
 {

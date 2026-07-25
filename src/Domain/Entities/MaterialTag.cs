@@ -1,4 +1,4 @@
-namespace StServer.Domain.Entities;
+namespace Domain.Entities;
 
 public class MaterialTag
 {

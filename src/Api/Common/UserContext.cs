@@ -1,7 +1,7 @@
 using System.Security.Claims;
-using StServer.Application.Interfaces;
+using Application.Interfaces;
 
-namespace StServer.Api.Common;
+namespace Api.Common;
 
 public class UserContext : IUserContext
 {

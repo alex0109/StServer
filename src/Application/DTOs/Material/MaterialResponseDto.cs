@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Tag;
-using StServer.Domain.Utility.Material;
+using Application.DTOs.Tag;
+using Domain.Utility.Material;
 
-namespace StServer.Application.DTOs.Material;
+namespace Application.DTOs.Material;
 
 public class MaterialResponseDto
 {

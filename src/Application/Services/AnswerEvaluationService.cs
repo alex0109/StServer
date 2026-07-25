@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Question;
-using StServer.Application.Interfaces;
+using Application.DTOs.Question;
+using Application.Interfaces;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class AnswerEvaluationService : IAnswerEvaluationService
 {

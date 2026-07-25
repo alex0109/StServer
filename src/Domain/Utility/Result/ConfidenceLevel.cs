@@ -1,4 +1,4 @@
-namespace StServer.Domain.Utility.Result;
+namespace Domain.Utility.Result;
 
 public enum ConfidenceLevel
 {

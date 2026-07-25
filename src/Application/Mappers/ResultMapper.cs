@@ -1,8 +1,8 @@
-using StServer.Domain.Entities;
-using StServer.Application.DTOs.Result;
-using StServer.Domain.Utility.Question;
+using Domain.Entities;
+using Application.DTOs.Result;
+using Domain.Utility.Question;
 
-namespace StServer.Application.Mappers;
+namespace Application.Mappers;
 
 public class ResultMapper
 {

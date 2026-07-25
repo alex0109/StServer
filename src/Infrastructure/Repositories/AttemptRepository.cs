@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using StServer.Application.Interfaces;
-using StServer.Domain.Entities;
-using StServer.Domain.Utility.Attempt;
-using StServer.Infrastructure.Data;
+using Application.Interfaces;
+using Domain.Entities;
+using Domain.Utility.Attempt;
+using Infrastructure.Data;
 
-namespace StServer.Infrastructure.Repositories;
+namespace Infrastructure.Repositories;
 
 public class AttemptRepository : IAttemptRepository
 {

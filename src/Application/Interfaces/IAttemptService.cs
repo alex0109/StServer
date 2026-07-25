@@ -1,9 +1,9 @@
-using StServer.Application.DTOs.Attempt;
-using StServer.Application.DTOs.Question;
-using StServer.Application.DTOs.Result;
-using StServer.Domain.Entities;
+using Application.DTOs.Attempt;
+using Application.DTOs.Question;
+using Application.DTOs.Result;
+using Domain.Entities;
 
-namespace StServer.Application.Interfaces;
+namespace Application.Interfaces;
 
 public interface IAttemptService
 {

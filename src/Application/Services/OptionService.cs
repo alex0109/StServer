@@ -1,9 +1,9 @@
-using StServer.Application.DTOs.Option;
-using StServer.Application.DTOs.Question;
-using StServer.Application.Interfaces;
-using StServer.Domain.Entities;
+using Application.DTOs.Option;
+using Application.DTOs.Question;
+using Application.Interfaces;
+using Domain.Entities;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class OptionService : IOptionService
 {

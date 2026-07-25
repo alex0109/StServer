@@ -1,12 +1,12 @@
-using StServer.Application.DTOs.Attempt;
-using StServer.Application.DTOs.Question;
-using StServer.Application.DTOs.Result;
-using StServer.Application.Interfaces;
-using StServer.Application.Mappers;
-using StServer.Domain.Utility.Attempt;
-using StServer.Domain.Utility.Question;
+using Application.DTOs.Attempt;
+using Application.DTOs.Question;
+using Application.DTOs.Result;
+using Application.Interfaces;
+using Application.Mappers;
+using Domain.Utility.Attempt;
+using Domain.Utility.Question;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class AttemptService : IAttemptService
 {

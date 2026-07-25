@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using StServer.Domain.Entities;
+using Domain.Entities;
 
-namespace StServer.Infrastructure.Data;
+namespace Infrastructure.Data;
 
 public class AppDbContext : DbContext
 {

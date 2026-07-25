@@ -1,7 +1,7 @@
-using StServer.Application.DTOs.Question;
-using StServer.Application.Interfaces;
+using Application.DTOs.Question;
+using Application.Interfaces;
 
-namespace StServer.Application.Evaluators;
+namespace Application.Evaluators;
 
 public class ExactValidationStep : IAnswerValidationStep
 {

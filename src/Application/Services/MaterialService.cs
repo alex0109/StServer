@@ -1,10 +1,10 @@
-using StServer.Application.Constants;
-using StServer.Application.DTOs.Material;
-using StServer.Application.Exceptions;
-using StServer.Application.Interfaces;
-using StServer.Application.Mappers;
+using Application.Constants;
+using Application.DTOs.Material;
+using Application.Exceptions;
+using Application.Interfaces;
+using Application.Mappers;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class MaterialService : IMaterialService
 {

@@ -1,9 +1,9 @@
-using StServer.Application.DTOs.Option;
-using StServer.Domain.Entities;
-using StServer.Application.DTOs.Question;
-using StServer.Domain.Utility.Question;
+using Application.DTOs.Option;
+using Domain.Entities;
+using Application.DTOs.Question;
+using Domain.Utility.Question;
 
-namespace StServer.Application.Mappers;
+namespace Application.Mappers;
 
 public static class QuestionMapper
 {

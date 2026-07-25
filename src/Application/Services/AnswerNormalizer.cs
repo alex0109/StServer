@@ -1,8 +1,8 @@
 using System.Text;
 using System.Text.RegularExpressions;
-using StServer.Application.Interfaces;
+using Application.Interfaces;
 
-namespace StServer.Application.Services;
+namespace Application.Services;
 
 public class AnswerNormalizer : IAnswerNormalizer
 {

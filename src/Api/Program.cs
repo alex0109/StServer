@@ -2,17 +2,17 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using StServer.Infrastructure.Data;
-using StServer.Api.Endpoints;
+using Infrastructure.Data;
+using Api.Endpoints;
 using System.Text.Json.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.RateLimiting;
-using StServer.Api.Common;
-using StServer.Application;
-using StServer.Application.Interfaces;
-using StServer.Application.Jobs;
-using StServer.Infrastructure;
+using Api.Common;
+using Application;
+using Application.Interfaces;
+using Application.Jobs;
+using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
