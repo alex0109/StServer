@@ -142,22 +142,44 @@ namespace StServer.Migrations
                 type: "integer",
                 nullable: false,
                 defaultValue: 0);
+            
+            migrationBuilder.Sql(@"
+                ALTER TABLE ""Materials""
+                ALTER COLUMN ""Type"" TYPE integer
+                USING (CASE ""Type""
+                    WHEN 'article' THEN 0
+                    WHEN 'video' THEN 1
+                    WHEN 'summary' THEN 2
+                    WHEN 'practice' THEN 3
+                    WHEN 'test' THEN 4
+                END);
+            ");
 
-            migrationBuilder.AlterColumn<int>(
-                name: "Type",
-                table: "Materials",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "text");
+            //migrationBuilder.AlterColumn<int>(
+            //    name: "Type",
+            //    table: "Materials",
+            //    type: "integer",
+            //    nullable: false,
+            //    oldClrType: typeof(string),
+            //    oldType: "text");
+            
+            migrationBuilder.Sql(@"
+                ALTER TABLE ""Materials""
+                ALTER COLUMN ""Status"" TYPE integer
+                USING (CASE ""Status""
+                    WHEN 'tolearn' THEN 0
+                    WHEN 'inprocess' THEN 1
+                    WHEN 'finished' THEN 2
+                END);
+            ");
 
-            migrationBuilder.AlterColumn<int>(
-                name: "Status",
-                table: "Materials",
-                type: "integer",
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "text");
+            //migrationBuilder.AlterColumn<int>(
+            //    name: "Status",
+            //    table: "Materials",
+            //    type: "integer",
+            //    nullable: false,
+            //    oldClrType: typeof(string),
+            //    oldType: "text");
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "DeletedAt",

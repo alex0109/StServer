@@ -119,8 +119,7 @@ public class MaterialService : IMaterialService
         
         if (updatedMaterial is null)
             return null;
-
-
+        
         return MaterialMapper.ToDto(updatedMaterial);
     }
 

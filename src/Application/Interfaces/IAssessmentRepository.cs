@@ -5,7 +5,7 @@ namespace Application.Interfaces;
 public interface IAssessmentRepository
 {
 
-    Task<Assessment?> GetAssessmentByIdAsync(Guid id, Guid userId);
+    Task<Assessment?> GetAssessmentByMaterialIdAsync(Guid materialId, Guid userId);
     
     Task AddAssessmentAsync(Assessment assessment);
 

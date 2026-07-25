@@ -26,4 +26,12 @@
     <ProjectReference Include="..\Infrastructure\Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="bin\Debug\net9.0\.env" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="bin\Debug\net9.0\" />
+  </ItemGroup>
+
 </Project>

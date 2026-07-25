@@ -10,6 +10,6 @@ public class Attempt
     public Guid AssessmentId { get; set; }
     public Assessment Assessment { get; set; } = null!;
     public AttemptStatus AttemptStatus  { get; set; }
-    public DateTime StartedAt { get; set; }
+    public required DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
 }

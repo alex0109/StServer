@@ -18,7 +18,7 @@ public class Material
     public JsonDocument? Content { get; set; }
     public required MaterialStatus Status { get; set; }
     public required bool IsActive { get; set; } = true;
-    public DateTime CreatedAt { get; set; }
+    public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int Version { get; set; } = 1;

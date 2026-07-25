@@ -32,6 +32,6 @@ public class TagMapper
             entity.Name = dto.Name;
         
         if (dto.Color is not null)
-            entity.Name = dto.Color;
+            entity.Color = dto.Color;
     }
 }

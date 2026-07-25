@@ -9,7 +9,9 @@ public class FuzzyValidationStep: IAnswerValidationStep
     public int Priority => 2;
     public AnswerEvaluationResult? Evaluate(string correctAnswer, string userAnswer)
     {
-        int score = Fuzz.TokenSortRatio(correctAnswer, userAnswer);
+        int score = Fuzz.TokenSortRatio(
+            correctAnswer.ToLowerInvariant(),
+            userAnswer.ToLowerInvariant());
 
         if (score >= 85)
         {

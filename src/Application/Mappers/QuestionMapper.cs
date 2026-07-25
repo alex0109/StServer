@@ -33,6 +33,7 @@ public static class QuestionMapper
             UserId = userId,
             Title = dto.Title,
             QuestionType = QuestionType.Options,
+            QuestionDifficulty =  dto.QuestionDifficulty,
             Explanation = dto?.Explanation,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow

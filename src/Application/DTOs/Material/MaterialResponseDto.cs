@@ -13,7 +13,7 @@ public class MaterialResponseDto
     public string? Link { get; set; }
     public RichTextDocument? Content { get; set; }
     public required MaterialStatus Status { get; set; }
-    public bool IsActive { get; set; }
+    public required bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int Version { get; set; }

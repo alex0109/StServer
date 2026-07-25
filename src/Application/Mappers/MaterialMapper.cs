@@ -48,6 +48,7 @@ public static class MaterialMapper
                 ? null
                 : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
             Version = entity.Version,
+            IsActive =  entity.IsActive
         };
     }
     

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Text.Json;
 using Infrastructure.Data;
 using Api.Endpoints;
 using System.Text.Json.Serialization;
@@ -19,14 +20,30 @@ var builder = WebApplication.CreateBuilder(args);
 if (builder.Environment.IsDevelopment())
 {
     DotNetEnv.Env.Load();
+    
+    Console.WriteLine(Environment.GetEnvironmentVariable("JWKS_URL"));
 }
 
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET") ?? throw new Exception("Jwt:Secret missing");
+JsonWebKeySet jwks;
+
+if (builder.Environment.EnvironmentName == "Testing")
+{
+    jwks = new JsonWebKeySet();
+}
+else
+{
+    var jwksUrl = Environment.GetEnvironmentVariable("JWKS_URL") ?? throw new Exception("JWKS_URL missing");
+    using var httpClient = new HttpClient();
+    var jwksJson = await httpClient.GetStringAsync(jwksUrl);
+    jwks = new JsonWebKeySet(jwksJson);
+}
+
+var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? throw new Exception("SUPABASE_URL missing");
 
 var allowedOrigins =
     builder.Configuration
         .GetSection("Cors:AllowedOrigins")
-        .Get<string[]>();
+        .Get<string[]>() ?? [];
 
 builder.Services.AddCors(options =>
 {
@@ -39,7 +56,6 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Аутентифікуємо користувача по Berear токену
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -47,11 +63,11 @@ builder.Services
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
+            IssuerSigningKeys = jwks.GetSigningKeys(),
             ValidateAudience = true,
-            ValidateIssuer = true,
-            ValidIssuer = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? throw new Exception("SUPABASE_URL missing"),
             ValidAudience = "authenticated",
+            ValidateIssuer = true,
+            ValidIssuer = $"{supabaseUrl}/auth/v1",
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -59,21 +75,17 @@ builder.Services
 
 builder.Services.AddAuthorization();
 
-// Дозволяє отримати HttpContext з будь якого місця в коді
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IUserContext, UserContext>();
 
-// Підключаємо DI(scope) з Infrastructure та Application
 builder.Services.AddInfrastructure();
 builder.Services.AddApplication();
 
-// Дозволяємо штуку яка може конвертувати назви enum в їх строкову версію замість цифр
-builder.Services.ConfigureHttpJsonOptions(options =>
+builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
 {
-    options.SerializerOptions.Converters.Add(
-        new JsonStringEnumConverter()
-    );
+    options.SerializerOptions.PropertyNameCaseInsensitive = true;
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
 });
 
 String? connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ?? throw new Exception("DATABASE_URL missing");
@@ -81,13 +93,15 @@ String? connectionString = Environment.GetEnvironmentVariable("DATABASE_URL") ??
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Підключаємо hangfire
-builder.Services.AddHangfire(config =>
+if (!builder.Environment.IsEnvironment("Testing"))
 {
-    config.UsePostgreSqlStorage(connectionString);
-});
+    builder.Services.AddHangfire(config =>
+    {
+        config.UsePostgreSqlStorage(connectionString);
+    });
 
-builder.Services.AddHangfireServer();
+    builder.Services.AddHangfireServer();
+}
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -100,36 +114,38 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
-app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();
+    app.UseHttpsRedirection();
 }
-
-app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.UseRateLimiter();
 
-// Підключаємо dashboard для моніторингу
-if (app.Environment.IsDevelopment())
-{
-    app.UseHangfireDashboard();
-}
-
-// Підключаємо ендпоінти
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
 app.MapAttemptEndpoints();
 app.MapTagEndpoints();
 
-RecurringJob.AddOrUpdate<AttemptCleanupJob>(
-    "cleanup-attempts",
-    x => x.Cleanup(),
-    Cron.Daily);
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    if (app.Environment.IsDevelopment())
+    {
+        app.UseHangfireDashboard();
+    }
+
+    RecurringJob.AddOrUpdate<AttemptCleanupJob>(
+        "cleanup-attempts",
+        x => x.Cleanup(),
+        Cron.Daily);
+}
 
 app.Run();
+
+public partial class Program { }

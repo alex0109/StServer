@@ -1,13 +1,12 @@
 using Shouldly;
 using Application.DTOs.Result;
 using Application.ScoreCalculators;
-using Xunit;
 
-namespace StServer.UnitTests.ScoreCalculators;
+namespace UnitTests.ScoreCalculators;
 
 public class AverageScoreCalculatorTests
 {
-    private readonly AverageScoreCalculator _sut = new(); // system under test
+    private readonly AverageScoreCalculator _sut = new();
 
     [Fact]
     public void Calculate_EmptyResults_ReturnsZero()

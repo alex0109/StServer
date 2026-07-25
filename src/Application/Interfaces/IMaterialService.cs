@@ -1,6 +1,4 @@
-using Application.DTOs.Attempt;
 using Application.DTOs.Material;
-using Application.DTOs.Tag;
 
 namespace Application.Interfaces;
 

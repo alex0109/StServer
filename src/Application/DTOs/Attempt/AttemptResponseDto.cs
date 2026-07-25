@@ -13,6 +13,6 @@ public class AttemptResponseDto
     public int WrongAnswers { get; set; }
     public double TotalTimeSeconds { get; set; }
     public List<ResultResponseDto> Results { get; set; } = [];
-    public DateTime StartedAt { get; set; }
+    public required DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
 }

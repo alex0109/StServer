@@ -66,7 +66,7 @@ public class AttemptService : IAttemptService
 
     public async Task<Guid?> StartAttempt(Guid assessmentId)
     {
-        var assessment = await _assessmentRepo.GetAssessmentByIdAsync(assessmentId, _user.UserId);
+        var assessment = await _assessmentRepo.GetAssessmentByMaterialIdAsync(assessmentId, _user.UserId);
         if (assessment is null) return null;
         
         var attemptEntity = AttemptMapper.ToEntity(assessmentId, _user.UserId);
