@@ -1,0 +1,63 @@
+using Application.DTOs.Option;
+using Application.DTOs.Question;
+using Application.Interfaces;
+using Domain.Entities;
+
+namespace Application.Services;
+
+public class OptionService : IOptionService
+{
+    public void SyncOptions(Question question, List<OptionUpdateDto> incoming)
+    {
+        var incomingIds = incoming
+            .Where(x => x.Id.HasValue)
+            .Select(x => x.Id!.Value)
+            .ToHashSet();
+
+        var toRemove = question.Options
+            .Where(x => !incomingIds.Contains(x.Id))
+            .ToList();
+
+        foreach (var option in toRemove)
+        {
+            question.Options.Remove(option);
+        }
+
+        Option? correctOption = null;
+
+        foreach (var dto in incoming)
+        {
+            Option option;
+
+            if (dto.Id.HasValue)
+            {
+                option = question.Options.First(x => x.Id == dto.Id);
+
+                option.Name = dto.Name;
+            }
+            else
+            {
+                option = new Option
+                {
+                    Id = Guid.NewGuid(),
+                    QuestionId = question.Id,
+                    Name = dto.Name
+                };
+
+                question.Options.Add(option);
+            }
+
+            if (dto.IsCorrect is not null && dto.IsCorrect is true)
+            {
+                correctOption = option;
+            }
+        }
+
+        if (incoming.Count(x => x.IsCorrect is true) != 1)
+        {
+            throw new Exception("At least one correct option required");
+        }
+
+        question.CorrectOptionId = correctOption.Id;
+    }
+}

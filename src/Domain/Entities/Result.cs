@@ -1,0 +1,24 @@
+using System.ComponentModel.DataAnnotations;
+using Domain.Utility.Result;
+
+namespace Domain.Entities;
+
+public class Result
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public Guid AttemptId { get; set; }
+    public Attempt Attempt { get; set; } = null!;
+    public Guid QuestionId { get; set; }
+    public Question Question { get; set; } = null!;
+    [MaxLength(1000)]
+    public string? UserAnswer { get; set; }
+    public Guid? UserAnswerOptionId { get; set; }
+    public required bool IsCorrect { get; set; }
+    public required double Score { get; set; }
+    public required int Weight { get; set; }
+    public TimeSpan TimeSpent { get; set; }
+    public ConfidenceLevel? ConfidenceLevel { get; set; }
+    public int AnswerChangedCount { get; set; } = 0;
+    public required DateTime AnsweredAt { get; set; }
+}

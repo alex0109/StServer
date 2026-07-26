@@ -1,0 +1,72 @@
+using Microsoft.EntityFrameworkCore;
+using Application.Interfaces;
+using Domain.Entities;
+using Infrastructure.Data;
+
+namespace Infrastructure.Repositories;
+
+public class MaterialRepository : IMaterialRepository
+{
+    private readonly AppDbContext _db;
+
+    public MaterialRepository(AppDbContext db)
+    {
+        _db = db;
+    }
+
+    public async Task<List<Material>> GetAllAsync(Guid userId)
+    {
+        return await _db.Materials
+            .Include(m => m.MaterialTags)
+            .ThenInclude(mt => mt.Tag)
+            .Include(mr => mr.Assessments)
+            .Where(x => x.UserId == userId)
+            .ToListAsync();
+    }
+
+    public async Task<Material?> GetByIdAsync(Guid materialId, Guid userId)
+    {
+        var material = await _db.Materials
+            .Include(m => m.MaterialTags)
+            .ThenInclude(mt => mt.Tag)
+            .Include(mr => mr.Assessments)
+            .FirstOrDefaultAsync(x => x.Id == materialId && x.UserId == userId);
+
+        if (material is null)
+        {
+            return null;
+        }
+        
+        return material;
+    }
+
+    public async Task AddAsync(Material material)
+    {
+        await _db.Materials.AddAsync(material);
+    }
+
+    public async Task<bool> DeleteAsync(Guid materialId, Guid userId)
+    {
+        var material = await _db.Materials
+            .FirstOrDefaultAsync(x => x.Id == materialId && x.UserId == userId);
+        
+        if (material is null)
+        {
+            return false;
+        }
+        
+        _db.Materials.Remove(material);
+        return true;
+        
+    }
+    
+    public async Task<int> CountByUserIdAsync(Guid userId)
+    {
+        return await _db.Materials.CountAsync(x => x.UserId == userId);
+    }
+
+    public Task SaveChangesAsync()
+    {
+        return _db.SaveChangesAsync();
+    }
+}
