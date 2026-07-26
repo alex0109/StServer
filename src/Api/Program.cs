@@ -10,6 +10,7 @@ using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.RateLimiting;
 using Api.Common;
+using Api.Middleware;
 using Application;
 using Application.Interfaces;
 using Application.Jobs;
@@ -112,7 +113,12 @@ builder.Services.AddRateLimiter(options =>
     });
 });
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 app.UseCors("AllowFrontend");
 

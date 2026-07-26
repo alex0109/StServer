@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Domain.Entities;
-using Application.DTOs;
+using Application.DTOs.RichTextDocument;
 using Application.DTOs.Material;
 using Application.DTOs.Tag;
 using Domain.Utility.Material;

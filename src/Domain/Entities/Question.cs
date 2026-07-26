@@ -10,7 +10,7 @@ public class Question
     public ICollection<Result> Results { get; set; } = new List<Result>();
     public Guid MaterialId { get; set; }
     public Material Material { get; set; } = null!;
-    [MaxLength(70)]
+    [MaxLength(100)]
     public required string Title { get; set; }
     [MaxLength(1000)] 
     public string? Answer { get; set; }

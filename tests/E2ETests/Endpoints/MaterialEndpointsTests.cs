@@ -5,12 +5,15 @@ using Domain.Utility.Material;
 using Shouldly;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Application.Constants;
+using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
 namespace E2ETests.Endpoints;
 
 public class MaterialEndpointsTests : IClassFixture<ApiFactory>
 {
+    private readonly ApiFactory _factory;
     private readonly HttpClient _client;
     private readonly HttpClient _noAuthClient;
 
@@ -22,7 +25,8 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
 
     public MaterialEndpointsTests(ApiFactory factory)
     {
-        _client = factory.CreateClient();
+        _factory = factory;
+        _client = factory.CreateAuthenticatedClient();
         _noAuthClient = factory.CreateClientWithoutAuth();
     }
     
@@ -89,6 +93,26 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
         fetched!.Id.ShouldBe(created.Id);
         fetched.Title.ShouldBe(createDto.Title);
     }
+    
+    [Fact]
+    public async Task CreateMaterial_WhenLimitExceeded_ReturnsConflictWithProblemDetails()
+    {
+        // створити MaxMaterials матеріалів
+        for (int i = 0; i < UserLimits.MaxMaterials; i++)
+            await CreateMaterial();
+
+        var response = await _client.PostAsJsonAsync("/api/materials", new MaterialCreateDto
+        {
+            Title = "One too many",
+            Type = MaterialType.article,
+            Status = MaterialStatus.tolearn
+        });
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        problem!.Title.ShouldBe("Limit exceeded");
+    }
 
     [Fact]
     public async Task GetMaterial_WhenNotExists_ReturnsNotFound()
@@ -148,9 +172,9 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
         var created = await createResponse.Content
             .ReadFromJsonAsync<MaterialResponseDto>(JsonOptions);
         
-        TestAuthHandler.CurrentUserId = Guid.NewGuid();
+        var otherUserClient = _factory.CreateAuthenticatedClient();
         
-        var response = await _client.GetAsync(
+        var response = await otherUserClient.GetAsync(
             $"/api/materials/{created!.Id}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);

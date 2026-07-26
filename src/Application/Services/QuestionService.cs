@@ -1,5 +1,4 @@
 using Application.Constants;
-using Application.DTOs.Option;
 using Application.DTOs.Question;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -53,6 +52,13 @@ public class QuestionService : IQuestionService
 
     public async Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
     {
+        var count = await _repo.CountByMaterialIdAsync(materialId);
+
+        if (count >= UserLimits.MaxQuestionsPerMaterial)
+        {
+            throw new LimitExceededException("Question limit reached");
+        }
+        
         var question = QuestionMapper.ToEntityOpenQuestion(questionDto, materialId, _user.UserId);
 
         var response = await _repo.AddQuestionAsync(question);

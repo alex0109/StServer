@@ -13,6 +13,7 @@ namespace E2ETests.Endpoints;
 
 public class QuestionEndpointsTests : IClassFixture<ApiFactory>
 {
+    private readonly ApiFactory _factory;
     private readonly HttpClient _client;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -23,7 +24,8 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
     
     public QuestionEndpointsTests(ApiFactory factory)
     {
-        _client = factory.CreateClient();
+        _factory = factory;
+        _client = factory.CreateAuthenticatedClient();
     }
     
     private async Task<MaterialResponseDto> CreateMaterial()
@@ -231,9 +233,9 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
 
         var question = await CreateOpenQuestion(material.Id);
 
-        TestAuthHandler.SetUser(Guid.NewGuid());
+        var otherUserClient = _factory.CreateAuthenticatedClient();
         
-        var response = await _client.GetAsync(
+        var response = await otherUserClient.GetAsync(
             $"/api/materials/{material.Id}/questions/{question.Id}");
         
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);

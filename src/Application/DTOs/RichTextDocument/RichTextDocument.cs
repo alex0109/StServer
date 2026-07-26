@@ -1,4 +1,6 @@
-namespace Application.DTOs;
+using System.ComponentModel.DataAnnotations;
+
+namespace Application.DTOs.RichTextDocument;
 
 public class NodeAttrs
 {
@@ -10,6 +12,7 @@ public class Node
 {
     public required string Type { get; set; }
 
+    [MaxLength(5000)]
     public string? Text { get; set; }
 
     public NodeAttrs? Attrs { get; set; }

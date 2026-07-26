@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Application.DTOs;
+using Application.DTOs.RichTextDocument;
 using Application.DTOs.Material;
 using Application.Mappers;
 using Domain.Entities;

@@ -33,6 +33,15 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         });
     }
     
+    public HttpClient CreateAuthenticatedClient(Guid? userId = null)
+    {
+        var client = CreateClient();
+        client.DefaultRequestHeaders.Add(
+            TestAuthHandler.UserIdHeader,
+            (userId ?? Guid.NewGuid()).ToString());
+        return client;
+    }
+    
     public HttpClient CreateClientWithoutAuth()
     {
         return WithWebHostBuilder(builder =>
