@@ -133,6 +133,12 @@ app.UseAuthorization();
 
 app.UseRateLimiter();
 
+app.MapGet("/", () => Results.Ok(new
+{
+    Status = "OK",
+    Name = "StServer",
+    Environment = app.Environment.EnvironmentName
+}));
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
