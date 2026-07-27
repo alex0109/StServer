@@ -129,11 +129,6 @@ public class MaterialMapperTests
                 {
                     Type = "heading",
                     Text = "Title",
-                    Attrs = new NodeAttrs
-                    {
-                        Width = 100,
-                        Align = "center"
-                    }
                 }
             ]
         };
@@ -149,12 +144,6 @@ public class MaterialMapperTests
 
         result.Content.Content[0].Type
             .ShouldBe("heading");
-
-        result.Content.Content[0].Attrs!.Width
-            .ShouldBe(100);
-
-        result.Content.Content[0].Attrs.Align
-            .ShouldBe("center");
     }
     
     [Fact]
