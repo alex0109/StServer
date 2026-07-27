@@ -146,10 +146,16 @@ if (!app.Environment.IsEnvironment("Testing"))
         app.UseHangfireDashboard();
     }
 
-    RecurringJob.AddOrUpdate<AttemptCleanupJob>(
-        "cleanup-attempts",
-        x => x.Cleanup(),
-        Cron.Daily);
+    using (var scope = app.Services.CreateScope())
+    {
+        var recurringJobManager =
+            scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+
+        recurringJobManager.AddOrUpdate<AttemptCleanupJob>(
+            "cleanup-attempts",
+            x => x.Cleanup(),
+            Cron.Daily);
+    }
 }
 
 app.Run();
