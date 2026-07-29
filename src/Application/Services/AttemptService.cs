@@ -33,7 +33,7 @@ public class AttemptService : IAttemptService
         _attemptScoringService = attemptScoringService;
     }
     
-    public async Task<List<AttemptResponseDto>> GetFinishedAttempts(Guid materialId)
+    public async Task<List<AttemptResponseDto>?> GetFinishedAttempts(Guid materialId)
     {
         var attempts = await _repo.GetFinishedAttemptsAsync(materialId, _user.UserId);
 
@@ -79,58 +79,79 @@ public class AttemptService : IAttemptService
     public async Task<AnswerEvaluationResult> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto)
     {
         var attempt = await _repo.GetFullAttemptByIdAsync(id, _user.UserId);
-        
+
         AnswerEvaluationResult result = new AnswerEvaluationResult
         {
             IsCorrect = false,
             Score = 0,
             Method = EvaluationMethod.None
         };
-        
-        if (attempt is not null)
+
+        if (attempt is null)
+            return result;
+
+        var questionId = resultRequestDto.QuestionId;
+        var question = await _questionRepo.GetByIdQuestionAsync(attempt.Assessment.MaterialId, questionId, _user.UserId);
+
+        if (question is null)
+            return result;
+
+        if (question.CorrectOptionId is not null && resultRequestDto.UserAnswerOptionId is not null)
         {
-            Guid questionId = resultRequestDto.QuestionId;
+            bool isIdCorrect = question.CorrectOptionId == resultRequestDto.UserAnswerOptionId;
 
-            var question = await _questionRepo.GetByIdQuestionAsync(attempt.Assessment.MaterialId, questionId, _user.UserId);
-            
-            if (question is not null)
+            result = new AnswerEvaluationResult
             {
-                if (question.CorrectOptionId is not null && resultRequestDto.UserAnswerOptionId is not null)
-                {
-                    bool isIdCorrect = question.CorrectOptionId == resultRequestDto.UserAnswerOptionId;
-
-                    result = new AnswerEvaluationResult
-                    {
-                        IsCorrect = isIdCorrect,
-                        Score = 100,
-                        Method = EvaluationMethod.Exact
-                    };
-                }
-                else if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
-                {
-                    result = _answerEvaluationService.EvaluateAnswer(
-                        question.Answer,
-                        resultRequestDto.UserAnswer
-                    );
-                }
-                
-            
-                var resultEntity = ResultMapper.ToEntity(
-                    resultRequestDto, 
-                    id, 
-                    _user.UserId, 
-                    result.IsCorrect, 
-                    result.Score,
-                    (int)question.QuestionDifficulty);
-                
-                resultEntity.AttemptId = id;
-
-                await _repo.AddResultAsync(resultEntity);
-            
-                await _repo.SaveChangesAsync();
-            }
-
+                IsCorrect = isIdCorrect,
+                Score = 100,
+                Method = EvaluationMethod.Exact
+            };
         }
+        else if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
+        {
+            result = _answerEvaluationService.EvaluateAnswer(
+                question.Answer,
+                resultRequestDto.UserAnswer
+            );
+        }
+
+        var now = DateTime.UtcNow;
+        var existing = attempt.Results.FirstOrDefault(r => r.QuestionId == questionId);
+
+        if (existing is null)
+        {
+            var checkpoint = attempt.Results
+                .Where(r => r.QuestionId != questionId)
+                .Select(r => r.LastModifiedAt ?? r.AnsweredAt)
+                .DefaultIfEmpty(attempt.StartedAt)
+                .Max();
+
+            var timeSpent = now - checkpoint;
+            if (timeSpent < TimeSpan.Zero)
+                timeSpent = TimeSpan.Zero;
+
+            var resultEntity = ResultMapper.ToEntity(
+                resultRequestDto,
+                id,
+                _user.UserId,
+                result.IsCorrect,
+                result.Score,
+                (int)question.QuestionDifficulty,
+                timeSpent);
+
+            resultEntity.AnsweredAt = now;
+            resultEntity.LastModifiedAt = now;
+
+            await _repo.AddResultAsync(resultEntity);
+        }
+        else
+        {
+            ResultMapper.ApplyUpdate(existing, resultRequestDto, result.IsCorrect, result.Score);
+            existing.LastModifiedAt = now;
+            existing.TimeSpent = now - existing.AnsweredAt;
+        }
+
+        await _repo.SaveChangesAsync();
 
         return result;
     }
@@ -156,7 +177,6 @@ public class AttemptService : IAttemptService
         
         if (attempts is null || attempts.Count == 0)
             return;
-
         
         foreach (var attempt in attempts)
         {

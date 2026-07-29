@@ -69,6 +69,7 @@ public static class MaterialMapper
         if (dto.Status is MaterialStatus status)
             entity.Status = status;
 
+        entity.Version++; 
         entity.UpdatedAt = DateTime.UtcNow;
     }
 }

@@ -20,5 +20,6 @@ public class Result
     public TimeSpan TimeSpent { get; set; }
     public ConfidenceLevel? ConfidenceLevel { get; set; }
     public int AnswerChangedCount { get; set; } = 0;
+    public DateTime? LastModifiedAt { get; set; }
     public required DateTime AnsweredAt { get; set; }
 }

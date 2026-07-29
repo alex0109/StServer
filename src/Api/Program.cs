@@ -1,8 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using System.Text.Json;
 using Infrastructure.Data;
 using Api.Endpoints;
 using System.Text.Json.Serialization;
@@ -144,6 +142,7 @@ app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
 app.MapAttemptEndpoints();
 app.MapTagEndpoints();
+app.MapStatisticsEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
