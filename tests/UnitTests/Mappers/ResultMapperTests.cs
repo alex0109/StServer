@@ -27,7 +27,8 @@ public class ResultMapperTests
             userId,
             isCorrect: true,
             score: 95,
-            weight: 3);
+            weight: 3,
+            timeSpent: TimeSpan.FromHours(2));
 
         result.ShouldNotBeNull();
 
@@ -63,7 +64,8 @@ public class ResultMapperTests
             Guid.NewGuid(),
             isCorrect: false,
             score: 0,
-            weight: 1);
+            weight: 1,
+            timeSpent: TimeSpan.FromHours(2));
 
         result.UserAnswer.ShouldBeNull();
         result.UserAnswerOptionId.ShouldBeNull();

@@ -97,6 +97,7 @@ public static class QuestionMapper
         if (dto.Explanation is not null)
             entity.Explanation = dto.Explanation;
 
+        entity.Version++; 
         entity.UpdatedAt = DateTime.UtcNow;
     }
 }

@@ -16,6 +16,7 @@ public static class DependencyInjection
         services.AddScoped<IAttemptService, AttemptService>();
         services.AddScoped<IOptionService, OptionService>();
         services.AddScoped<ITagService, TagService>();
+        services.AddScoped<IStatisticsService, StatisticsService>();
         services.AddScoped<IAnswerEvaluationService, AnswerEvaluationService>();
         services.AddScoped<IAnswerNormalizer, AnswerNormalizer>();
         services.AddScoped<IAnswerValidationStep, ExactValidationStep>();
