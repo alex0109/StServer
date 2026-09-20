@@ -20,6 +20,7 @@ public class MaterialRepository : IMaterialRepository
             .Include(m => m.MaterialTags)
             .ThenInclude(mt => mt.Tag)
             .Include(mr => mr.Assessments)
+            .Include(ml => ml.Notes)
             .Where(x => x.UserId == userId)
             .ToListAsync();
     }
@@ -30,6 +31,7 @@ public class MaterialRepository : IMaterialRepository
             .Include(m => m.MaterialTags)
             .ThenInclude(mt => mt.Tag)
             .Include(mr => mr.Assessments)
+            .Include(ml => ml.Notes)
             .FirstOrDefaultAsync(x => x.Id == materialId && x.UserId == userId);
 
         if (material is null)

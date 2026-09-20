@@ -10,10 +10,12 @@ public class Material
     public Guid UserId { get; set; }
     public ICollection<Question> Questions { get; set; } = new List<Question>();
     public ICollection<Assessment> Assessments { get; set; } = new List<Assessment>();
+    public ICollection<Note> Notes { get; set; } = new List<Note>();
+    public ICollection<MaterialFile> MaterialFiles { get; set; } = new List<MaterialFile>();
+    public ICollection<MaterialTag> MaterialTags { get; set; } = new List<MaterialTag>();
     [MaxLength(70)]
     public required string Title { get; set; }
     public required MaterialType Type { get; set; }
-    public ICollection<MaterialTag> MaterialTags { get; set; } = new List<MaterialTag>();
     public string? Link { get; set; }
     public JsonDocument? Content { get; set; }
     public required MaterialStatus Status { get; set; }

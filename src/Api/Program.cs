@@ -143,6 +143,7 @@ app.MapAssessmentEndpoints();
 app.MapAttemptEndpoints();
 app.MapTagEndpoints();
 app.MapStatisticsEndpoints();
+app.MapNoteEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {

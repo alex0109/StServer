@@ -2,6 +2,7 @@ using System.Text.Json;
 using Domain.Entities;
 using Application.DTOs.RichTextDocument;
 using Application.DTOs.Material;
+using Application.DTOs.Note;
 using Application.DTOs.Tag;
 using Domain.Utility.Material;
 
@@ -38,6 +39,19 @@ public static class MaterialMapper
                     Id = mt.Tag.Id,
                     Name = mt.Tag.Name,
                     Color = mt.Tag.Color,
+                })
+                .ToList(),
+            Notes = entity.Notes
+                .Select(m => new NoteResponseDto()
+                {
+                    Id = m.Id,
+                    MaterialId = m.MaterialId,
+                    Type = m.Type,
+                    TextContent = m.TextContent,
+                    DrawingContent = m.DrawingContent,
+                    Order = m.Order,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt
                 })
                 .ToList(),
             Link = entity.Link,
