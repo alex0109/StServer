@@ -46,6 +46,7 @@ public static class MaterialMapper
                 {
                     Id = m.Id,
                     MaterialId = m.MaterialId,
+                    Title = m.Title,
                     Type = m.Type,
                     TextContent = m.TextContent,
                     DrawingContent = m.DrawingContent,
