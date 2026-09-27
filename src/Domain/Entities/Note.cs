@@ -12,7 +12,7 @@ public class Note
     public required string Title { get; set; }
     public NoteType Type { get; set; }
     
-    public string? TextContent { get; set; }
+    public JsonDocument? TextContent { get; set; }
     
     public JsonDocument? DrawingContent { get; set; }
     

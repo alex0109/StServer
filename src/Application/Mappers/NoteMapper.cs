@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.DTOs.Note;
+using Application.DTOs.RichTextDocument;
 using Domain.Entities;
 
 namespace Application.Mappers;
@@ -28,7 +29,7 @@ public static class NoteMapper
             MaterialId = entity.MaterialId,
             Title = entity.Title,
             Type = entity.Type,
-            TextContent = entity.TextContent,
+            TextContent = entity.TextContent == null ? null : JsonSerializer.Deserialize<RichTextDocument>(entity.TextContent),
             DrawingContent = entity.DrawingContent,
             Order = entity.Order,
             CreatedAt = entity.CreatedAt,
@@ -42,7 +43,7 @@ public static class NoteMapper
             entity.Title = dto.Title;
             
         if (dto.TextContent is not null)
-            entity.TextContent = dto.TextContent;
+            entity.TextContent = JsonSerializer.SerializeToDocument(dto.TextContent);
         
         if (dto.DrawingContent is not null)
             entity.DrawingContent = JsonSerializer.SerializeToDocument(dto.DrawingContent);

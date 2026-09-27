@@ -37,7 +37,7 @@ public class NoteService : INoteService
         return NoteMapper.ToDto(note);
     }
 
-    public async Task<NoteResponseDto> CreateAsync(NoteCreateDto dto, Guid materialId)
+    public async Task<NoteResponseDto> CreateAsync(Guid materialId, NoteCreateDto dto)
     {
         var count = await _repo.CountByUserIdAsync(materialId, _user.UserId);
 

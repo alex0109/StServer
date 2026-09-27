@@ -35,9 +35,9 @@ public static class NoteEndpoints
             return TypedResults.Ok(result);
         };
         
-        static async Task<IResult> CreateNote(NoteCreateDto noteCreateDto, Guid materialId, INoteService service)
+        static async Task<IResult> CreateNote(Guid materialId, NoteCreateDto noteCreateDto, INoteService service)
         {
-            var result = await service.CreateAsync(noteCreateDto, materialId);
+            var result = await service.CreateAsync(materialId, noteCreateDto);
             
             return TypedResults.Created($"/api/materials/{materialId}/notes/{result.Id}", result);
         };

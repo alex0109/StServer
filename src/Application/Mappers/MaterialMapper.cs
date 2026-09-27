@@ -48,7 +48,7 @@ public static class MaterialMapper
                     MaterialId = m.MaterialId,
                     Title = m.Title,
                     Type = m.Type,
-                    TextContent = m.TextContent,
+                    TextContent = m.TextContent == null ? null : JsonSerializer.Deserialize<RichTextDocument>(m.TextContent),
                     DrawingContent = m.DrawingContent,
                     Order = m.Order,
                     CreatedAt = m.CreatedAt,
@@ -59,9 +59,7 @@ public static class MaterialMapper
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            Content = entity.Content == null
-                ? null
-                : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
+            Content = entity.Content == null ? null : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
             Version = entity.Version,
             IsActive =  entity.IsActive
         };

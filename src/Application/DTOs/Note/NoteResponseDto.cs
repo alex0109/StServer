@@ -9,7 +9,7 @@ public class NoteResponseDto
     public Guid MaterialId { get; set; }
     public required string Title { get; set; }
     public NoteType Type { get; set; }
-    public string? TextContent { get; set; }
+    public RichTextDocument.RichTextDocument? TextContent { get; set; }
     public JsonDocument? DrawingContent { get; set; }
     public int Order { get; set; }
     public DateTime CreatedAt { get; set; }
