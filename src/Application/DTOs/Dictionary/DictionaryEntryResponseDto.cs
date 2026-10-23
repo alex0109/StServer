@@ -1,3 +1,4 @@
+using Application.DTOs.Flashcard;
 using Domain.Utility.Dictionary;
 
 namespace Application.DTOs.Dictionary;
@@ -17,6 +18,7 @@ public class DictionaryEntryResponseDto
     public List<string> Synonyms { get; set; } = [];
     public int Position { get; set; }
     public bool IsArchived { get; set; }
+    public FlashcardProgressResponseDto? Progress { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

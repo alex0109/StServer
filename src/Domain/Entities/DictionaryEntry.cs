@@ -27,6 +27,8 @@ public class DictionaryEntry
     public int Position { get; set; }
     public bool IsArchived { get; set; }
     public Question? Question { get; set; }
+    public DictionaryEntryProgress? Progress { get; set; }
+    public ICollection<FlashcardReview> Reviews { get; set; } = new List<FlashcardReview>();
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

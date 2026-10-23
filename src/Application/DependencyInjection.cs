@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Application.Evaluators;
 using Application.Interfaces;
+using Application.Schedulers;
 using Application.ScoreCalculators;
 using Application.Services;
 
@@ -28,6 +29,8 @@ public static class DependencyInjection
         services.AddScoped<IAttemptScoringService, AttemptScoringService>();
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IDictionaryService, DictionaryService>();
+        services.AddScoped<IFlashcardService, FlashcardService>();
+        services.AddScoped<IFlashcardScheduler, BasicFlashcardScheduler>();
 
         return services;
     }

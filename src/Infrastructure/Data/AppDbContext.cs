@@ -22,6 +22,9 @@ public class AppDbContext : DbContext
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<Dictionary> Dictionaries => Set<Dictionary>();
     public DbSet<DictionaryEntry> DictionaryEntries => Set<DictionaryEntry>();
+    public DbSet<DictionaryEntryProgress> DictionaryEntryProgresses => Set<DictionaryEntryProgress>();
+    public DbSet<FlashcardSession> FlashcardSessions => Set<FlashcardSession>();
+    public DbSet<FlashcardReview> FlashcardReviews => Set<FlashcardReview>();
     public DbSet<MaterialFile> MaterialFiles => Set<MaterialFile>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -181,6 +184,51 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(x => new { x.DictionaryId, x.Position });
+        });
+
+        modelBuilder.Entity<DictionaryEntryProgress>(entity =>
+        {
+            entity.HasKey(x => x.EntryId);
+
+            entity.HasOne(p => p.Entry)
+                .WithOne(e => e.Progress)
+                .HasForeignKey<DictionaryEntryProgress>(p => p.EntryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new { x.UserId, x.Due });
+        });
+
+        modelBuilder.Entity<FlashcardSession>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasOne(s => s.Dictionary)
+                .WithMany(d => d.FlashcardSessions)
+                .HasForeignKey(s => s.DictionaryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new { x.DictionaryId, x.UserId });
+        });
+
+        modelBuilder.Entity<FlashcardReview>(entity =>
+        {
+            // Id comes from the client, so a retried request does not create a duplicate
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.HasOne(r => r.Session)
+                .WithMany(s => s.Reviews)
+                .HasForeignKey(r => r.SessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(r => r.Entry)
+                .WithMany(e => e.Reviews)
+                .HasForeignKey(r => r.EntryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new { x.EntryId, x.ReviewedAt });
+            entity.HasIndex(x => new { x.UserId, x.ReviewedAt });
         });
         
         modelBuilder.Entity<MaterialFile>()

@@ -146,6 +146,7 @@ app.MapTagEndpoints();
 app.MapStatisticsEndpoints();
 app.MapNoteEndpoints();
 app.MapDictionaryEndpoints();
+app.MapFlashcardEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {

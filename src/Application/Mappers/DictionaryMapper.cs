@@ -87,6 +87,7 @@ public static class DictionaryMapper
             Synonyms = entity.Synonyms,
             Position = entity.Position,
             IsArchived = entity.IsArchived,
+            Progress = entity.Progress is null ? null : FlashcardMapper.ToProgressDto(entity.Progress),
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
         };

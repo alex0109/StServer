@@ -19,6 +19,7 @@ public class DictionaryRepository : IDictionaryRepository
         return await _context.Dictionaries
             .Where(d => d.MaterialId == materialId && d.UserId == userId)
             .Include(d => d.Entries)
+                .ThenInclude(e => e.Progress)
             .OrderBy(d => d.CreatedAt)
             .ToListAsync();
     }
@@ -27,6 +28,7 @@ public class DictionaryRepository : IDictionaryRepository
     {
         return await _context.Dictionaries
             .Include(d => d.Entries)
+                .ThenInclude(e => e.Progress)
             .FirstOrDefaultAsync(d => d.Id == dictionaryId && d.UserId == userId);
     }
 
@@ -47,6 +49,7 @@ public class DictionaryRepository : IDictionaryRepository
     public async Task<DictionaryEntry?> GetEntryByIdAsync(Guid entryId, Guid userId)
     {
         return await _context.DictionaryEntries
+            .Include(e => e.Progress)
             .FirstOrDefaultAsync(e => e.Id == entryId && e.Dictionary.UserId == userId);
     }
 
@@ -56,6 +59,7 @@ public class DictionaryRepository : IDictionaryRepository
             .Where(e => e.DictionaryId == dictionaryId && e.Dictionary.UserId == userId)
             .Include(e => e.Question)
                 .ThenInclude(q => q!.Options)
+            .Include(e => e.Progress)
             .OrderBy(e => e.Position)
             .ToListAsync();
     }

@@ -46,6 +46,8 @@ public class GlobalExceptionHandler : IExceptionHandler
         exception switch
         {
             LimitExceededException => (StatusCodes.Status409Conflict, "Limit exceeded"),
+            ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
+            BadRequestException => (StatusCodes.Status400BadRequest, "Bad request"),
             UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Forbidden"),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found"),
             _ => (StatusCodes.Status500InternalServerError, "Internal server error")

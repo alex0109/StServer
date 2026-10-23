@@ -178,6 +178,150 @@ namespace StServer.Migrations
                     b.ToTable("DictionaryEntries");
                 });
 
+            modelBuilder.Entity("Domain.Entities.DictionaryEntryProgress", b =>
+                {
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("Difficulty")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("Due")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Lapses")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastReviewAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LearningSteps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScheduledDays")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Stability")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("EntryId");
+
+                    b.HasIndex("UserId", "Due");
+
+                    b.ToTable("DictionaryEntryProgresses");
+                });
+
+            modelBuilder.Entity("Domain.Entities.FlashcardReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DurationMs")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("ElapsedDays")
+                        .HasColumnType("double precision");
+
+                    b.Property<Guid>("EntryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("PrevDifficulty")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("PrevDue")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PrevLapses")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PrevLastReviewAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PrevLearningSteps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PrevReps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PrevScheduledDays")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("PrevStability")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("PrevState")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SessionId");
+
+                    b.HasIndex("EntryId", "ReviewedAt");
+
+                    b.HasIndex("UserId", "ReviewedAt");
+
+                    b.ToTable("FlashcardReviews");
+                });
+
+            modelBuilder.Entity("Domain.Entities.FlashcardSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<int>("CardsTotal")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("DictionaryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DictionaryId", "UserId");
+
+                    b.ToTable("FlashcardSessions");
+                });
+
             modelBuilder.Entity("Domain.Entities.Material", b =>
                 {
                     b.Property<Guid>("Id")
@@ -541,6 +685,46 @@ namespace StServer.Migrations
                     b.Navigation("Dictionary");
                 });
 
+            modelBuilder.Entity("Domain.Entities.DictionaryEntryProgress", b =>
+                {
+                    b.HasOne("Domain.Entities.DictionaryEntry", "Entry")
+                        .WithOne("Progress")
+                        .HasForeignKey("Domain.Entities.DictionaryEntryProgress", "EntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Entry");
+                });
+
+            modelBuilder.Entity("Domain.Entities.FlashcardReview", b =>
+                {
+                    b.HasOne("Domain.Entities.DictionaryEntry", "Entry")
+                        .WithMany("Reviews")
+                        .HasForeignKey("EntryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.FlashcardSession", "Session")
+                        .WithMany("Reviews")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Entry");
+
+                    b.Navigation("Session");
+                });
+
+            modelBuilder.Entity("Domain.Entities.FlashcardSession", b =>
+                {
+                    b.HasOne("Domain.Entities.Dictionary", "Dictionary")
+                        .WithMany("FlashcardSessions")
+                        .HasForeignKey("DictionaryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Dictionary");
+                });
+
             modelBuilder.Entity("Domain.Entities.MaterialFile", b =>
                 {
                     b.HasOne("Domain.Entities.Material", "Material")
@@ -657,11 +841,22 @@ namespace StServer.Migrations
             modelBuilder.Entity("Domain.Entities.Dictionary", b =>
                 {
                     b.Navigation("Entries");
+
+                    b.Navigation("FlashcardSessions");
                 });
 
             modelBuilder.Entity("Domain.Entities.DictionaryEntry", b =>
                 {
+                    b.Navigation("Progress");
+
                     b.Navigation("Question");
+
+                    b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("Domain.Entities.FlashcardSession", b =>
+                {
+                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("Domain.Entities.Material", b =>

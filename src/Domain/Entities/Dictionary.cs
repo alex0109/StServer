@@ -14,6 +14,7 @@ public class Dictionary
     [MaxLength(500)]
     public string? Description { get; set; }
     public ICollection<DictionaryEntry> Entries { get; set; } = new List<DictionaryEntry>();
+    public ICollection<FlashcardSession> FlashcardSessions { get; set; } = new List<FlashcardSession>();
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }
