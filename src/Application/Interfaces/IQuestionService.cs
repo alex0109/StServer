@@ -16,6 +16,8 @@ public interface IQuestionService
     
     Task<QuestionResponseDto> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto);
 
+    Task<QuestionResponseDto> CreateTrueFalseQuestionAsync(Guid materialId, TrueFalseQuestionCreateDto questionDto);
+
     Task<QuestionResponseDto?> UpdateQuestionAsync(Guid materialId, Guid id, QuestionUpdateDto questionDto);
 
     Task<bool> DeleteQuestionAsync(Guid materialId, Guid id);

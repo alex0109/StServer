@@ -181,7 +181,6 @@ public class QuestionServiceTests
                     Guid.NewGuid(),
                     new OptionQuestionCreateDto
                     {
-                        CorrectOptionId =  Guid.NewGuid(),
                         Title = "Test",
                         Options = []
                     }));
@@ -204,13 +203,13 @@ public class QuestionServiceTests
         
         var dto = new OptionQuestionCreateDto
         {
-            CorrectOptionId =  Guid.NewGuid(),
             Title = "Options",
             Options =
             [
-                new OptionUpdateDto
+                new OptionCreateDto
                 {
-                    Name = "A"
+                    Name = "A",
+                    IsCorrect = true
                 }
             ]
         };
@@ -225,7 +224,8 @@ public class QuestionServiceTests
         _optionService.Verify(x =>
             x.SyncOptions(
                 It.IsAny<Question>(),
-                dto.Options),
+                It.Is<List<OptionUpdateDto>>(o =>
+                    o.Count == 1 && o[0].Name == "A" && o[0].IsCorrect == true && o[0].Id == null)),
             Times.Once);
         
         _repo.Verify(x =>
@@ -294,6 +294,8 @@ public class QuestionServiceTests
     public async Task UpdateQuestionAsync_WithOptions_SyncsOptions()
     {
         var question = CreateQuestion("Test");
+        question.QuestionType = QuestionType.Options;
+        question.Answer = null;
         
         _repo.Setup(x =>
                 x.GetByIdQuestionAsync(
@@ -366,6 +368,122 @@ public class QuestionServiceTests
         _repo.Verify(x =>
             x.SaveChangesAsync(),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTrueFalseQuestionAsync_CreatesQuestionWithFixedOptions()
+    {
+        _repo.Setup(x =>
+                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(0);
+
+        var result = await _sut.CreateTrueFalseQuestionAsync(
+            Guid.NewGuid(),
+            new TrueFalseQuestionCreateDto
+            {
+                Title = "The Earth is round",
+                IsTrue = true,
+                QuestionDifficulty = QuestionDifficulty.Easy
+            });
+
+        result.QuestionType.ShouldBe(QuestionType.TrueFalse);
+
+        _optionService.Verify(x =>
+            x.SetTrueFalseOptions(
+                It.Is<Question>(q => q.QuestionType == QuestionType.TrueFalse),
+                true),
+            Times.Once);
+
+        _repo.Verify(x => x.AddQuestionAsync(It.IsAny<Question>()), Times.Once);
+        _repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTrueFalseQuestionAsync_LimitReached_Throws()
+    {
+        _repo.Setup(x =>
+                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(UserLimits.MaxQuestionsPerMaterial);
+
+        await Should.ThrowAsync<LimitExceededException>(() =>
+            _sut.CreateTrueFalseQuestionAsync(
+                Guid.NewGuid(),
+                new TrueFalseQuestionCreateDto { Title = "Test", IsTrue = false }));
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_OpenQuestionWithOptions_ThrowsBadRequest()
+    {
+        var question = CreateQuestion("Open");
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateQuestionAsync(
+                question.MaterialId,
+                question.Id,
+                new QuestionUpdateDto { Options = [] }));
+
+        _repo.Verify(x => x.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_TrueFalseWithOptions_ThrowsBadRequest()
+    {
+        var question = CreateQuestion("True/False");
+        question.QuestionType = QuestionType.TrueFalse;
+        question.Answer = null;
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateQuestionAsync(
+                question.MaterialId,
+                question.Id,
+                new QuestionUpdateDto { Options = [] }));
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_TrueFalseCorrectOption_SetsItThroughOptionService()
+    {
+        var question = CreateQuestion("True/False");
+        question.QuestionType = QuestionType.TrueFalse;
+        question.Answer = null;
+        var optionId = Guid.NewGuid();
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await _sut.UpdateQuestionAsync(
+            question.MaterialId,
+            question.Id,
+            new QuestionUpdateDto { CorrectOptionId = optionId });
+
+        _optionService.Verify(x => x.SetCorrectOption(question, optionId), Times.Once);
+        _repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_OptionsQuestionWithTextAnswer_ThrowsBadRequest()
+    {
+        var question = CreateQuestion("Options");
+        question.QuestionType = QuestionType.Options;
+        question.Answer = null;
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateQuestionAsync(
+                question.MaterialId,
+                question.Id,
+                new QuestionUpdateDto { Answer = "text" }));
     }
 
     private Question CreateQuestion(string title)

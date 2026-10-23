@@ -1,4 +1,5 @@
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 
 namespace Domain.Entities;
 
@@ -12,7 +13,7 @@ public class FlashcardReview
     public FlashcardSession? Session { get; set; }
     public Guid EntryId { get; set; }
     public DictionaryEntry Entry { get; set; } = null!;
-    public FlashcardRating Rating { get; set; }
+    public ReviewRating Rating { get; set; }
     public required DateTime ReviewedAt { get; set; }
     public int? DurationMs { get; set; }
     public double ElapsedDays { get; set; }

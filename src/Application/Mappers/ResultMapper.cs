@@ -43,6 +43,8 @@ public class ResultMapper
             Score = entity.Score,
             Weight = entity.Weight,
             ConfidenceLevel = entity.ConfidenceLevel,
+            Rating = entity.Rating,
+            CorrectOptionId = entity.Question?.CorrectOptionId,
             AnswerChangedCount = entity.AnswerChangedCount,
             TimeSpent = entity.TimeSpent,
             AnsweredAt = entity.AnsweredAt,

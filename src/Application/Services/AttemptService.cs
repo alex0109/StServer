@@ -16,6 +16,7 @@ public class AttemptService : IAttemptService
     private readonly IUserContext _user;
     private readonly IAnswerEvaluationService _answerEvaluationService;
     private readonly IAttemptScoringService _attemptScoringService;
+    private readonly IReviewRatingResolver _reviewRatingResolver;
 
     public AttemptService(
         IAttemptRepository repo, 
@@ -23,7 +24,8 @@ public class AttemptService : IAttemptService
         IAssessmentRepository assessmentRepo, 
         IUserContext user,
         IAnswerEvaluationService answerEvaluationService,
-        IAttemptScoringService attemptScoringService)
+        IAttemptScoringService attemptScoringService,
+        IReviewRatingResolver reviewRatingResolver)
     {
         _repo = repo;
         _questionRepo = questionRepo;
@@ -31,6 +33,7 @@ public class AttemptService : IAttemptService
         _user = user;
         _answerEvaluationService = answerEvaluationService;
         _attemptScoringService = attemptScoringService;
+        _reviewRatingResolver = reviewRatingResolver;
     }
     
     public async Task<List<AttemptResponseDto>?> GetFinishedAttempts(Guid materialId)
@@ -96,16 +99,12 @@ public class AttemptService : IAttemptService
         if (question is null)
             return result;
 
-        if (question.CorrectOptionId is not null && resultRequestDto.UserAnswerOptionId is not null)
+        if (question.QuestionType is QuestionType.Options or QuestionType.TrueFalse)
         {
-            bool isIdCorrect = question.CorrectOptionId == resultRequestDto.UserAnswerOptionId;
-
-            result = new AnswerEvaluationResult
-            {
-                IsCorrect = isIdCorrect,
-                Score = 100,
-                Method = EvaluationMethod.Exact
-            };
+            result = _answerEvaluationService.EvaluateOption(
+                question.CorrectOptionId,
+                resultRequestDto.UserAnswerOptionId
+            );
         }
         else if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
         {
@@ -114,6 +113,8 @@ public class AttemptService : IAttemptService
                 resultRequestDto.UserAnswer
             );
         }
+
+        var rating = _reviewRatingResolver.Resolve(result.IsCorrect, resultRequestDto.ConfidenceLevel);
 
         var now = DateTime.UtcNow;
         var existing = attempt.Results.FirstOrDefault(r => r.QuestionId == questionId);
@@ -141,6 +142,7 @@ public class AttemptService : IAttemptService
 
             resultEntity.AnsweredAt = now;
             resultEntity.LastModifiedAt = now;
+            resultEntity.Rating = rating;
 
             await _repo.AddResultAsync(resultEntity);
         }
@@ -149,6 +151,7 @@ public class AttemptService : IAttemptService
             ResultMapper.ApplyUpdate(existing, resultRequestDto, result.IsCorrect, result.Score);
             existing.LastModifiedAt = now;
             existing.TimeSpent = now - existing.AnsweredAt;
+            existing.Rating = rating;
         }
 
         await _repo.SaveChangesAsync();

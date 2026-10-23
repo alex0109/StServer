@@ -277,4 +277,42 @@ public class AnswerEvaluationServiceTests
                 It.IsAny<string>()),
             Times.Never);
     }
+
+    [Fact]
+    public void EvaluateOption_SameOption_IsCorrectWithFullScore()
+    {
+        var optionId = Guid.NewGuid();
+
+        var result = CreateService().EvaluateOption(optionId, optionId);
+
+        result.IsCorrect.ShouldBeTrue();
+        result.Score.ShouldBe(100);
+        result.Method.ShouldBe(EvaluationMethod.Exact);
+    }
+
+    [Fact]
+    public void EvaluateOption_OtherOption_IsWrongWithZeroScore()
+    {
+        var result = CreateService().EvaluateOption(Guid.NewGuid(), Guid.NewGuid());
+
+        result.IsCorrect.ShouldBeFalse();
+        result.Score.ShouldBe(0);
+    }
+
+    [Fact]
+    public void EvaluateOption_NoOptionChosen_IsWrong()
+    {
+        var result = CreateService().EvaluateOption(Guid.NewGuid(), null);
+
+        result.IsCorrect.ShouldBeFalse();
+        result.Score.ShouldBe(0);
+    }
+
+    [Fact]
+    public void EvaluateOption_QuestionWithoutCorrectOption_IsWrong()
+    {
+        var result = CreateService().EvaluateOption(null, null);
+
+        result.IsCorrect.ShouldBeFalse();
+    }
 }

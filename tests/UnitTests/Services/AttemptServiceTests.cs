@@ -2,10 +2,13 @@ using Application.DTOs.Attempt;
 using Application.DTOs.Question;
 using Application.DTOs.Result;
 using Application.Interfaces;
+using Application.Evaluators;
 using Application.Services;
 using Domain.Entities;
 using Domain.Utility.Attempt;
 using Domain.Utility.Question;
+using Domain.Utility.Result;
+using Domain.Utility.Review;
 using Moq;
 using Shouldly;
 
@@ -35,7 +38,17 @@ public class AttemptServiceTests
             _assessmentRepo.Object,
             _user.Object,
             _evaluation.Object,
-            _scoring.Object);
+            _scoring.Object,
+            new ConfidenceReviewRatingResolver());
+
+        _evaluation.Setup(x =>
+                x.EvaluateOption(It.IsAny<Guid?>(), It.IsAny<Guid?>()))
+            .Returns((Guid? correct, Guid? chosen) => new AnswerEvaluationResult
+            {
+                IsCorrect = correct is not null && correct == chosen,
+                Score = correct is not null && correct == chosen ? 100 : 0,
+                Method = EvaluationMethod.Exact
+            });
     }
     
     [Fact]
@@ -321,6 +334,7 @@ public class AttemptServiceTests
             {
                 Id = questionId,
                 Answer = "correct",
+                QuestionType = QuestionType.Open,
                 QuestionDifficulty = QuestionDifficulty.Medium,
                 Title = "Test",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
@@ -487,6 +501,121 @@ public class AttemptServiceTests
             Times.Once);
     }
     
+    [Fact]
+    public async Task AnswerQuestion_WrongOption_ScoresZeroAndRatesAgain()
+    {
+        var attempt = CreateAttempt();
+        var questionId = Guid.NewGuid();
+        Result? saved = null;
+
+        _repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        _repo.Setup(x => x.AddResultAsync(It.IsAny<Result>())).Callback<Result>(r => saved = r);
+        _questionRepo.Setup(x =>
+                x.GetByIdQuestionAsync(It.IsAny<Guid>(), questionId, _userId))
+            .ReturnsAsync(new Question
+            {
+                Id = questionId,
+                QuestionType = QuestionType.Options,
+                CorrectOptionId = Guid.NewGuid(),
+                QuestionDifficulty = QuestionDifficulty.Easy,
+                Title = "Test",
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
+        {
+            QuestionId = questionId,
+            UserAnswerOptionId = Guid.NewGuid(),
+            ConfidenceLevel = ConfidenceLevel.High
+        });
+
+        result.IsCorrect.ShouldBeFalse();
+        result.Score.ShouldBe(0);
+        saved.ShouldNotBeNull();
+        saved.Rating.ShouldBe(ReviewRating.Again);
+    }
+
+    [Fact]
+    public async Task AnswerQuestion_TrueFalseCorrect_IsGradedByOptionAndRated()
+    {
+        var attempt = CreateAttempt();
+        var questionId = Guid.NewGuid();
+        var trueOptionId = Guid.NewGuid();
+        Result? saved = null;
+
+        _repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        _repo.Setup(x => x.AddResultAsync(It.IsAny<Result>())).Callback<Result>(r => saved = r);
+        _questionRepo.Setup(x =>
+                x.GetByIdQuestionAsync(It.IsAny<Guid>(), questionId, _userId))
+            .ReturnsAsync(new Question
+            {
+                Id = questionId,
+                QuestionType = QuestionType.TrueFalse,
+                CorrectOptionId = trueOptionId,
+                QuestionDifficulty = QuestionDifficulty.Easy,
+                Title = "The Earth is round",
+                CreatedAt = DateTime.UtcNow
+            });
+
+        var result = await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
+        {
+            QuestionId = questionId,
+            UserAnswerOptionId = trueOptionId,
+            ConfidenceLevel = ConfidenceLevel.Low
+        });
+
+        result.IsCorrect.ShouldBeTrue();
+        result.Score.ShouldBe(100);
+        saved.ShouldNotBeNull();
+        saved.UserAnswerOptionId.ShouldBe(trueOptionId);
+        saved.Rating.ShouldBe(ReviewRating.Hard);
+        _evaluation.Verify(x => x.EvaluateAnswer(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AnswerQuestion_ChangedAnswer_UpdatesRating()
+    {
+        var attempt = CreateAttempt();
+        var questionId = Guid.NewGuid();
+        var correctOptionId = Guid.NewGuid();
+        var existing = new Result
+        {
+            Id = Guid.NewGuid(),
+            AttemptId = attempt.Id,
+            QuestionId = questionId,
+            UserAnswerOptionId = Guid.NewGuid(),
+            IsCorrect = false,
+            Score = 0,
+            Weight = 1,
+            Rating = ReviewRating.Again,
+            AnsweredAt = DateTime.UtcNow.AddMinutes(-1)
+        };
+        attempt.Results.Add(existing);
+
+        _repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        _questionRepo.Setup(x =>
+                x.GetByIdQuestionAsync(It.IsAny<Guid>(), questionId, _userId))
+            .ReturnsAsync(new Question
+            {
+                Id = questionId,
+                QuestionType = QuestionType.Options,
+                CorrectOptionId = correctOptionId,
+                QuestionDifficulty = QuestionDifficulty.Easy,
+                Title = "Test",
+                CreatedAt = DateTime.UtcNow
+            });
+
+        await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
+        {
+            QuestionId = questionId,
+            UserAnswerOptionId = correctOptionId
+        });
+
+        existing.IsCorrect.ShouldBeTrue();
+        existing.Rating.ShouldBe(ReviewRating.Good);
+        _repo.Verify(x => x.AddResultAsync(It.IsAny<Result>()), Times.Never);
+    }
+
     private Attempt CreateAttempt()
     {
         return new Attempt

@@ -1,5 +1,6 @@
 using Application.Schedulers;
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 using Shouldly;
 using Xunit;
 
@@ -11,10 +12,10 @@ public class BasicFlashcardSchedulerTests
     private readonly DateTime _now = new(2026, 10, 23, 12, 0, 0, DateTimeKind.Utc);
 
     [Theory]
-    [InlineData(FlashcardRating.Hard, 1)]
-    [InlineData(FlashcardRating.Good, 3)]
-    [InlineData(FlashcardRating.Easy, 7)]
-    public void Schedule_NewCard_MovesToReviewWithFirstInterval(FlashcardRating rating, int expectedDays)
+    [InlineData(ReviewRating.Hard, 1)]
+    [InlineData(ReviewRating.Good, 3)]
+    [InlineData(ReviewRating.Easy, 7)]
+    public void Schedule_NewCard_MovesToReviewWithFirstInterval(ReviewRating rating, int expectedDays)
     {
         var result = _sut.Schedule(FlashcardCard.CreateNew(_now), rating, _now);
 
@@ -28,7 +29,7 @@ public class BasicFlashcardSchedulerTests
     [Fact]
     public void Schedule_NewCardAgain_MovesToLearningAndIsDueSoon()
     {
-        var result = _sut.Schedule(FlashcardCard.CreateNew(_now), FlashcardRating.Again, _now);
+        var result = _sut.Schedule(FlashcardCard.CreateNew(_now), ReviewRating.Again, _now);
 
         result.State.ShouldBe(FlashcardState.Learning);
         result.ScheduledDays.ShouldBe(0);
@@ -42,7 +43,7 @@ public class BasicFlashcardSchedulerTests
     {
         var card = new FlashcardCard { State = FlashcardState.Review, ScheduledDays = 10, Reps = 3, Lapses = 1 };
 
-        var result = _sut.Schedule(card, FlashcardRating.Again, _now);
+        var result = _sut.Schedule(card, ReviewRating.Again, _now);
 
         result.State.ShouldBe(FlashcardState.Relearning);
         result.Lapses.ShouldBe(2);
@@ -54,7 +55,7 @@ public class BasicFlashcardSchedulerTests
     {
         var card = new FlashcardCard { State = FlashcardState.Review, ScheduledDays = 4, Reps = 2 };
 
-        var result = _sut.Schedule(card, FlashcardRating.Good, _now);
+        var result = _sut.Schedule(card, ReviewRating.Good, _now);
 
         result.ScheduledDays.ShouldBe(10);
         result.Due.ShouldBe(_now.AddDays(10));
@@ -65,7 +66,7 @@ public class BasicFlashcardSchedulerTests
     {
         var card = new FlashcardCard { State = FlashcardState.Review, ScheduledDays = 1, Reps = 2 };
 
-        var result = _sut.Schedule(card, FlashcardRating.Hard, _now);
+        var result = _sut.Schedule(card, ReviewRating.Hard, _now);
 
         result.ScheduledDays.ShouldBe(2);
     }
@@ -75,7 +76,7 @@ public class BasicFlashcardSchedulerTests
     {
         var card = new FlashcardCard { State = FlashcardState.Review, ScheduledDays = 3, Stability = 5.5, Difficulty = 4.2 };
 
-        var result = _sut.Schedule(card, FlashcardRating.Good, _now);
+        var result = _sut.Schedule(card, ReviewRating.Good, _now);
 
         result.Stability.ShouldBe(5.5);
         result.Difficulty.ShouldBe(4.2);
@@ -85,6 +86,6 @@ public class BasicFlashcardSchedulerTests
     public void Schedule_ManualRating_Throws()
     {
         Should.Throw<ArgumentException>(() =>
-            _sut.Schedule(FlashcardCard.CreateNew(_now), FlashcardRating.Manual, _now));
+            _sut.Schedule(FlashcardCard.CreateNew(_now), ReviewRating.Manual, _now));
     }
 }

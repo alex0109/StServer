@@ -5,6 +5,7 @@ using Application.Interfaces;
 using Application.Mappers;
 using Domain.Entities;
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 
 namespace Application.Services;
 
@@ -93,7 +94,7 @@ public class FlashcardService : IFlashcardService
         if (dto.Id == Guid.Empty)
             throw new BadRequestException("Review id is required");
 
-        if (dto.Rating == FlashcardRating.Manual)
+        if (dto.Rating == ReviewRating.Manual)
             throw new BadRequestException("Manual rating can't be used in a session");
 
         var session = await _flashcardRepository.GetSessionAsync(sessionId, userId);
@@ -189,7 +190,7 @@ public class FlashcardService : IFlashcardService
 
         // Manual log keeps the review history consistent for FSRS
         var log = FlashcardMapper.ToReviewEntity(
-            Guid.NewGuid(), userId, null, entry.Id, FlashcardRating.Manual, null, before, now);
+            Guid.NewGuid(), userId, null, entry.Id, ReviewRating.Manual, null, before, now);
 
         await _flashcardRepository.AddReviewAsync(log);
         _flashcardRepository.RemoveProgress(entry.Progress);

@@ -484,6 +484,9 @@ namespace StServer.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("QuestionId")
                         .HasColumnType("uuid");
 
@@ -588,6 +591,9 @@ namespace StServer.Migrations
 
                     b.Property<Guid>("QuestionId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
 
                     b.Property<double>("Score")
                         .HasColumnType("double precision");

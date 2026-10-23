@@ -40,4 +40,18 @@ public class AnswerEvaluationService : IAnswerEvaluationService
             Method = EvaluationMethod.None
         };
     }
+
+    public AnswerEvaluationResult EvaluateOption(
+        Guid? correctOptionId,
+        Guid? userOptionId)
+    {
+        bool isCorrect = correctOptionId is not null && correctOptionId == userOptionId;
+
+        return new AnswerEvaluationResult
+        {
+            IsCorrect = isCorrect,
+            Score = isCorrect ? 100 : 0,
+            Method = EvaluationMethod.Exact
+        };
+    }
 }

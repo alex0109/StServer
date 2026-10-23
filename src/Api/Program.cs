@@ -6,6 +6,8 @@ using Api.Endpoints;
 using System.Text.Json.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
+using System.Security.Claims;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using Api.Common;
 using Api.Middleware;
@@ -104,10 +106,21 @@ if (!builder.Environment.IsEnvironment("Testing"))
 
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("api", limiter =>
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+    // Separate window for every user, requests without a user are limited by IP
+    options.AddPolicy("api", httpContext =>
     {
-        limiter.Window = TimeSpan.FromMinutes(1);
-        limiter.PermitLimit = 100;
+        var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var partitionKey = userId is not null
+            ? $"user:{userId}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 100,
+        });
     });
 });
 

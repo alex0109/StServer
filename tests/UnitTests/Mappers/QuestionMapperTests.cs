@@ -52,14 +52,14 @@ public class QuestionMapperTests
         var dto = new OptionQuestionCreateDto
         {
             Title = "2 + 2 = ?",
-            CorrectOptionId = Guid.NewGuid(),
             Explanation = "Math",
             QuestionDifficulty = QuestionDifficulty.Medium,
             Options =
             [
-                new OptionUpdateDto
+                new OptionCreateDto
                 {
-                    Name = "4"
+                    Name = "4",
+                    IsCorrect = true
                 }
             ]
         };
@@ -174,12 +174,14 @@ public class QuestionMapperTests
         };
 
         var oldUpdatedAt = entity.UpdatedAt;
+        var oldCorrectOptionId = entity.CorrectOptionId;
 
         QuestionMapper.ApplyUpdate(entity, dto);
 
         entity.Title.ShouldBe("New title");
         entity.Answer.ShouldBe("New answer");
-        entity.CorrectOptionId.ShouldBe(dto.CorrectOptionId);
+        // Correct option is validated by OptionService, mapper does not touch it
+        entity.CorrectOptionId.ShouldBe(oldCorrectOptionId);
         entity.QuestionDifficulty.ShouldBe(QuestionDifficulty.Hard);
         entity.Explanation.ShouldBe("New explanation");
 

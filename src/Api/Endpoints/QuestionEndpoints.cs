@@ -18,6 +18,7 @@ public static class QuestionEndpoints
         questionGroup.MapGet("/{id:guid}", GetQuestion);
         questionGroup.MapPost("/open", CreateOpenQuestion);
         questionGroup.MapPost("/options", CreateOptionQuestion);
+        questionGroup.MapPost("/true-false", CreateTrueFalseQuestion);
         questionGroup.MapPatch("/{id:guid}", UpdateQuestion);
         questionGroup.MapDelete("/{id:guid}", DeleteQuestion);
         
@@ -63,7 +64,14 @@ public static class QuestionEndpoints
         {
             var result = await service.CreateQuestionWithOptionsAsync(materialId, questionCreateDto);
             
-            return TypedResults.Created($"materials/{materialId}/questions/{result.Id}", result);
+            return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
+        };
+
+        static async Task<IResult> CreateTrueFalseQuestion(Guid materialId, TrueFalseQuestionCreateDto questionCreateDto, IQuestionService service)
+        {
+            var result = await service.CreateTrueFalseQuestionAsync(materialId, questionCreateDto);
+
+            return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
         };
 
         static async Task<IResult> UpdateQuestion(Guid materialId, Guid id, QuestionUpdateDto questionUpdateDto, IQuestionService service)

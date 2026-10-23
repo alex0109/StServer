@@ -1,9 +1,11 @@
 using Application.Constants;
+using Application.DTOs.Option;
 using Application.DTOs.Question;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
 using Domain.Entities;
+using Domain.Utility.Question;
 
 namespace Application.Services;
 
@@ -81,7 +83,30 @@ public class QuestionService : IQuestionService
 
         question.Options = new List<Option>();
 
-        _optionService.SyncOptions(question, questionDto.Options);
+        var options = questionDto.Options
+            .Select(x => new OptionUpdateDto { Name = x.Name, IsCorrect = x.IsCorrect })
+            .ToList();
+
+        _optionService.SyncOptions(question, options);
+
+        await _repo.AddQuestionAsync(question);
+        await _repo.SaveChangesAsync();
+
+        return QuestionMapper.ToDto(question);
+    }
+
+    public async Task<QuestionResponseDto> CreateTrueFalseQuestionAsync(Guid materialId, TrueFalseQuestionCreateDto questionDto)
+    {
+        var count = await _repo.CountByMaterialIdAsync(materialId);
+
+        if (count >= UserLimits.MaxQuestionsPerMaterial)
+        {
+            throw new LimitExceededException("Question limit reached");
+        }
+
+        var question = QuestionMapper.ToEntityTrueFalseQuestion(questionDto, materialId, _user.UserId);
+
+        _optionService.SetTrueFalseOptions(question, questionDto.IsTrue);
 
         await _repo.AddQuestionAsync(question);
         await _repo.SaveChangesAsync();
@@ -99,16 +124,35 @@ public class QuestionService : IQuestionService
         if (question is null)
             return null;
 
+        ValidateUpdate(question.QuestionType, questionDto);
+
         QuestionMapper.ApplyUpdate(question, questionDto);
 
         if (questionDto.Options is not null)
         {
             _optionService.SyncOptions(question, questionDto.Options);
         }
+        else if (questionDto.CorrectOptionId is Guid correctOptionId)
+        {
+            _optionService.SetCorrectOption(question, correctOptionId);
+        }
 
         await _repo.SaveChangesAsync();
 
         return QuestionMapper.ToDto(question);
+    }
+
+    private static void ValidateUpdate(QuestionType questionType, QuestionUpdateDto questionDto)
+    {
+        switch (questionType)
+        {
+            case QuestionType.Open when questionDto.Options is not null || questionDto.CorrectOptionId is not null:
+                throw new BadRequestException("Open question has no options");
+            case QuestionType.Options or QuestionType.TrueFalse when questionDto.Answer is not null:
+                throw new BadRequestException("Question with options has no text answer");
+            case QuestionType.TrueFalse when questionDto.Options is not null:
+                throw new BadRequestException("True/False options can't be changed, update CorrectOptionId instead");
+        }
     }
 
     public async Task<bool> DeleteQuestionAsync(Guid materialId, Guid id)

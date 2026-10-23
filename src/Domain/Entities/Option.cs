@@ -9,4 +9,5 @@ public class Option
     public Question Question { get; set; } = null!;
     [MaxLength(500)]
     public required string Name { get; set; }
+    public int Position { get; set; }
 }

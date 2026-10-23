@@ -5,6 +5,7 @@ using Application.Schedulers;
 using Application.Services;
 using Domain.Entities;
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 using Moq;
 using Shouldly;
 using Xunit;
@@ -202,7 +203,7 @@ public class FlashcardServiceTests
     {
         var session = CreateSession();
         var entry = CreateEntry();
-        var dto = new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = FlashcardRating.Good };
+        var dto = new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = ReviewRating.Good };
 
         _flashcardRepo.Setup(x => x.GetSessionAsync(session.Id, _userId)).ReturnsAsync(session);
         _flashcardRepo.Setup(x => x.GetEntryWithProgressAsync(entry.Id, _userId)).ReturnsAsync(entry);
@@ -244,7 +245,7 @@ public class FlashcardServiceTests
         _flashcardRepo.Setup(x => x.GetEntryWithProgressAsync(entry.Id, _userId)).ReturnsAsync(entry);
 
         await _sut.AddReviewAsync(session.Id,
-            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = FlashcardRating.Again });
+            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = ReviewRating.Again });
 
         progress.State.ShouldBe(FlashcardState.Relearning);
         progress.Lapses.ShouldBe(1);
@@ -262,7 +263,7 @@ public class FlashcardServiceTests
             UserId = _userId,
             SessionId = session.Id,
             EntryId = entry.Id,
-            Rating = FlashcardRating.Good,
+            Rating = ReviewRating.Good,
             ReviewedAt = DateTime.UtcNow,
         };
 
@@ -271,7 +272,7 @@ public class FlashcardServiceTests
         _flashcardRepo.Setup(x => x.GetEntryWithProgressAsync(entry.Id, _userId)).ReturnsAsync(entry);
 
         var result = await _sut.AddReviewAsync(session.Id,
-            new FlashcardReviewCreateDto { Id = existing.Id, EntryId = entry.Id, Rating = FlashcardRating.Good });
+            new FlashcardReviewCreateDto { Id = existing.Id, EntryId = entry.Id, Rating = ReviewRating.Good });
 
         result.ShouldNotBeNull();
         result.Id.ShouldBe(existing.Id);
@@ -286,14 +287,14 @@ public class FlashcardServiceTests
         _flashcardRepo.Setup(x => x.GetSessionAsync(session.Id, _userId)).ReturnsAsync(session);
 
         await Should.ThrowAsync<ConflictException>(() => _sut.AddReviewAsync(session.Id,
-            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = Guid.NewGuid(), Rating = FlashcardRating.Good }));
+            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = Guid.NewGuid(), Rating = ReviewRating.Good }));
     }
 
     [Fact]
     public async Task AddReviewAsync_ManualRating_ThrowsBadRequest()
     {
         await Should.ThrowAsync<BadRequestException>(() => _sut.AddReviewAsync(Guid.NewGuid(),
-            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = Guid.NewGuid(), Rating = FlashcardRating.Manual }));
+            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = Guid.NewGuid(), Rating = ReviewRating.Manual }));
     }
 
     [Fact]
@@ -307,7 +308,7 @@ public class FlashcardServiceTests
         _flashcardRepo.Setup(x => x.GetEntryWithProgressAsync(entry.Id, _userId)).ReturnsAsync(entry);
 
         var result = await _sut.AddReviewAsync(session.Id,
-            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = FlashcardRating.Good });
+            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = ReviewRating.Good });
 
         result.ShouldBeNull();
     }
@@ -323,7 +324,7 @@ public class FlashcardServiceTests
             UserId = _userId,
             SessionId = session.Id,
             EntryId = entry.Id,
-            Rating = FlashcardRating.Good,
+            Rating = ReviewRating.Good,
             ReviewedAt = DateTime.UtcNow,
             PrevState = FlashcardState.New,
             PrevReps = 0,
@@ -355,7 +356,7 @@ public class FlashcardServiceTests
             UserId = _userId,
             SessionId = session.Id,
             EntryId = entry.Id,
-            Rating = FlashcardRating.Good,
+            Rating = ReviewRating.Good,
             ReviewedAt = DateTime.UtcNow,
             PrevState = FlashcardState.Review,
             PrevDue = previousDue,
@@ -423,9 +424,9 @@ public class FlashcardServiceTests
         var session = CreateSession();
         session.Reviews =
         [
-            new FlashcardReview { Rating = FlashcardRating.Good, ReviewedAt = DateTime.UtcNow },
-            new FlashcardReview { Rating = FlashcardRating.Good, ReviewedAt = DateTime.UtcNow },
-            new FlashcardReview { Rating = FlashcardRating.Again, ReviewedAt = DateTime.UtcNow },
+            new FlashcardReview { Rating = ReviewRating.Good, ReviewedAt = DateTime.UtcNow },
+            new FlashcardReview { Rating = ReviewRating.Good, ReviewedAt = DateTime.UtcNow },
+            new FlashcardReview { Rating = ReviewRating.Again, ReviewedAt = DateTime.UtcNow },
         ];
 
         _flashcardRepo.Setup(x => x.GetSessionAsync(session.Id, _userId)).ReturnsAsync(session);
@@ -470,7 +471,7 @@ public class FlashcardServiceTests
 
         result.ShouldBeTrue();
         log.ShouldNotBeNull();
-        log.Rating.ShouldBe(FlashcardRating.Manual);
+        log.Rating.ShouldBe(ReviewRating.Manual);
         log.SessionId.ShouldBeNull();
         log.PrevState.ShouldBe(FlashcardState.Review);
         _flashcardRepo.Verify(x => x.RemoveProgress(entry.Progress!), Times.Once);

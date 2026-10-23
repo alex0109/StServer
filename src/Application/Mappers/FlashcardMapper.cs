@@ -2,6 +2,7 @@ using Application.DTOs.Flashcard;
 using Application.Schedulers;
 using Domain.Entities;
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 
 namespace Application.Mappers;
 
@@ -90,7 +91,7 @@ public static class FlashcardMapper
         Guid userId,
         Guid? sessionId,
         Guid entryId,
-        FlashcardRating rating,
+        ReviewRating rating,
         int? durationMs,
         FlashcardCard before,
         DateTime now)
@@ -173,10 +174,10 @@ public static class FlashcardMapper
             Mode = session.Mode,
             CardsTotal = session.CardsTotal,
             Reviewed = session.Reviews.Count,
-            Again = session.Reviews.Count(r => r.Rating == FlashcardRating.Again),
-            Hard = session.Reviews.Count(r => r.Rating == FlashcardRating.Hard),
-            Good = session.Reviews.Count(r => r.Rating == FlashcardRating.Good),
-            Easy = session.Reviews.Count(r => r.Rating == FlashcardRating.Easy),
+            Again = session.Reviews.Count(r => r.Rating == ReviewRating.Again),
+            Hard = session.Reviews.Count(r => r.Rating == ReviewRating.Hard),
+            Good = session.Reviews.Count(r => r.Rating == ReviewRating.Good),
+            Easy = session.Reviews.Count(r => r.Rating == ReviewRating.Easy),
             StartedAt = session.StartedAt,
             FinishedAt = session.FinishedAt,
         };

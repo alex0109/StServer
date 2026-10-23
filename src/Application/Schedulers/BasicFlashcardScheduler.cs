@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 
 namespace Application.Schedulers;
 
@@ -10,12 +11,12 @@ public class BasicFlashcardScheduler : IFlashcardScheduler
 {
     private static readonly TimeSpan AgainDelay = TimeSpan.FromMinutes(1);
 
-    public FlashcardCard Schedule(FlashcardCard card, FlashcardRating rating, DateTime now)
+    public FlashcardCard Schedule(FlashcardCard card, ReviewRating rating, DateTime now)
     {
-        if (rating == FlashcardRating.Manual)
+        if (rating == ReviewRating.Manual)
             throw new ArgumentException("Manual rating can't be scheduled", nameof(rating));
 
-        if (rating == FlashcardRating.Again)
+        if (rating == ReviewRating.Again)
         {
             var isLapse = card.State == FlashcardState.Review;
 
@@ -46,16 +47,16 @@ public class BasicFlashcardScheduler : IFlashcardScheduler
         };
     }
 
-    private static int NextIntervalDays(FlashcardCard card, FlashcardRating rating)
+    private static int NextIntervalDays(FlashcardCard card, ReviewRating rating)
     {
         // Cards that are not in Review yet start from the first interval
         var previous = card.State == FlashcardState.Review ? Math.Max(card.ScheduledDays, 1) : 0;
 
         var (first, factor) = rating switch
         {
-            FlashcardRating.Hard => (1, 1.2),
-            FlashcardRating.Good => (3, 2.5),
-            FlashcardRating.Easy => (7, 3.5),
+            ReviewRating.Hard => (1, 1.2),
+            ReviewRating.Good => (3, 2.5),
+            ReviewRating.Easy => (7, 3.5),
             _ => throw new ArgumentOutOfRangeException(nameof(rating), rating, null)
         };
 

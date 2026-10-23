@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Domain.Utility.Result;
+using Domain.Utility.Review;
 
 namespace Domain.Entities;
 
@@ -19,6 +20,8 @@ public class Result
     public required int Weight { get; set; }
     public TimeSpan TimeSpent { get; set; }
     public ConfidenceLevel? ConfidenceLevel { get; set; }
+    // FSRS rating of the answer, derived from correctness and confidence
+    public ReviewRating Rating { get; set; }
     public int AnswerChangedCount { get; set; } = 0;
     public DateTime? LastModifiedAt { get; set; }
     public required DateTime AnsweredAt { get; set; }

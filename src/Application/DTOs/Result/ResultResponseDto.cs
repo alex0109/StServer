@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Domain.Utility.Result;
+using Domain.Utility.Review;
 
 namespace Application.DTOs.Result;
 
@@ -15,6 +16,9 @@ public class ResultResponseDto
     public required double Score { get; set; }
     public required int Weight { get; set; }
     public ConfidenceLevel? ConfidenceLevel { get; set; }
+    public ReviewRating Rating { get; set; }
+    // Filled for option and true/false questions, so results can show the right answer
+    public Guid? CorrectOptionId { get; set; }
     public int? AnswerChangedCount { get; set; }
     public TimeSpan TimeSpent { get; set; }
     public required DateTime AnsweredAt { get; set; }
