@@ -41,16 +41,35 @@ public class AnswerEvaluationService : IAnswerEvaluationService
         };
     }
 
-    public AnswerEvaluationResult EvaluateOption(
-        Guid? correctOptionId,
-        Guid? userOptionId)
+    public AnswerEvaluationResult EvaluateOptions(
+        IReadOnlyCollection<Guid> correctOptionIds,
+        IReadOnlyCollection<Guid>? userOptionIds)
     {
-        bool isCorrect = correctOptionId is not null && correctOptionId == userOptionId;
+        var correct = correctOptionIds.ToHashSet();
+        var chosen = (userOptionIds ?? []).ToHashSet();
+
+        if (correct.Count == 0)
+        {
+            return new AnswerEvaluationResult
+            {
+                IsCorrect = false,
+                Score = 0,
+                Method = EvaluationMethod.Exact
+            };
+        }
+
+        // Answer counts as correct only when exactly the correct options are chosen,
+        // score gives partial credit and every wrong pick cancels one right pick
+        bool isCorrect = chosen.SetEquals(correct);
+        int rightPicks = chosen.Count(correct.Contains);
+        int wrongPicks = chosen.Count - rightPicks;
+
+        double score = Math.Max(0, rightPicks - wrongPicks) * 100.0 / correct.Count;
 
         return new AnswerEvaluationResult
         {
             IsCorrect = isCorrect,
-            Score = isCorrect ? 100 : 0,
+            Score = Math.Round(score, 2),
             Method = EvaluationMethod.Exact
         };
     }

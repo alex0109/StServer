@@ -12,6 +12,7 @@ public class OptionServiceTests
 {
     private readonly OptionService _sut = new();
 
+    // First option is the correct one
     private static Question CreateQuestion(params string[] optionNames)
     {
         var question = new Question
@@ -29,17 +30,16 @@ public class OptionServiceTests
                 Id = Guid.NewGuid(),
                 QuestionId = question.Id,
                 Name = name,
-                Position = index
+                Position = index,
+                IsCorrect = index == 0
             })
             .ToList();
-
-        question.CorrectOptionId = question.Options.FirstOrDefault()?.Id;
 
         return question;
     }
 
     [Fact]
-    public void SyncOptions_NewOptions_AddsThemInOrderAndSetsCorrect()
+    public void SyncOptions_NewOptions_AddsThemInOrderWithCorrectFlags()
     {
         var question = CreateQuestion();
 
@@ -53,7 +53,46 @@ public class OptionServiceTests
         var options = question.Options.OrderBy(x => x.Position).ToList();
         options.Select(x => x.Name).ShouldBe(["A", "B", "C"]);
         options.Select(x => x.Position).ShouldBe([0, 1, 2]);
-        question.CorrectOptionId.ShouldBe(options[1].Id);
+        options.Select(x => x.IsCorrect).ShouldBe([false, true, false]);
+    }
+
+    [Fact]
+    public void SyncOptions_SeveralCorrect_AreAllowed()
+    {
+        var question = CreateQuestion();
+
+        _sut.SyncOptions(question,
+        [
+            new OptionUpdateDto { Name = "A", IsCorrect = true },
+            new OptionUpdateDto { Name = "B", IsCorrect = true },
+            new OptionUpdateDto { Name = "C" }
+        ]);
+
+        question.Options.Count(x => x.IsCorrect).ShouldBe(2);
+    }
+
+    [Fact]
+    public void SyncOptions_AllCorrect_AreAllowed()
+    {
+        var question = CreateQuestion();
+
+        _sut.SyncOptions(question,
+        [
+            new OptionUpdateDto { Name = "A", IsCorrect = true },
+            new OptionUpdateDto { Name = "B", IsCorrect = true }
+        ]);
+
+        question.Options.ShouldAllBe(x => x.IsCorrect);
+    }
+
+    [Fact]
+    public void SyncOptions_NoCorrect_Throws()
+    {
+        Should.Throw<BadRequestException>(() => _sut.SyncOptions(CreateQuestion(),
+        [
+            new OptionUpdateDto { Name = "A", IsCorrect = false },
+            new OptionUpdateDto { Name = "B" }
+        ]));
     }
 
     [Fact]
@@ -66,7 +105,7 @@ public class OptionServiceTests
         _sut.SyncOptions(question,
         [
             new OptionUpdateDto { Id = c.Id, IsCorrect = true },
-            new OptionUpdateDto { Id = a.Id, Name = "A2" }
+            new OptionUpdateDto { Id = a.Id, Name = "A2", IsCorrect = false }
         ]);
 
         question.Options.Count.ShouldBe(2);
@@ -74,7 +113,25 @@ public class OptionServiceTests
         a.Position.ShouldBe(1);
         a.Name.ShouldBe("A2");
         c.Name.ShouldBe("C");
-        question.CorrectOptionId.ShouldBe(c.Id);
+        c.IsCorrect.ShouldBeTrue();
+        a.IsCorrect.ShouldBeFalse();
+    }
+
+    [Fact]
+    public void SyncOptions_MissingCorrectFlag_KeepsExistingValue()
+    {
+        var question = CreateQuestion("A", "B");
+        var a = question.Options.Single(x => x.Name == "A");
+        var b = question.Options.Single(x => x.Name == "B");
+
+        _sut.SyncOptions(question,
+        [
+            new OptionUpdateDto { Id = a.Id, Name = "A2" },
+            new OptionUpdateDto { Id = b.Id }
+        ]);
+
+        a.IsCorrect.ShouldBeTrue();
+        b.IsCorrect.ShouldBeFalse();
     }
 
     [Fact]
@@ -96,21 +153,6 @@ public class OptionServiceTests
         var options = Enumerable.Range(0, QuestionLimits.MaxOptions + 1)
             .Select(i => new OptionUpdateDto { Name = $"Option {i}", IsCorrect = i == 0 })
             .ToList();
-
-        Should.Throw<BadRequestException>(() => _sut.SyncOptions(CreateQuestion(), options));
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(2)]
-    public void SyncOptions_NotExactlyOneCorrect_Throws(int correctCount)
-    {
-        var options = new List<OptionUpdateDto>
-        {
-            new() { Name = "A", IsCorrect = correctCount >= 1 },
-            new() { Name = "B", IsCorrect = correctCount >= 2 },
-            new() { Name = "C" }
-        };
 
         Should.Throw<BadRequestException>(() => _sut.SyncOptions(CreateQuestion(), options));
     }
@@ -148,7 +190,7 @@ public class OptionServiceTests
     [Theory]
     [InlineData(true, QuestionLimits.TrueOptionName)]
     [InlineData(false, QuestionLimits.FalseOptionName)]
-    public void SetTrueFalseOptions_CreatesTwoOptionsAndMarksCorrect(bool isTrue, string correctName)
+    public void SetTrueFalseOptions_CreatesTwoOptionsWithOneCorrect(bool isTrue, string correctName)
     {
         var question = CreateQuestion();
 
@@ -156,28 +198,27 @@ public class OptionServiceTests
 
         var options = question.Options.OrderBy(x => x.Position).ToList();
         options.Select(x => x.Name).ShouldBe([QuestionLimits.TrueOptionName, QuestionLimits.FalseOptionName]);
-        question.CorrectOptionId.ShouldBe(options.Single(x => x.Name == correctName).Id);
+        options.Single(x => x.IsCorrect).Name.ShouldBe(correctName);
     }
 
     [Fact]
-    public void SetCorrectOption_OptionOfQuestion_SetsIt()
+    public void SetCorrectOption_OptionOfQuestion_MakesItTheOnlyCorrect()
     {
         var question = CreateQuestion("A", "B");
         var b = question.Options.Single(x => x.Name == "B");
 
         _sut.SetCorrectOption(question, b.Id);
 
-        question.CorrectOptionId.ShouldBe(b.Id);
+        question.Options.Single(x => x.IsCorrect).ShouldBe(b);
     }
 
     [Fact]
-    public void SetCorrectOption_ForeignOption_Throws()
+    public void SetCorrectOption_ForeignOption_ThrowsAndKeepsFlags()
     {
         var question = CreateQuestion("A", "B");
-        var correctBefore = question.CorrectOptionId;
 
         Should.Throw<BadRequestException>(() => _sut.SetCorrectOption(question, Guid.NewGuid()));
 
-        question.CorrectOptionId.ShouldBe(correctBefore);
+        question.Options.Single(x => x.IsCorrect).Name.ShouldBe("A");
     }
 }

@@ -20,7 +20,7 @@ public class ResultMapper
             AttemptId = attemptId,
             UserId = userId,
             UserAnswer = dto.UserAnswer ?? null,
-            UserAnswerOptionId = dto.UserAnswerOptionId ?? null,
+            UserAnswerOptionIds = dto.UserAnswerOptionIds?.Distinct().ToList() ?? [],
             IsCorrect = isCorrect,
             Score = score,
             Weight = weight,
@@ -38,13 +38,16 @@ public class ResultMapper
             AttemptId = entity.AttemptId,
             QuestionId = entity.QuestionId,
             UserAnswer = entity.UserAnswer ?? null,
-            UserAnswerOptionId = entity.UserAnswerOptionId ?? null,
+            UserAnswerOptionIds = entity.UserAnswerOptionIds,
             IsCorrect = entity.IsCorrect,
             Score = entity.Score,
             Weight = entity.Weight,
             ConfidenceLevel = entity.ConfidenceLevel,
             Rating = entity.Rating,
-            CorrectOptionId = entity.Question?.CorrectOptionId,
+            CorrectOptionIds = entity.Question?.Options
+                .Where(o => o.IsCorrect)
+                .Select(o => o.Id)
+                .ToList() ?? [],
             AnswerChangedCount = entity.AnswerChangedCount,
             TimeSpent = entity.TimeSpent,
             AnsweredAt = entity.AnsweredAt,
@@ -54,7 +57,7 @@ public class ResultMapper
     public static void ApplyUpdate(Result entity, ResultRequestDto dto, bool isCorrect, double score)
     {
         entity.UserAnswer = dto.UserAnswer ?? null;
-        entity.UserAnswerOptionId = dto.UserAnswerOptionId ?? null;
+        entity.UserAnswerOptionIds = dto.UserAnswerOptionIds?.Distinct().ToList() ?? [];
         entity.IsCorrect = isCorrect;
         entity.Score = score;
         entity.ConfidenceLevel = dto.ConfidenceLevel;

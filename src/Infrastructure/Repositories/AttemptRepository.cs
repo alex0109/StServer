@@ -60,6 +60,7 @@ public class AttemptRepository : IAttemptRepository
             .Include(m => m.Assessment)
             .Include(m => m.Results)
                 .ThenInclude(r => r.Question)
+                    .ThenInclude(q => q.Options)
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
 

@@ -91,7 +91,6 @@ public class QuestionMapperTests
             Title = "Question",
             Answer = "Answer",
             QuestionType = QuestionType.Options,
-            CorrectOptionId = correctOptionId,
             QuestionDifficulty = QuestionDifficulty.Easy,
             Explanation = "Explain",
             Version = 2,
@@ -103,7 +102,8 @@ public class QuestionMapperTests
                 new Option
                 {
                     Id = correctOptionId,
-                    Name = "Correct"
+                    Name = "Correct",
+                    IsCorrect = true
                 },
                 new Option
                 {
@@ -174,14 +174,11 @@ public class QuestionMapperTests
         };
 
         var oldUpdatedAt = entity.UpdatedAt;
-        var oldCorrectOptionId = entity.CorrectOptionId;
 
         QuestionMapper.ApplyUpdate(entity, dto);
 
         entity.Title.ShouldBe("New title");
         entity.Answer.ShouldBe("New answer");
-        // Correct option is validated by OptionService, mapper does not touch it
-        entity.CorrectOptionId.ShouldBe(oldCorrectOptionId);
         entity.QuestionDifficulty.ShouldBe(QuestionDifficulty.Hard);
         entity.Explanation.ShouldBe("New explanation");
 

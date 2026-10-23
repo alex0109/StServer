@@ -479,6 +479,9 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<bool>("IsCorrect")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -507,9 +510,6 @@ namespace StServer.Migrations
                     b.Property<string>("Answer")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
-
-                    b.Property<Guid?>("CorrectOptionId")
-                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -605,8 +605,9 @@ namespace StServer.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<Guid?>("UserAnswerOptionId")
-                        .HasColumnType("uuid");
+                    b.PrimitiveCollection<List<Guid>>("UserAnswerOptionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");

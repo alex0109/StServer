@@ -17,11 +17,6 @@ public class OptionService : IOptionService
                 $"Question must have from {QuestionLimits.MinOptions} to {QuestionLimits.MaxOptions} options");
         }
 
-        if (incoming.Count(x => x.IsCorrect is true) != 1)
-        {
-            throw new BadRequestException("Exactly one correct option required");
-        }
-
         var existingById = question.Options.ToDictionary(x => x.Id);
 
         if (incoming.Any(x => x.Id.HasValue && !existingById.ContainsKey(x.Id.Value)))
@@ -41,6 +36,18 @@ public class OptionService : IOptionService
         if (names.Distinct(StringComparer.OrdinalIgnoreCase).Count() != names.Count)
         {
             throw new BadRequestException("Options must be unique");
+        }
+
+        // Missing IsCorrect keeps the current value of an existing option
+        var correctFlags = incoming
+            .Select(x => x.IsCorrect
+                         ?? existingById.GetValueOrDefault(x.Id ?? Guid.Empty)?.IsCorrect
+                         ?? false)
+            .ToList();
+
+        if (!correctFlags.Any(x => x))
+        {
+            throw new BadRequestException("At least one correct option required");
         }
 
         var incomingIds = incoming
@@ -80,34 +87,31 @@ public class OptionService : IOptionService
             }
 
             option.Position = i;
-
-            if (dto.IsCorrect is true)
-            {
-                question.CorrectOptionId = option.Id;
-            }
+            option.IsCorrect = correctFlags[i];
         }
     }
 
     public void SetTrueFalseOptions(Question question, bool isTrue)
     {
-        var trueOption = new Option
+        question.Options = new List<Option>
         {
-            Id = Guid.NewGuid(),
-            QuestionId = question.Id,
-            Name = QuestionLimits.TrueOptionName,
-            Position = 0
+            new()
+            {
+                Id = Guid.NewGuid(),
+                QuestionId = question.Id,
+                Name = QuestionLimits.TrueOptionName,
+                Position = 0,
+                IsCorrect = isTrue
+            },
+            new()
+            {
+                Id = Guid.NewGuid(),
+                QuestionId = question.Id,
+                Name = QuestionLimits.FalseOptionName,
+                Position = 1,
+                IsCorrect = !isTrue
+            }
         };
-
-        var falseOption = new Option
-        {
-            Id = Guid.NewGuid(),
-            QuestionId = question.Id,
-            Name = QuestionLimits.FalseOptionName,
-            Position = 1
-        };
-
-        question.Options = new List<Option> { trueOption, falseOption };
-        question.CorrectOptionId = isTrue ? trueOption.Id : falseOption.Id;
     }
 
     public void SetCorrectOption(Question question, Guid optionId)
@@ -117,6 +121,9 @@ public class OptionService : IOptionService
             throw new BadRequestException("Option does not belong to this question");
         }
 
-        question.CorrectOptionId = optionId;
+        foreach (var option in question.Options)
+        {
+            option.IsCorrect = option.Id == optionId;
+        }
     }
 }

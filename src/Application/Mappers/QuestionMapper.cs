@@ -69,14 +69,13 @@ public static class QuestionMapper
             Title = entity.Title,
             Answer = entity.Answer,
             QuestionType = entity.QuestionType,
-            CorrectOptionId = entity.CorrectOptionId,
             Explanation = entity.Explanation,
             QuestionDifficulty = entity.QuestionDifficulty,
             Options = entity.Options.OrderBy(o => o.Position).Select(o => new OptionResponseDto
             {
                 Id = o.Id,
                 Name = o.Name,
-                IsCorrect = o.Id == entity.CorrectOptionId
+                IsCorrect = o.IsCorrect
             }).ToList(),
             IsActive = entity.IsActive,
             Version = entity.Version,

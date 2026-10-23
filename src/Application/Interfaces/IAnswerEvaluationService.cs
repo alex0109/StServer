@@ -8,7 +8,7 @@ public interface IAnswerEvaluationService
         string correctAnswer, 
         string userAnswer);
 
-    AnswerEvaluationResult EvaluateOption(
-        Guid? correctOptionId,
-        Guid? userOptionId);
+    AnswerEvaluationResult EvaluateOptions(
+        IReadOnlyCollection<Guid> correctOptionIds,
+        IReadOnlyCollection<Guid>? userOptionIds);
 }

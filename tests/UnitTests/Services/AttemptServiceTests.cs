@@ -41,14 +41,11 @@ public class AttemptServiceTests
             _scoring.Object,
             new ConfidenceReviewRatingResolver());
 
+        // Option grading has no dependencies, so the real implementation is used
         _evaluation.Setup(x =>
-                x.EvaluateOption(It.IsAny<Guid?>(), It.IsAny<Guid?>()))
-            .Returns((Guid? correct, Guid? chosen) => new AnswerEvaluationResult
-            {
-                IsCorrect = correct is not null && correct == chosen,
-                Score = correct is not null && correct == chosen ? 100 : 0,
-                Method = EvaluationMethod.Exact
-            });
+                x.EvaluateOptions(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<IReadOnlyCollection<Guid>?>()))
+            .Returns((IReadOnlyCollection<Guid> correct, IReadOnlyCollection<Guid>? chosen) =>
+                new AnswerEvaluationService(Mock.Of<IAnswerNormalizer>(), []).EvaluateOptions(correct, chosen));
     }
     
     [Fact]
@@ -240,7 +237,7 @@ public class AttemptServiceTests
             .ReturnsAsync(new Question
             {
                 Id = questionId,
-                CorrectOptionId = optionId,
+                Options = [new Option { Id = optionId, Name = "Correct", IsCorrect = true }],
                 QuestionDifficulty = QuestionDifficulty.Easy,
                 Title = "Test",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
@@ -253,7 +250,7 @@ public class AttemptServiceTests
                 new ResultRequestDto
                 {
                     QuestionId = questionId,
-                    UserAnswerOptionId = optionId
+                    UserAnswerOptionIds = [optionId]
                 });
 
         result.IsCorrect.ShouldBeTrue();
@@ -288,7 +285,7 @@ public class AttemptServiceTests
             .ReturnsAsync(new Question
             {
                 Id = questionId,
-                CorrectOptionId = Guid.NewGuid(),
+                Options = [new Option { Id = Guid.NewGuid(), Name = "Correct", IsCorrect = true }],
                 QuestionDifficulty = QuestionDifficulty.Easy,
                 Title = "Test",
                 CreatedAt = DateTime.UtcNow.AddDays(-1),
@@ -302,7 +299,7 @@ public class AttemptServiceTests
                 new ResultRequestDto
                 {
                     QuestionId = questionId,
-                    UserAnswerOptionId = Guid.NewGuid()
+                    UserAnswerOptionIds = [Guid.NewGuid()]
                 });
 
 
@@ -516,7 +513,7 @@ public class AttemptServiceTests
             {
                 Id = questionId,
                 QuestionType = QuestionType.Options,
-                CorrectOptionId = Guid.NewGuid(),
+                Options = [new Option { Id = Guid.NewGuid(), Name = "Correct", IsCorrect = true }],
                 QuestionDifficulty = QuestionDifficulty.Easy,
                 Title = "Test",
                 CreatedAt = DateTime.UtcNow
@@ -525,7 +522,7 @@ public class AttemptServiceTests
         var result = await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
         {
             QuestionId = questionId,
-            UserAnswerOptionId = Guid.NewGuid(),
+            UserAnswerOptionIds = [Guid.NewGuid()],
             ConfidenceLevel = ConfidenceLevel.High
         });
 
@@ -551,7 +548,7 @@ public class AttemptServiceTests
             {
                 Id = questionId,
                 QuestionType = QuestionType.TrueFalse,
-                CorrectOptionId = trueOptionId,
+                Options = [new Option { Id = trueOptionId, Name = "Correct", IsCorrect = true }],
                 QuestionDifficulty = QuestionDifficulty.Easy,
                 Title = "The Earth is round",
                 CreatedAt = DateTime.UtcNow
@@ -560,14 +557,14 @@ public class AttemptServiceTests
         var result = await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
         {
             QuestionId = questionId,
-            UserAnswerOptionId = trueOptionId,
+            UserAnswerOptionIds = [trueOptionId],
             ConfidenceLevel = ConfidenceLevel.Low
         });
 
         result.IsCorrect.ShouldBeTrue();
         result.Score.ShouldBe(100);
         saved.ShouldNotBeNull();
-        saved.UserAnswerOptionId.ShouldBe(trueOptionId);
+        saved.UserAnswerOptionIds.ShouldBe([trueOptionId]);
         saved.Rating.ShouldBe(ReviewRating.Hard);
         _evaluation.Verify(x => x.EvaluateAnswer(It.IsAny<string>(), It.IsAny<string>()), Times.Never);
     }
@@ -583,7 +580,7 @@ public class AttemptServiceTests
             Id = Guid.NewGuid(),
             AttemptId = attempt.Id,
             QuestionId = questionId,
-            UserAnswerOptionId = Guid.NewGuid(),
+            UserAnswerOptionIds = [Guid.NewGuid()],
             IsCorrect = false,
             Score = 0,
             Weight = 1,
@@ -599,7 +596,7 @@ public class AttemptServiceTests
             {
                 Id = questionId,
                 QuestionType = QuestionType.Options,
-                CorrectOptionId = correctOptionId,
+                Options = [new Option { Id = correctOptionId, Name = "Correct", IsCorrect = true }],
                 QuestionDifficulty = QuestionDifficulty.Easy,
                 Title = "Test",
                 CreatedAt = DateTime.UtcNow
@@ -608,12 +605,53 @@ public class AttemptServiceTests
         await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
         {
             QuestionId = questionId,
-            UserAnswerOptionId = correctOptionId
+            UserAnswerOptionIds = [correctOptionId]
         });
 
         existing.IsCorrect.ShouldBeTrue();
         existing.Rating.ShouldBe(ReviewRating.Good);
         _repo.Verify(x => x.AddResultAsync(It.IsAny<Result>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AnswerQuestion_SeveralCorrectOptions_NeedsAllOfThem()
+    {
+        var attempt = CreateAttempt();
+        var questionId = Guid.NewGuid();
+        Guid a = Guid.NewGuid(), b = Guid.NewGuid(), c = Guid.NewGuid();
+        Result? saved = null;
+
+        _repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        _repo.Setup(x => x.AddResultAsync(It.IsAny<Result>())).Callback<Result>(r => saved = r);
+        _questionRepo.Setup(x =>
+                x.GetByIdQuestionAsync(It.IsAny<Guid>(), questionId, _userId))
+            .ReturnsAsync(new Question
+            {
+                Id = questionId,
+                QuestionType = QuestionType.Options,
+                QuestionDifficulty = QuestionDifficulty.Easy,
+                Title = "Pick prime numbers",
+                CreatedAt = DateTime.UtcNow,
+                Options =
+                [
+                    new Option { Id = a, Name = "2", IsCorrect = true },
+                    new Option { Id = b, Name = "3", IsCorrect = true },
+                    new Option { Id = c, Name = "4" }
+                ]
+            });
+
+        var result = await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
+        {
+            QuestionId = questionId,
+            UserAnswerOptionIds = [a],
+            ConfidenceLevel = ConfidenceLevel.High
+        });
+
+        result.IsCorrect.ShouldBeFalse();
+        result.Score.ShouldBe(50);
+        saved.ShouldNotBeNull();
+        saved.UserAnswerOptionIds.ShouldBe([a]);
+        saved.Rating.ShouldBe(ReviewRating.Again);
     }
 
     private Attempt CreateAttempt()

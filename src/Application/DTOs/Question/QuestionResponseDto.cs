@@ -14,7 +14,6 @@ public class QuestionResponseDto
     [MaxLength(1000)]
     public string? Answer { get; set; }
     public QuestionType QuestionType  { get; set; }
-    public Guid? CorrectOptionId { get; set; }
     public List<OptionResponseDto>? Options { get; set; }
     public QuestionDifficulty QuestionDifficulty { get; set; }
     [MaxLength(1000)]

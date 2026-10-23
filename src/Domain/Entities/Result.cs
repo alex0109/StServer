@@ -14,7 +14,7 @@ public class Result
     public Question Question { get; set; } = null!;
     [MaxLength(1000)]
     public string? UserAnswer { get; set; }
-    public Guid? UserAnswerOptionId { get; set; }
+    public List<Guid> UserAnswerOptionIds { get; set; } = [];
     public required bool IsCorrect { get; set; }
     public required double Score { get; set; }
     public required int Weight { get; set; }

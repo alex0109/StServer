@@ -279,11 +279,11 @@ public class AnswerEvaluationServiceTests
     }
 
     [Fact]
-    public void EvaluateOption_SameOption_IsCorrectWithFullScore()
+    public void EvaluateOptions_SameSingleOption_IsCorrectWithFullScore()
     {
         var optionId = Guid.NewGuid();
 
-        var result = CreateService().EvaluateOption(optionId, optionId);
+        var result = CreateService().EvaluateOptions([optionId], [optionId]);
 
         result.IsCorrect.ShouldBeTrue();
         result.Score.ShouldBe(100);
@@ -291,27 +291,62 @@ public class AnswerEvaluationServiceTests
     }
 
     [Fact]
-    public void EvaluateOption_OtherOption_IsWrongWithZeroScore()
+    public void EvaluateOptions_AllCorrectOfMany_IsCorrect()
     {
-        var result = CreateService().EvaluateOption(Guid.NewGuid(), Guid.NewGuid());
+        Guid a = Guid.NewGuid(), b = Guid.NewGuid(), c = Guid.NewGuid();
+
+        var result = CreateService().EvaluateOptions([a, b, c], [c, a, b]);
+
+        result.IsCorrect.ShouldBeTrue();
+        result.Score.ShouldBe(100);
+    }
+
+    [Fact]
+    public void EvaluateOptions_PartOfCorrect_IsWrongWithPartialScore()
+    {
+        Guid a = Guid.NewGuid(), b = Guid.NewGuid();
+
+        var result = CreateService().EvaluateOptions([a, b], [a]);
+
+        result.IsCorrect.ShouldBeFalse();
+        result.Score.ShouldBe(50);
+    }
+
+    [Fact]
+    public void EvaluateOptions_WrongPickCancelsRightPick()
+    {
+        Guid a = Guid.NewGuid(), b = Guid.NewGuid(), wrong = Guid.NewGuid();
+
+        var result = CreateService().EvaluateOptions([a, b], [a, b, wrong]);
+
+        result.IsCorrect.ShouldBeFalse();
+        result.Score.ShouldBe(50);
+    }
+
+    [Fact]
+    public void EvaluateOptions_ScoreNeverGoesBelowZero()
+    {
+        var result = CreateService().EvaluateOptions(
+            [Guid.NewGuid()],
+            [Guid.NewGuid(), Guid.NewGuid()]);
 
         result.IsCorrect.ShouldBeFalse();
         result.Score.ShouldBe(0);
     }
 
     [Fact]
-    public void EvaluateOption_NoOptionChosen_IsWrong()
+    public void EvaluateOptions_NothingChosen_IsWrong()
     {
-        var result = CreateService().EvaluateOption(Guid.NewGuid(), null);
+        var result = CreateService().EvaluateOptions([Guid.NewGuid()], null);
 
         result.IsCorrect.ShouldBeFalse();
         result.Score.ShouldBe(0);
     }
 
     [Fact]
-    public void EvaluateOption_QuestionWithoutCorrectOption_IsWrong()
+    public void EvaluateOptions_QuestionWithoutCorrectOptions_IsWrong()
     {
-        var result = CreateService().EvaluateOption(null, null);
+        var result = CreateService().EvaluateOptions([], []);
 
         result.IsCorrect.ShouldBeFalse();
     }

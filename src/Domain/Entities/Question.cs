@@ -19,7 +19,6 @@ public class Question
     [MaxLength(1000)] 
     public string? Answer { get; set; }
     public QuestionType QuestionType  { get; set; }
-    public Guid? CorrectOptionId { get; set; }
     public ICollection<Option> Options { get; set; } = new List<Option>();
     public QuestionDifficulty QuestionDifficulty { get; set; }
     public string? Explanation { get; set; }

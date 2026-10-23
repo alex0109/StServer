@@ -101,9 +101,14 @@ public class AttemptService : IAttemptService
 
         if (question.QuestionType is QuestionType.Options or QuestionType.TrueFalse)
         {
-            result = _answerEvaluationService.EvaluateOption(
-                question.CorrectOptionId,
-                resultRequestDto.UserAnswerOptionId
+            var correctOptionIds = question.Options
+                .Where(o => o.IsCorrect)
+                .Select(o => o.Id)
+                .ToList();
+
+            result = _answerEvaluationService.EvaluateOptions(
+                correctOptionIds,
+                resultRequestDto.UserAnswerOptionIds
             );
         }
         else if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
