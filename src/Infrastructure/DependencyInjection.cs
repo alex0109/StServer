@@ -15,6 +15,7 @@ public static class DependencyInjection
         services.AddScoped<ITagRepository, TagRepository>();
         services.AddScoped<IStatisticsRepository, StatisticsRepository>();
         services.AddScoped<INoteRepository, NoteRepository>();
+        services.AddScoped<IDictionaryRepository, DictionaryRepository>();
 
         return services;
     }

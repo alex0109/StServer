@@ -12,10 +12,10 @@ public static class NoteEndpoints
             .RequireRateLimiting("api");
 
         noteGroup.MapGet("/", GetAllNotes);
-        noteGroup.MapGet("/{noteId}", GetOneNote);
+        noteGroup.MapGet("/{noteId:guid}", GetOneNote);
         noteGroup.MapPost("/", CreateNote);
-        noteGroup.MapPatch("/{noteId}", UpdateNote);
-        noteGroup.MapDelete("/{noteId}", DeleteNote);
+        noteGroup.MapPatch("/{noteId:guid}", UpdateNote);
+        noteGroup.MapDelete("/{noteId:guid}", DeleteNote);
         
         static async Task<IResult> GetAllNotes(Guid materialId, INoteService service)
         {

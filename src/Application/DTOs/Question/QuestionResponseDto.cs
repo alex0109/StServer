@@ -8,6 +8,7 @@ public class QuestionResponseDto
 {
     public Guid Id { get; set; }
     public Guid MaterialId { get; set; }
+    public Guid? NoteId { get; set; }
     [MaxLength(100)]
     public required string Title { get; set; }
     [MaxLength(1000)]

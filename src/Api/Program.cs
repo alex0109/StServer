@@ -137,6 +137,7 @@ app.MapGet("/", () => Results.Ok(new
     Name = "StServer",
     Environment = app.Environment.EnvironmentName
 }));
+
 app.MapMaterialEndpoints();
 app.MapQuestionEndpoints();
 app.MapAssessmentEndpoints();
@@ -144,6 +145,7 @@ app.MapAttemptEndpoints();
 app.MapTagEndpoints();
 app.MapStatisticsEndpoints();
 app.MapNoteEndpoints();
+app.MapDictionaryEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {

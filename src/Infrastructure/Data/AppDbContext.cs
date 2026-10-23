@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<MaterialTag> MaterialTags => Set<MaterialTag>();
     public DbSet<Option> Options => Set<Option>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<Dictionary> Dictionaries => Set<Dictionary>();
+    public DbSet<DictionaryEntry> DictionaryEntries => Set<DictionaryEntry>();
     public DbSet<MaterialFile> MaterialFiles => Set<MaterialFile>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -41,6 +43,20 @@ public class AppDbContext : DbContext
             .WithMany(m => m.Questions)
             .HasForeignKey(a => a.MaterialId)
             .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Question>()
+            .HasOne(a => a.Note)
+            .WithMany(m => m.Questions)
+            .HasForeignKey(a => a.NoteId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Question>()
+            .HasOne(q => q.DictionaryEntry)
+            .WithOne(e => e.Question)
+            .HasForeignKey<Question>(q => q.DictionaryEntryId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Question>().HasIndex(q => q.NoteId);
         
         modelBuilder.Entity<Assessment>()
             .Property(x => x.Id)
@@ -137,6 +153,34 @@ public class AppDbContext : DbContext
                 ("Type" = 1 AND "TextContent" IS NULL AND "FileId" IS NULL)
                 """
             ));
+        });
+        
+        modelBuilder.Entity<Dictionary>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasOne(d => d.Material)
+                .WithMany(m => m.Dictionaries)
+                .HasForeignKey(d => d.MaterialId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => x.MaterialId);
+            entity.HasIndex(x => x.UserId);
+            entity.HasIndex(x => new { x.MaterialId, x.UserId });
+        });
+
+        modelBuilder.Entity<DictionaryEntry>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasOne(e => e.Dictionary)
+                .WithMany(d => d.Entries)
+                .HasForeignKey(e => e.DictionaryId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new { x.DictionaryId, x.Position });
         });
         
         modelBuilder.Entity<MaterialFile>()

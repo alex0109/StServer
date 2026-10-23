@@ -12,13 +12,13 @@ public static class MaterialEndpoints
             .RequireRateLimiting("api");
 
         materialGroup.MapGet("/", GetAllMaterials);
-        materialGroup.MapGet("/{materialId}", GetMaterial);
+        materialGroup.MapGet("/{materialId:guid}", GetMaterial);
         materialGroup.MapGet("/stats/data", GetStatisticalData);
         materialGroup.MapPost("/", CreateMaterial);
-        materialGroup.MapPatch("/{materialId}", UpdateMaterial);
-        materialGroup.MapPost("/{materialId}/tags/{tagId}", AddTagToMaterial);
-        materialGroup.MapDelete("/{materialId}/tags/{tagId}", DeleteTagFromMaterial);
-        materialGroup.MapDelete("/{materialId}", DeleteMaterial);
+        materialGroup.MapPatch("/{materialId:guid}", UpdateMaterial);
+        materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);
+        materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
+        materialGroup.MapDelete("/{materialId:guid}", DeleteMaterial);
         
         static async Task<IResult> GetAllMaterials(IMaterialService service)
         {

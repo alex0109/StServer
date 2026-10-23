@@ -12,11 +12,11 @@ public static class TagEndpoints
             .RequireRateLimiting("api");
 
         tagGroup.MapGet("/", GetTags);
-        tagGroup.MapGet("/{tagId}", GetTagById);
-        tagGroup.MapGet("/{tagId}/materials", GetMaterialsByTag);
+        tagGroup.MapGet("/{tagId:guid}", GetTagById);
+        tagGroup.MapGet("/{tagId:guid}/materials", GetMaterialsByTag);
         tagGroup.MapPost("/", CreateTag);
-        tagGroup.MapPatch("/{tagId}", UpdateTag);
-        tagGroup.MapDelete("/{tagId}", DeleteTag);
+        tagGroup.MapPatch("/{tagId:guid}", UpdateTag);
+        tagGroup.MapDelete("/{tagId:guid}", DeleteTag);
 
         static async Task<IResult> GetTags(ITagService service)
         {

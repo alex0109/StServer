@@ -11,6 +11,7 @@ public class Material
     public ICollection<Question> Questions { get; set; } = new List<Question>();
     public ICollection<Assessment> Assessments { get; set; } = new List<Assessment>();
     public ICollection<Note> Notes { get; set; } = new List<Note>();
+    public ICollection<Dictionary> Dictionaries { get; set; } = new List<Dictionary>();
     public ICollection<MaterialFile> MaterialFiles { get; set; } = new List<MaterialFile>();
     public ICollection<MaterialTag> MaterialTags { get; set; } = new List<MaterialTag>();
     [MaxLength(70)]

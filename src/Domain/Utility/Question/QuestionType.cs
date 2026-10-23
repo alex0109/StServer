@@ -4,4 +4,5 @@ public enum QuestionType
 {
     Options,
     Open,
+    Flashcard,
 }

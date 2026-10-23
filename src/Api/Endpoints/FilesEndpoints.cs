@@ -4,14 +4,14 @@ public static class FileEndpoints
 {
     public static void MapFileEndpoints(this WebApplication app)
     {
-        var fileGroup = app.MapGroup("api/materials/{materialId}/files")
+        var fileGroup = app.MapGroup("api/materials/{materialId:guid}/files")
             .RequireAuthorization()
             .RequireRateLimiting("api");
 
         fileGroup.MapGet("/", GetAllFiles);
-        fileGroup.MapGet("/{fileId}", GetOneFile);
+        fileGroup.MapGet("/{fileId:guid}", GetOneFile);
         fileGroup.MapPost("/", CreateFile);
-        fileGroup.MapDelete("/{fileId}", DeleteFile);
+        fileGroup.MapDelete("/{fileId:guid}", DeleteFile);
         
         static async Task<IResult> GetAllFiles()
         {

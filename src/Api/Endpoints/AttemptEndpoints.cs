@@ -12,12 +12,12 @@ public static class AttemptEndpoints
             .RequireAuthorization()
             .RequireRateLimiting("api");
 
-        assessmentGroup.MapGet("/m/{materialId}", GetFinishedAttempts);
-        assessmentGroup.MapGet("/{attemptId}", GetAttempt);
+        assessmentGroup.MapGet("/m/{materialId:guid}", GetFinishedAttempts);
+        assessmentGroup.MapGet("/{attemptId:guid}", GetAttempt);
         assessmentGroup.MapPost("/start", StartAttempt);
-        assessmentGroup.MapPost("/{attemptId}/answer", AnswerQuestion);
-        assessmentGroup.MapPost("/{attemptId}/finish", FinishAttempt);
-        assessmentGroup.MapGet("/{attemptId}/results", GetResults);
+        assessmentGroup.MapPost("/{attemptId:guid}/answer", AnswerQuestion);
+        assessmentGroup.MapPost("/{attemptId:guid}/finish", FinishAttempt);
+        assessmentGroup.MapGet("/{attemptId:guid}/results", GetResults);
 
         static async Task<IResult> GetFinishedAttempts(Guid materialId, IAttemptService service)
         {

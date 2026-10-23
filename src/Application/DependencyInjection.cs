@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<ISuccessBonusScoreCalculator>(sp => new SuccessBonusScoreCalculator(bonusFactor: 0.5));
         services.AddScoped<IAttemptScoringService, AttemptScoringService>();
         services.AddScoped<INoteService, NoteService>();
+        services.AddScoped<IDictionaryService, DictionaryService>();
 
         return services;
     }

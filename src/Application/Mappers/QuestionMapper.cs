@@ -13,6 +13,7 @@ public static class QuestionMapper
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            NoteId = dto.NoteId,
             UserId = userId,
             Title = dto.Title,
             Answer = dto.Answer,
@@ -30,6 +31,7 @@ public static class QuestionMapper
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            NoteId = dto.NoteId,
             UserId = userId,
             Title = dto.Title,
             QuestionType = QuestionType.Options,
@@ -46,6 +48,7 @@ public static class QuestionMapper
         {
             Id = entity.Id,
             MaterialId = entity.MaterialId,
+            NoteId = entity.NoteId,
             Title = entity.Title,
             Answer = entity.Answer,
             QuestionType = entity.QuestionType,
@@ -74,8 +77,7 @@ public static class QuestionMapper
             Options = entity.Options.Select(o => new OptionResponseDto
             {
                 Id = o.Id,
-                Name = o.Name,
-                IsCorrect = o.Id == entity.CorrectOptionId
+                Name = o.Name
             }).ToList()
         };
     }

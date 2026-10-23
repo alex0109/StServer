@@ -10,6 +10,10 @@ public class Question
     public ICollection<Result> Results { get; set; } = new List<Result>();
     public Guid MaterialId { get; set; }
     public Material Material { get; set; } = null!;
+    public Guid? NoteId { get; set; }
+    public Note? Note { get; set; }
+    public Guid? DictionaryEntryId { get; set; }
+    public DictionaryEntry? DictionaryEntry { get; set; }
     [MaxLength(100)]
     public required string Title { get; set; }
     [MaxLength(1000)] 

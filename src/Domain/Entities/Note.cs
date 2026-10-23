@@ -9,6 +9,7 @@ public class Note
     public Guid UserId { get; set; }
     public Guid MaterialId { get; set; }
     public Material Material { get; set; } = null!;
+    public ICollection<Question> Questions { get; set; } = new List<Question>();
     public required string Title { get; set; }
     public NoteType Type { get; set; }
     
