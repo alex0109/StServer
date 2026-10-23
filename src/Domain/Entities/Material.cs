@@ -14,6 +14,7 @@ public class Material
     public ICollection<Dictionary> Dictionaries { get; set; } = new List<Dictionary>();
     public ICollection<MaterialFile> MaterialFiles { get; set; } = new List<MaterialFile>();
     public ICollection<MaterialTag> MaterialTags { get; set; } = new List<MaterialTag>();
+    public ICollection<MaterialShare> Shares { get; set; } = new List<MaterialShare>();
     [MaxLength(70)]
     public required string Title { get; set; }
     public required MaterialType Type { get; set; }
@@ -25,6 +26,9 @@ public class Material
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int Version { get; set; } = 1;
+    // Set when the material is a copy imported from a share link, no FK: the source may be deleted
+    public Guid? ImportedFromMaterialId { get; set; }
+    public DateTime? ImportedAt { get; set; }
     
     public void AddTag(Guid tagId)
     {

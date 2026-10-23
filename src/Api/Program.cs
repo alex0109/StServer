@@ -14,6 +14,7 @@ using Api.Middleware;
 using Application;
 using Application.Interfaces;
 using Application.Jobs;
+using Application.Schedulers;
 using Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -81,7 +82,10 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IUserContext, UserContext>();
 
 builder.Services.AddInfrastructure();
-builder.Services.AddApplication();
+builder.Services.AddApplication(
+    builder.Configuration
+        .GetSection(FlashcardSchedulerOptions.SectionName)
+        .Get<FlashcardSchedulerOptions>());
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
 {
@@ -160,6 +164,8 @@ app.MapStatisticsEndpoints();
 app.MapNoteEndpoints();
 app.MapDictionaryEndpoints();
 app.MapFlashcardEndpoints();
+app.MapMaterialShareEndpoints();
+app.MapLimitEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -177,6 +183,14 @@ if (!app.Environment.IsEnvironment("Testing"))
             "cleanup-attempts",
             x => x.Cleanup(),
             Cron.Daily);
+
+        recurringJobManager.AddOrUpdate<FlashcardRescheduleJob>(
+            "reschedule-flashcards",
+            x => x.RescheduleOutdated(),
+            Cron.Daily);
+
+        // Run once on start as well, so cards move to a newly configured algorithm right away
+        recurringJobManager.Trigger("reschedule-flashcards");
     }
 }
 

@@ -14,12 +14,18 @@ public class QuestionService : IQuestionService
     private readonly IQuestionRepository _repo;
     private readonly IUserContext _user;
     private readonly IOptionService _optionService;
+    private readonly ILimitLock _limitLock;
 
-    public QuestionService(IQuestionRepository repo, IUserContext user, IOptionService optionService)
+    public QuestionService(
+        IQuestionRepository repo,
+        IUserContext user,
+        IOptionService optionService,
+        ILimitLock limitLock)
     {
         _repo = repo;
         _user = user;
         _optionService = optionService;
+        _limitLock = limitLock;
     }
 
     public async Task<List<QuestionResponseDto>> GetActiveQuestionsAsync(Guid materialId)
@@ -52,64 +58,61 @@ public class QuestionService : IQuestionService
         return QuestionMapper.ToDto(question);
     }
 
-    public async Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
+    public Task<QuestionResponseDto?> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
     {
-        var count = await _repo.CountByMaterialIdAsync(materialId);
-
-        if (count >= UserLimits.MaxQuestionsPerMaterial)
-        {
-            throw new LimitExceededException("Question limit reached");
-        }
-        
-        var question = QuestionMapper.ToEntityOpenQuestion(questionDto, materialId, _user.UserId);
-
-        var response = await _repo.AddQuestionAsync(question);
-        
-        await _repo.SaveChangesAsync();
-
-        return QuestionMapper.ToDto(response);
+        return CreateWithinLimitAsync(materialId, () =>
+            QuestionMapper.ToEntityOpenQuestion(questionDto, materialId, _user.UserId));
     }
     
-    public async Task<QuestionResponseDto> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto)
+    public Task<QuestionResponseDto?> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto)
     {
-        var count = await _repo.CountByMaterialIdAsync(materialId);
-
-        if (count >= UserLimits.MaxQuestionsPerMaterial)
+        return CreateWithinLimitAsync(materialId, () =>
         {
-            throw new LimitExceededException("Question limit reached");
-        }
-        
-        var question = QuestionMapper.ToEntityOptionsQuestion(questionDto, materialId, _user.UserId);
+            var question = QuestionMapper.ToEntityOptionsQuestion(questionDto, materialId, _user.UserId);
 
-        question.Options = new List<Option>();
+            question.Options = new List<Option>();
 
-        var options = questionDto.Options
-            .Select(x => new OptionUpdateDto { Name = x.Name, IsCorrect = x.IsCorrect })
-            .ToList();
+            var options = questionDto.Options
+                .Select(x => new OptionUpdateDto { Name = x.Name, IsCorrect = x.IsCorrect })
+                .ToList();
 
-        _optionService.SyncOptions(question, options);
+            _optionService.SyncOptions(question, options);
 
-        await _repo.AddQuestionAsync(question);
-        await _repo.SaveChangesAsync();
-
-        return QuestionMapper.ToDto(question);
+            return question;
+        });
     }
 
-    public async Task<QuestionResponseDto> CreateTrueFalseQuestionAsync(Guid materialId, TrueFalseQuestionCreateDto questionDto)
+    public Task<QuestionResponseDto?> CreateTrueFalseQuestionAsync(Guid materialId, TrueFalseQuestionCreateDto questionDto)
     {
-        var count = await _repo.CountByMaterialIdAsync(materialId);
+        return CreateWithinLimitAsync(materialId, () =>
+        {
+            var question = QuestionMapper.ToEntityTrueFalseQuestion(questionDto, materialId, _user.UserId);
+
+            _optionService.SetTrueFalseOptions(question, questionDto.IsTrue);
+
+            return question;
+        });
+    }
+
+    private async Task<QuestionResponseDto?> CreateWithinLimitAsync(Guid materialId, Func<Question> buildQuestion)
+    {
+        if (!await _repo.MaterialExistsAsync(materialId, _user.UserId))
+            return null;
+
+        await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Questions, materialId);
+
+        var count = await _repo.CountActiveByMaterialIdAsync(materialId);
 
         if (count >= UserLimits.MaxQuestionsPerMaterial)
         {
-            throw new LimitExceededException("Question limit reached");
+            throw new LimitExceededException($"Question limit reached: {UserLimits.MaxQuestionsPerMaterial} per material");
         }
 
-        var question = QuestionMapper.ToEntityTrueFalseQuestion(questionDto, materialId, _user.UserId);
-
-        _optionService.SetTrueFalseOptions(question, questionDto.IsTrue);
+        var question = buildQuestion();
 
         await _repo.AddQuestionAsync(question);
         await _repo.SaveChangesAsync();
+        await limitLock.CommitAsync();
 
         return QuestionMapper.ToDto(question);
     }

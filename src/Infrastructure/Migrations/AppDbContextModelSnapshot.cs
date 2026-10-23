@@ -183,6 +183,9 @@ namespace StServer.Migrations
                     b.Property<Guid>("EntryId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Algorithm")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -338,6 +341,12 @@ namespace StServer.Migrations
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime?>("ImportedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ImportedFromMaterialId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
@@ -365,6 +374,8 @@ namespace StServer.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ImportedFromMaterialId");
 
                     b.ToTable("Materials");
                 });
@@ -401,6 +412,43 @@ namespace StServer.Migrations
                     b.HasIndex("MaterialId");
 
                     b.ToTable("MaterialFiles");
+                });
+
+            modelBuilder.Entity("Domain.Entities.MaterialShare", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("ImportsCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("MaterialId", "UserId");
+
+                    b.ToTable("MaterialShares");
                 });
 
             modelBuilder.Entity("Domain.Entities.MaterialTag", b =>
@@ -743,6 +791,17 @@ namespace StServer.Migrations
                     b.Navigation("Material");
                 });
 
+            modelBuilder.Entity("Domain.Entities.MaterialShare", b =>
+                {
+                    b.HasOne("Domain.Entities.Material", "Material")
+                        .WithMany("Shares")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
+                });
+
             modelBuilder.Entity("Domain.Entities.MaterialTag", b =>
                 {
                     b.HasOne("Domain.Entities.Material", "Material")
@@ -879,6 +938,8 @@ namespace StServer.Migrations
                     b.Navigation("Notes");
 
                     b.Navigation("Questions");
+
+                    b.Navigation("Shares");
                 });
 
             modelBuilder.Entity("Domain.Entities.Note", b =>

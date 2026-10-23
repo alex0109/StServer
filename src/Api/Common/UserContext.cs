@@ -12,6 +12,16 @@ public class UserContext : IUserContext
         _http = http;
     }
 
+    public Guid? CurrentUserId
+    {
+        get
+        {
+            var sub = _http.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            return Guid.TryParse(sub, out var userId) ? userId : null;
+        }
+    }
+
     public Guid UserId
     {
         get

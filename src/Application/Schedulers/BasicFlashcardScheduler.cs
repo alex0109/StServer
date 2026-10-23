@@ -4,12 +4,13 @@ using Domain.Utility.Review;
 
 namespace Application.Schedulers;
 
-// Temporary fixed-interval scheduler until FSRS is implemented behind IFlashcardScheduler.
-// It does not model memory, so Stability and Difficulty stay untouched;
-// FSRS can rebuild them later by replaying FlashcardReviews.
+// Simple fixed-interval scheduler, kept as an alternative to FSRS.
+// It does not model memory, so Stability and Difficulty stay untouched.
 public class BasicFlashcardScheduler : IFlashcardScheduler
 {
     private static readonly TimeSpan AgainDelay = TimeSpan.FromMinutes(1);
+
+    public FlashcardAlgorithm Algorithm => FlashcardAlgorithm.Basic;
 
     public FlashcardCard Schedule(FlashcardCard card, ReviewRating rating, DateTime now)
     {

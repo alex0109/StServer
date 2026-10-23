@@ -55,6 +55,8 @@ public static class QuestionEndpoints
         static async Task<IResult> CreateOpenQuestion(Guid materialId, OpenQuestionCreateDto questionCreateDto, IQuestionService service)
         {
             var result = await service.CreateOpenQuestionAsync(materialId, questionCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
             
             
             return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
@@ -63,6 +65,8 @@ public static class QuestionEndpoints
         static async Task<IResult> CreateOptionQuestion(Guid materialId, OptionQuestionCreateDto questionCreateDto, IQuestionService service)
         {
             var result = await service.CreateQuestionWithOptionsAsync(materialId, questionCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
             
             return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
         };
@@ -70,6 +74,8 @@ public static class QuestionEndpoints
         static async Task<IResult> CreateTrueFalseQuestion(Guid materialId, TrueFalseQuestionCreateDto questionCreateDto, IQuestionService service)
         {
             var result = await service.CreateTrueFalseQuestionAsync(materialId, questionCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
 
             return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
         };

@@ -58,10 +58,16 @@ public class QuestionRepository : IQuestionRepository
         
     }
     
-    public async Task<int> CountByMaterialIdAsync(Guid materialId)
+    public async Task<int> CountActiveByMaterialIdAsync(Guid materialId)
     {
         return await _db.Questions
-            .CountAsync(x => x.MaterialId == materialId);
+            .CountAsync(x => x.MaterialId == materialId && x.IsActive && x.DeletedAt == null);
+    }
+
+    public async Task<bool> MaterialExistsAsync(Guid materialId, Guid userId)
+    {
+        return await _db.Materials
+            .AnyAsync(x => x.Id == materialId && x.UserId == userId);
     }
 
     public Task SaveChangesAsync()

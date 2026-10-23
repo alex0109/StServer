@@ -53,6 +53,12 @@ public class NoteRepository : INoteRepository
         
     }
     
+    public async Task<bool> MaterialExistsAsync(Guid materialId, Guid userId)
+    {
+        return await _db.Materials
+            .AnyAsync(x => x.Id == materialId && x.UserId == userId);
+    }
+
     public async Task<int> CountByUserIdAsync(Guid materialId, Guid userId)
     {
         return await _db.Notes

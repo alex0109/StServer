@@ -16,6 +16,7 @@ public class FlashcardServiceTests
 {
     private readonly Mock<IFlashcardRepository> _flashcardRepo = new();
     private readonly Mock<IUserContext> _userContext = new();
+    private readonly Mock<IFlashcardProgressRebuilder> _rebuilder = new();
     private readonly FlashcardService _sut;
 
     private readonly Guid _userId = Guid.NewGuid();
@@ -29,9 +30,13 @@ public class FlashcardServiceTests
             .Setup(x => x.DictionaryExistsAsync(_dictionaryId, _userId))
             .ReturnsAsync(true);
 
+        // Basic algorithm keeps these tests about the service, not about scheduling math
         _sut = new FlashcardService(
             _flashcardRepo.Object,
-            new BasicFlashcardScheduler(),
+            new FlashcardSchedulerProvider(
+                [new BasicFlashcardScheduler()],
+                new FlashcardSchedulerOptions { Algorithm = FlashcardAlgorithm.Basic }),
+            _rebuilder.Object,
             _userContext.Object);
     }
 
@@ -250,6 +255,39 @@ public class FlashcardServiceTests
         progress.State.ShouldBe(FlashcardState.Relearning);
         progress.Lapses.ShouldBe(1);
         _flashcardRepo.Verify(x => x.AddProgressAsync(It.IsAny<DictionaryEntryProgress>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task AddReviewAsync_ProgressOfOtherAlgorithm_IsRebuiltFirst()
+    {
+        var session = CreateSession();
+        var progress = CreateProgress(FlashcardState.Review, DateTime.UtcNow.AddDays(-1));
+        progress.Algorithm = FlashcardAlgorithm.Fsrs;
+        var entry = CreateEntry(progress);
+
+        _flashcardRepo.Setup(x => x.GetSessionAsync(session.Id, _userId)).ReturnsAsync(session);
+        _flashcardRepo.Setup(x => x.GetEntryWithProgressAsync(entry.Id, _userId)).ReturnsAsync(entry);
+
+        await _sut.AddReviewAsync(session.Id,
+            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = ReviewRating.Good });
+
+        _rebuilder.Verify(x => x.RebuildEntryAsync(entry), Times.Once);
+        progress.Algorithm.ShouldBe(FlashcardAlgorithm.Basic);
+    }
+
+    [Fact]
+    public async Task AddReviewAsync_ProgressOfCurrentAlgorithm_IsNotRebuilt()
+    {
+        var session = CreateSession();
+        var entry = CreateEntry(CreateProgress(FlashcardState.Review, DateTime.UtcNow.AddDays(-1)));
+
+        _flashcardRepo.Setup(x => x.GetSessionAsync(session.Id, _userId)).ReturnsAsync(session);
+        _flashcardRepo.Setup(x => x.GetEntryWithProgressAsync(entry.Id, _userId)).ReturnsAsync(entry);
+
+        await _sut.AddReviewAsync(session.Id,
+            new FlashcardReviewCreateDto { Id = Guid.NewGuid(), EntryId = entry.Id, Rating = ReviewRating.Good });
+
+        _rebuilder.Verify(x => x.RebuildEntryAsync(It.IsAny<DictionaryEntry>()), Times.Never);
     }
 
     [Fact]

@@ -26,6 +26,7 @@ public class AppDbContext : DbContext
     public DbSet<FlashcardSession> FlashcardSessions => Set<FlashcardSession>();
     public DbSet<FlashcardReview> FlashcardReviews => Set<FlashcardReview>();
     public DbSet<MaterialFile> MaterialFiles => Set<MaterialFile>();
+    public DbSet<MaterialShare> MaterialShares => Set<MaterialShare>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -231,6 +232,23 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => new { x.UserId, x.ReviewedAt });
         });
         
+        modelBuilder.Entity<MaterialShare>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasOne(s => s.Material)
+                .WithMany(m => m.Shares)
+                .HasForeignKey(s => s.MaterialId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => x.Token).IsUnique();
+            entity.HasIndex(x => new { x.MaterialId, x.UserId });
+        });
+
+        modelBuilder.Entity<Material>()
+            .HasIndex(x => new { x.UserId, x.ImportedFromMaterialId });
+
         modelBuilder.Entity<MaterialFile>()
             .HasOne(x => x.Material)
             .WithMany(m => m.MaterialFiles)

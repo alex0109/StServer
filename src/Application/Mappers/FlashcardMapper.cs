@@ -120,6 +120,22 @@ public static class FlashcardMapper
         };
     }
 
+    public static void ApplyPrevCard(FlashcardReview review, FlashcardCard before)
+    {
+        review.ElapsedDays = before.LastReviewAt is DateTime lastReviewAt
+            ? Math.Max(0, (review.ReviewedAt - lastReviewAt).TotalDays)
+            : 0;
+        review.PrevState = before.State;
+        review.PrevDue = before.Due;
+        review.PrevStability = before.Stability;
+        review.PrevDifficulty = before.Difficulty;
+        review.PrevScheduledDays = before.ScheduledDays;
+        review.PrevLearningSteps = before.LearningSteps;
+        review.PrevReps = before.Reps;
+        review.PrevLapses = before.Lapses;
+        review.PrevLastReviewAt = before.LastReviewAt;
+    }
+
     public static FlashcardReviewResponseDto ToReviewDto(FlashcardReview review, DictionaryEntryProgress? progress)
     {
         return new FlashcardReviewResponseDto

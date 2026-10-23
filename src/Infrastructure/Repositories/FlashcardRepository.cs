@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Domain.Entities;
+using Domain.Utility.Flashcard;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -52,6 +53,25 @@ public class FlashcardRepository : IFlashcardRepository
     {
         return await _context.FlashcardReviews
             .FirstOrDefaultAsync(r => r.Id == reviewId && r.UserId == userId);
+    }
+
+    public async Task<List<FlashcardReview>> GetReviewsForEntriesAsync(List<Guid> entryIds)
+    {
+        return await _context.FlashcardReviews
+            .Where(r => entryIds.Contains(r.EntryId))
+            .OrderBy(r => r.ReviewedAt)
+            .ThenBy(r => r.Id)
+            .ToListAsync();
+    }
+
+    public async Task<List<DictionaryEntry>> GetEntriesWithOutdatedProgressAsync(FlashcardAlgorithm currentAlgorithm, int take)
+    {
+        return await _context.DictionaryEntries
+            .Include(e => e.Progress)
+            .Where(e => e.Progress != null && e.Progress.Algorithm != currentAlgorithm)
+            .OrderBy(e => e.Id)
+            .Take(take)
+            .ToListAsync();
     }
 
     public async Task<bool> HasLaterReviewAsync(FlashcardReview review)

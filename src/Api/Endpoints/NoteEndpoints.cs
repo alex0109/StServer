@@ -38,6 +38,8 @@ public static class NoteEndpoints
         static async Task<IResult> CreateNote(Guid materialId, NoteCreateDto noteCreateDto, INoteService service)
         {
             var result = await service.CreateAsync(materialId, noteCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
             
             return TypedResults.Created($"/api/materials/{materialId}/notes/{result.Id}", result);
         };

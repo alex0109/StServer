@@ -12,16 +12,19 @@ namespace Application.Services;
 public class FlashcardService : IFlashcardService
 {
     private readonly IFlashcardRepository _flashcardRepository;
-    private readonly IFlashcardScheduler _scheduler;
+    private readonly IFlashcardSchedulerProvider _schedulers;
+    private readonly IFlashcardProgressRebuilder _progressRebuilder;
     private readonly IUserContext _user;
 
     public FlashcardService(
         IFlashcardRepository flashcardRepository,
-        IFlashcardScheduler scheduler,
+        IFlashcardSchedulerProvider schedulers,
+        IFlashcardProgressRebuilder progressRebuilder,
         IUserContext user)
     {
         _flashcardRepository = flashcardRepository;
-        _scheduler = scheduler;
+        _schedulers = schedulers;
+        _progressRebuilder = progressRebuilder;
         _user = user;
     }
 
@@ -118,9 +121,17 @@ public class FlashcardService : IFlashcardService
         var entry = await _flashcardRepository.GetEntryWithProgressAsync(dto.EntryId, userId);
         if (entry is null || entry.DictionaryId != session.DictionaryId) return null;
 
+        var scheduler = _schedulers.Current;
+
+        // Card was scheduled by another algorithm and the background job has not reached it yet
+        if (entry.Progress is not null && entry.Progress.Algorithm != scheduler.Algorithm)
+        {
+            await _progressRebuilder.RebuildEntryAsync(entry);
+        }
+
         var now = DateTime.UtcNow;
         var before = FlashcardMapper.ToCard(entry.Progress, now);
-        var after = _scheduler.Schedule(before, dto.Rating, now);
+        var after = scheduler.Schedule(before, dto.Rating, now);
 
         var progress = entry.Progress;
         if (progress is null)
@@ -132,6 +143,8 @@ public class FlashcardService : IFlashcardService
         {
             FlashcardMapper.ApplyCard(progress, after, now);
         }
+
+        progress.Algorithm = scheduler.Algorithm;
 
         var review = FlashcardMapper.ToReviewEntity(
             dto.Id, userId, sessionId, entry.Id, dto.Rating, dto.DurationMs, before, now);

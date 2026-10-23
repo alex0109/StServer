@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Application.Evaluators;
 using Application.Interfaces;
 using Application.Schedulers;
+using Application.Schedulers.Fsrs;
 using Application.ScoreCalculators;
 using Application.Services;
 
@@ -9,7 +10,9 @@ namespace Application;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddApplication(this IServiceCollection services)
+    public static IServiceCollection AddApplication(
+        this IServiceCollection services,
+        FlashcardSchedulerOptions? flashcardSchedulerOptions = null)
     {
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IQuestionService, QuestionService>();
@@ -31,7 +34,14 @@ public static class DependencyInjection
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IDictionaryService, DictionaryService>();
         services.AddScoped<IFlashcardService, FlashcardService>();
-        services.AddScoped<IFlashcardScheduler, BasicFlashcardScheduler>();
+        services.AddScoped<IMaterialShareService, MaterialShareService>();
+        services.AddScoped<IFlashcardProgressRebuilder, FlashcardProgressRebuilder>();
+
+        // Every algorithm is registered, configuration picks the current one
+        services.AddSingleton(flashcardSchedulerOptions ?? new FlashcardSchedulerOptions());
+        services.AddSingleton<IFlashcardScheduler, BasicFlashcardScheduler>();
+        services.AddSingleton<IFlashcardScheduler, FsrsFlashcardScheduler>();
+        services.AddSingleton<IFlashcardSchedulerProvider, FlashcardSchedulerProvider>();
 
         return services;
     }

@@ -8,6 +8,7 @@ public class DictionaryEntryProgress
     public Guid EntryId { get; set; }
     public DictionaryEntry Entry { get; set; } = null!;
     public Guid UserId { get; set; }
+    public FlashcardAlgorithm Algorithm { get; set; }
     public FlashcardState State { get; set; }
     public DateTime Due { get; set; }
     public double Stability { get; set; }

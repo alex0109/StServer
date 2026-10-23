@@ -85,6 +85,18 @@ public class DictionaryRepository : IDictionaryRepository
             .MaxAsync(e => (int?)e.Position) ?? -1;
     }
 
+    public async Task<int> CountByMaterialIdAsync(Guid materialId, Guid userId)
+    {
+        return await _context.Dictionaries
+            .CountAsync(d => d.MaterialId == materialId && d.UserId == userId);
+    }
+
+    public async Task<int> CountEntriesAsync(Guid dictionaryId)
+    {
+        return await _context.DictionaryEntries
+            .CountAsync(e => e.DictionaryId == dictionaryId);
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

@@ -61,7 +61,9 @@ public static class MaterialMapper
             UpdatedAt = entity.UpdatedAt,
             Content = entity.Content == null ? null : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
             Version = entity.Version,
-            IsActive =  entity.IsActive
+            IsActive =  entity.IsActive,
+            IsImported = entity.ImportedFromMaterialId is not null,
+            ImportedAt = entity.ImportedAt
         };
     }
     

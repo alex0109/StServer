@@ -1,5 +1,7 @@
 using Application.DTOs.Dictionary;
 using Application.DTOs.Question;
+using Application.Constants;
+using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
 
@@ -10,15 +12,18 @@ public class DictionaryService : IDictionaryService
     private readonly IDictionaryRepository _dictionaryRepository;
     private readonly IMaterialRepository _materialRepository;
     private readonly IUserContext _user;
+    private readonly ILimitLock _limitLock;
 
     public DictionaryService(
         IDictionaryRepository dictionaryRepository,
         IMaterialRepository materialRepository,
-        IUserContext user)
+        IUserContext user,
+        ILimitLock limitLock)
     {
         _dictionaryRepository = dictionaryRepository;
         _materialRepository = materialRepository;
         _user = user;
+        _limitLock = limitLock;
     }
 
     public async Task<List<DictionaryResponseDto>> GetAllByMaterialIdAsync(Guid materialId)
@@ -42,10 +47,20 @@ public class DictionaryService : IDictionaryService
         var material = await _materialRepository.GetByIdAsync(materialId, userId);
         if (material is null) return null;
 
+        await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Dictionaries, materialId);
+
+        var count = await _dictionaryRepository.CountByMaterialIdAsync(materialId, userId);
+        if (count >= UserLimits.MaxDictionariesPerMaterial)
+        {
+            throw new LimitExceededException(
+                $"Dictionary limit reached: {UserLimits.MaxDictionariesPerMaterial} per material");
+        }
+
         var dictionary = DictionaryMapper.ToEntity(dto, materialId, userId);
 
         await _dictionaryRepository.AddAsync(dictionary);
         await _dictionaryRepository.SaveChangesAsync();
+        await limitLock.CommitAsync();
 
         return DictionaryMapper.ToDto(dictionary);
     }
@@ -71,11 +86,22 @@ public class DictionaryService : IDictionaryService
         var dictionary = await _dictionaryRepository.GetByIdAsync(dictionaryId, _user.UserId);
         if (dictionary is null) return null;
 
+        // The lock also keeps positions unique when words are added in parallel
+        await using var limitLock = await _limitLock.AcquireAsync(LimitScope.DictionaryEntries, dictionaryId);
+
+        var count = await _dictionaryRepository.CountEntriesAsync(dictionaryId);
+        if (count >= UserLimits.MaxEntriesPerDictionary)
+        {
+            throw new LimitExceededException(
+                $"Word limit reached: {UserLimits.MaxEntriesPerDictionary} per dictionary");
+        }
+
         var position = await _dictionaryRepository.GetMaxEntryPositionAsync(dictionaryId) + 1;
         var entry = DictionaryMapper.ToEntryEntity(dto, dictionaryId, position);
 
         await _dictionaryRepository.AddEntryAsync(entry);
         await _dictionaryRepository.SaveChangesAsync();
+        await limitLock.CommitAsync();
 
         return DictionaryMapper.ToEntryDto(entry);
     }

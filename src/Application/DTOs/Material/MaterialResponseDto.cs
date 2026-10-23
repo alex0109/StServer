@@ -21,4 +21,6 @@ public class MaterialResponseDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int Version { get; set; }
+    public bool IsImported { get; set; }
+    public DateTime? ImportedAt { get; set; }
 }

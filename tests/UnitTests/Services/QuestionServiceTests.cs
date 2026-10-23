@@ -16,6 +16,8 @@ public class QuestionServiceTests
     private readonly Mock<IQuestionRepository> _repo = new();
     private readonly Mock<IUserContext> _user = new();
     private readonly Mock<IOptionService> _optionService = new();
+    private readonly Mock<ILimitLock> _limitLock = new();
+    private readonly Mock<ILimitLockScope> _limitLockScope = new();
 
     private readonly QuestionService _sut;
 
@@ -26,10 +28,20 @@ public class QuestionServiceTests
         _user.Setup(x => x.UserId)
             .Returns(_userId);
 
+        _limitLock
+            .Setup(x => x.AcquireAsync(It.IsAny<LimitScope>(), It.IsAny<Guid>()))
+            .ReturnsAsync(_limitLockScope.Object);
+
+        // Material belongs to the user unless a test says otherwise
+        _repo
+            .Setup(x => x.MaterialExistsAsync(It.IsAny<Guid>(), _userId))
+            .ReturnsAsync(true);
+
         _sut = new QuestionService(
             _repo.Object,
             _user.Object,
-            _optionService.Object);
+            _optionService.Object,
+            _limitLock.Object);
     }
     
     [Fact]
@@ -172,7 +184,7 @@ public class QuestionServiceTests
     public async Task CreateQuestionWithOptions_LimitReached_Throws()
     {
         _repo.Setup(x =>
-                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(UserLimits.MaxQuestionsPerMaterial);
 
         await Should.ThrowAsync<LimitExceededException>(
@@ -194,7 +206,7 @@ public class QuestionServiceTests
     public async Task CreateQuestionWithOptions_CreatesQuestionAndSyncsOptions()
     {
         _repo.Setup(x =>
-                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(0);
 
         _repo.Setup(x =>
@@ -374,7 +386,7 @@ public class QuestionServiceTests
     public async Task CreateTrueFalseQuestionAsync_CreatesQuestionWithFixedOptions()
     {
         _repo.Setup(x =>
-                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(0);
 
         var result = await _sut.CreateTrueFalseQuestionAsync(
@@ -402,7 +414,7 @@ public class QuestionServiceTests
     public async Task CreateTrueFalseQuestionAsync_LimitReached_Throws()
     {
         _repo.Setup(x =>
-                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(UserLimits.MaxQuestionsPerMaterial);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
@@ -484,6 +496,47 @@ public class QuestionServiceTests
                 question.MaterialId,
                 question.Id,
                 new QuestionUpdateDto { Answer = "text" }));
+    }
+
+    [Fact]
+    public async Task CreateOpenQuestionAsync_ForeignMaterial_ReturnsNullWithoutLocking()
+    {
+        var materialId = Guid.NewGuid();
+        _repo.Setup(x => x.MaterialExistsAsync(materialId, _userId)).ReturnsAsync(false);
+
+        var result = await _sut.CreateOpenQuestionAsync(materialId,
+            new OpenQuestionCreateDto { Title = "Q", Answer = "A" });
+
+        result.ShouldBeNull();
+        _limitLock.Verify(x => x.AcquireAsync(It.IsAny<LimitScope>(), It.IsAny<Guid>()), Times.Never);
+        _repo.Verify(x => x.AddQuestionAsync(It.IsAny<Question>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateOpenQuestionAsync_CountsUnderMaterialLockAndCommits()
+    {
+        var materialId = Guid.NewGuid();
+        _repo.Setup(x => x.CountActiveByMaterialIdAsync(materialId)).ReturnsAsync(UserLimits.MaxQuestionsPerMaterial - 1);
+
+        var result = await _sut.CreateOpenQuestionAsync(materialId,
+            new OpenQuestionCreateDto { Title = "Q", Answer = "A" });
+
+        result.ShouldNotBeNull();
+        _limitLock.Verify(x => x.AcquireAsync(LimitScope.Questions, materialId), Times.Once);
+        _limitLockScope.Verify(x => x.CommitAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTrueFalseQuestionAsync_LimitReached_DoesNotCommit()
+    {
+        _repo.Setup(x => x.CountActiveByMaterialIdAsync(It.IsAny<Guid>())).ReturnsAsync(UserLimits.MaxQuestionsPerMaterial);
+
+        await Should.ThrowAsync<LimitExceededException>(() =>
+            _sut.CreateTrueFalseQuestionAsync(Guid.NewGuid(),
+                new TrueFalseQuestionCreateDto { Title = "Q", IsTrue = true }));
+
+        _limitLockScope.Verify(x => x.CommitAsync(), Times.Never);
+        _optionService.Verify(x => x.SetTrueFalseOptions(It.IsAny<Question>(), It.IsAny<bool>()), Times.Never);
     }
 
     private Question CreateQuestion(string title)

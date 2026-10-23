@@ -13,6 +13,8 @@ public interface IDictionaryRepository
     Task AddEntryAsync(DictionaryEntry entry);
     Task<bool> DeleteEntryAsync(Guid entryId, Guid userId);
     Task<int> GetMaxEntryPositionAsync(Guid dictionaryId);
+    Task<int> CountByMaterialIdAsync(Guid materialId, Guid userId);
+    Task<int> CountEntriesAsync(Guid dictionaryId);
 
     Task SaveChangesAsync();
 }
