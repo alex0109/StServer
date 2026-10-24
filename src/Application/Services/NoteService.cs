@@ -3,6 +3,7 @@ using Application.DTOs.Note;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
+using Domain.Utility.Note;
 
 namespace Application.Services;
 
@@ -52,6 +53,12 @@ public class NoteService : INoteService
         if (count >= UserLimits.MaxNotesPerMaterial)
         {
             throw new LimitExceededException($"Notes limit reached: {UserLimits.MaxNotesPerMaterial} per material");
+        }
+
+        // Checked under the same lock, the unique index is the last line of defence
+        if (dto.Type == NoteType.summary && await _repo.SummaryExistsAsync(materialId))
+        {
+            throw new ConflictException("Material already has a summary");
         }
         
         var note = NoteMapper.ToEntity(dto, materialId, _user.UserId);

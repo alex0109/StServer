@@ -41,7 +41,7 @@ public class MaterialShareServiceTests
         Id = Guid.NewGuid(),
         UserId = _ownerId,
         Title = "Shared",
-        Type = MaterialType.summary,
+        Type = MaterialType.practice,
         Status = MaterialStatus.inprocess,
         IsActive = true,
         CreatedAt = DateTime.UtcNow,

@@ -1,5 +1,6 @@
 using Domain.Entities;
 using Application.DTOs.Result;
+using Domain.Utility.Question;
 
 namespace Application.Mappers;
 
@@ -44,10 +45,14 @@ public class ResultMapper
             Weight = entity.Weight,
             ConfidenceLevel = entity.ConfidenceLevel,
             Rating = entity.Rating,
+            Method = entity.Method,
+            AiExplanation = entity.AiExplanation,
             CorrectOptionIds = entity.Question?.Options
                 .Where(o => o.IsCorrect)
                 .Select(o => o.Id)
                 .ToList() ?? [],
+            CorrectAnswer = entity.Question?.QuestionType == QuestionType.Open ? entity.Question.Answer : null,
+            QuestionExplanation = entity.Question?.Explanation,
             AnswerChangedCount = entity.AnswerChangedCount,
             TimeSpent = entity.TimeSpent,
             AnsweredAt = entity.AnsweredAt,
@@ -61,6 +66,8 @@ public class ResultMapper
         entity.IsCorrect = isCorrect;
         entity.Score = score;
         entity.ConfidenceLevel = dto.ConfidenceLevel;
+        // An explanation of the previous answer would be wrong for the new one
+        entity.AiExplanation = null;
         entity.AnswerChangedCount++;
     }
 }

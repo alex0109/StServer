@@ -340,8 +340,8 @@ public class AttemptServiceTests
 
 
         _evaluation.Setup(x =>
-                x.EvaluateAnswer("correct","answer"))
-            .Returns(new AnswerEvaluationResult
+                x.EvaluateAnswerAsync("Test", "correct", "answer", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AnswerEvaluationResult
             {
                 IsCorrect = true,
                 Score = 90,

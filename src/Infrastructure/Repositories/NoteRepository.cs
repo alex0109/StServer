@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Domain.Entities;
+using Domain.Utility.Note;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -63,6 +64,12 @@ public class NoteRepository : INoteRepository
     {
         return await _db.Notes
             .CountAsync(x => x.MaterialId == materialId && x.UserId == userId);
+    }
+
+    public async Task<bool> SummaryExistsAsync(Guid materialId)
+    {
+        return await _db.Notes
+            .AnyAsync(x => x.MaterialId == materialId && x.Type == NoteType.summary);
     }
 
     public Task SaveChangesAsync()

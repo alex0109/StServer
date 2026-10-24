@@ -22,6 +22,10 @@ public class Result
     public ConfidenceLevel? ConfidenceLevel { get; set; }
     // FSRS rating of the answer, derived from correctness and confidence
     public ReviewRating Rating { get; set; }
+    public EvaluationMethod Method { get; set; }
+    // Cached AI explanation of a wrong answer, so it is paid for once
+    [MaxLength(2000)]
+    public string? AiExplanation { get; set; }
     public int AnswerChangedCount { get; set; } = 0;
     public DateTime? LastModifiedAt { get; set; }
     public required DateTime AnsweredAt { get; set; }

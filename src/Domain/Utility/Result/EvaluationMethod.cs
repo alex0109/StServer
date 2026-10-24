@@ -1,4 +1,4 @@
-namespace Application.DTOs.Question;
+namespace Domain.Utility.Result;
 
 public enum EvaluationMethod
 {

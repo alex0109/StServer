@@ -12,10 +12,12 @@ using Microsoft.AspNetCore.RateLimiting;
 using Api.Common;
 using Api.Middleware;
 using Application;
+using Application.Ai;
 using Application.Interfaces;
 using Application.Jobs;
 using Application.Schedulers;
 using Infrastructure;
+using Infrastructure.Ai;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -85,7 +87,14 @@ builder.Services.AddInfrastructure();
 builder.Services.AddApplication(
     builder.Configuration
         .GetSection(FlashcardSchedulerOptions.SectionName)
-        .Get<FlashcardSchedulerOptions>());
+        .Get<FlashcardSchedulerOptions>(),
+    builder.Configuration
+        .GetSection(AiOptions.SectionName)
+        .Get<AiOptions>());
+
+// Models and endpoints come from configuration, API keys only from environment variables
+builder.Services.AddAiProviders(options =>
+    builder.Configuration.GetSection(AiProvidersOptions.SectionName).Bind(options));
 
 builder.Services.Configure<Microsoft.AspNetCore.Http.Json.JsonOptions>(options =>
 {
@@ -133,6 +142,12 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
+// Shows at start which AI providers can answer, a missing key or model is the usual reason for "AI unavailable"
+app.Logger.LogInformation(
+    "AI providers: {Providers}",
+    string.Join(", ", app.Services.GetServices<IAiProvider>()
+        .Select(x => $"{x.Name} {(x.IsConfigured ? "on" : "off (needs API key and model)")}")));
+
 app.UseExceptionHandler();
 
 app.UseCors("AllowFrontend");
@@ -166,6 +181,7 @@ app.MapDictionaryEndpoints();
 app.MapFlashcardEndpoints();
 app.MapMaterialShareEndpoints();
 app.MapLimitEndpoints();
+app.MapAiEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -191,6 +207,11 @@ if (!app.Environment.IsEnvironment("Testing"))
 
         // Run once on start as well, so cards move to a newly configured algorithm right away
         recurringJobManager.Trigger("reschedule-flashcards");
+
+        recurringJobManager.AddOrUpdate<AiUsageCleanupJob>(
+            "cleanup-ai-usage",
+            x => x.Cleanup(),
+            Cron.Hourly);
     }
 }
 

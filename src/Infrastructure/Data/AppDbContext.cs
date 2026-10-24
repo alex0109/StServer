@@ -27,6 +27,8 @@ public class AppDbContext : DbContext
     public DbSet<FlashcardReview> FlashcardReviews => Set<FlashcardReview>();
     public DbSet<MaterialFile> MaterialFiles => Set<MaterialFile>();
     public DbSet<MaterialShare> MaterialShares => Set<MaterialShare>();
+    public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
+    public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -150,11 +152,17 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => x.UserId);
             entity.HasIndex(x => new { x.MaterialId, x.UserId });
 
+            // Summary is a text note, and a material has at most one
+            entity.HasIndex(x => x.MaterialId, "IX_Notes_SingleSummary")
+                .IsUnique()
+                .HasFilter("\"Type\" = 3");
+
             entity.ToTable(t => t.HasCheckConstraint(
                 "CK_Note_TypeConsistency",
                 """
                 ("Type" = 0 AND "DrawingContent" IS NULL AND "FileId" IS NULL) OR
-                ("Type" = 1 AND "TextContent" IS NULL AND "FileId" IS NULL)
+                ("Type" = 1 AND "TextContent" IS NULL AND "FileId" IS NULL) OR
+                ("Type" = 3 AND "DrawingContent" IS NULL AND "FileId" IS NULL)
                 """
             ));
         });
@@ -248,6 +256,21 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<Material>()
             .HasIndex(x => new { x.UserId, x.ImportedFromMaterialId });
+
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<AiUsage>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            // Quota count: user, feature and month
+            entity.HasIndex(x => new { x.UserId, x.Feature, x.CreatedAt });
+            entity.HasIndex(x => new { x.Status, x.CreatedAt });
+        });
 
         modelBuilder.Entity<MaterialFile>()
             .HasOne(x => x.Material)

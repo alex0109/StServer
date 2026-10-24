@@ -1,3 +1,4 @@
+using Domain.Utility.Result;
 using Application.DTOs.Attempt;
 using Application.DTOs.Question;
 using Application.DTOs.Result;
@@ -113,7 +114,8 @@ public class AttemptService : IAttemptService
         }
         else if (question.Answer is not null && resultRequestDto.UserAnswer is not null)
         {
-            result = _answerEvaluationService.EvaluateAnswer(
+            result = await _answerEvaluationService.EvaluateAnswerAsync(
+                question.Title,
                 question.Answer,
                 resultRequestDto.UserAnswer
             );
@@ -148,6 +150,7 @@ public class AttemptService : IAttemptService
             resultEntity.AnsweredAt = now;
             resultEntity.LastModifiedAt = now;
             resultEntity.Rating = rating;
+            resultEntity.Method = result.Method;
 
             await _repo.AddResultAsync(resultEntity);
         }
@@ -157,6 +160,7 @@ public class AttemptService : IAttemptService
             existing.LastModifiedAt = now;
             existing.TimeSpent = now - existing.AnsweredAt;
             existing.Rating = rating;
+            existing.Method = result.Method;
         }
 
         await _repo.SaveChangesAsync();

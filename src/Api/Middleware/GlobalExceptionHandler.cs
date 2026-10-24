@@ -45,6 +45,9 @@ public class GlobalExceptionHandler : IExceptionHandler
     private static (int StatusCode, string Title) MapException(Exception exception) =>
         exception switch
         {
+            AiQuotaExceededException => (StatusCodes.Status429TooManyRequests, "AI quota exceeded"),
+            AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, "AI unavailable"),
+            AiOutputException => (StatusCodes.Status422UnprocessableEntity, "AI could not generate"),
             LimitExceededException => (StatusCodes.Status409Conflict, "Limit exceeded"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             BadRequestException => (StatusCodes.Status400BadRequest, "Bad request"),

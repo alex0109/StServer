@@ -24,6 +24,49 @@ namespace StServer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.AiUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Feature")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("InputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<long>("OutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Provider")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("UserId", "Feature", "CreatedAt");
+
+                    b.ToTable("AiUsages");
+                });
+
             modelBuilder.Entity("Domain.Entities.Assessment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -514,9 +557,13 @@ namespace StServer.Migrations
 
                     b.HasIndex("MaterialId", "UserId");
 
+                    b.HasIndex(new[] { "MaterialId" }, "IX_Notes_SingleSummary")
+                        .IsUnique()
+                        .HasFilter("\"Type\" = 3");
+
                     b.ToTable("Notes", t =>
                         {
-                            t.HasCheckConstraint("CK_Note_TypeConsistency", "(\"Type\" = 0 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 1 AND \"TextContent\" IS NULL AND \"FileId\" IS NULL)");
+                            t.HasCheckConstraint("CK_Note_TypeConsistency", "(\"Type\" = 0 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 1 AND \"TextContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 3 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL)");
                         });
                 });
 
@@ -619,6 +666,10 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.Property<string>("AiExplanation")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<int>("AnswerChangedCount")
                         .HasColumnType("integer");
 
@@ -636,6 +687,9 @@ namespace StServer.Migrations
 
                     b.Property<DateTime?>("LastModifiedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("QuestionId")
                         .HasColumnType("uuid");
@@ -694,6 +748,29 @@ namespace StServer.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserSubscription", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CurrentPeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserSubscriptions");
                 });
 
             modelBuilder.Entity("Domain.Entities.Assessment", b =>

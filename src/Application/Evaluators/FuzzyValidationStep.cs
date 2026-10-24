@@ -1,24 +1,23 @@
+using Domain.Utility.Result;
 using Application.DTOs.Question;
 using Application.Interfaces;
-using FuzzySharp;
 
 namespace Application.Evaluators;
 
 public class FuzzyValidationStep: IAnswerValidationStep
 {
     public int Priority => 2;
+
     public AnswerEvaluationResult? Evaluate(string correctAnswer, string userAnswer)
     {
-        int score = Fuzz.TokenSortRatio(
-            correctAnswer.ToLowerInvariant(),
-            userAnswer.ToLowerInvariant());
+        var match = FuzzyAnswerMatcher.Compare(correctAnswer, userAnswer);
 
-        if (score >= 85)
+        if (match.IsMatch)
         {
             return new AnswerEvaluationResult
             {
                 IsCorrect = true,
-                Score = score,
+                Score = match.Score,
                 Method = EvaluationMethod.Fuzzy
             };
         }

@@ -8,5 +8,6 @@ public enum LimitScope
     Questions = 3,
     Notes = 4,
     Dictionaries = 5,
-    DictionaryEntries = 6
+    DictionaryEntries = 6,
+    AiUsage = 7
 }

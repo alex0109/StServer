@@ -17,8 +17,15 @@ public class ResultResponseDto
     public required int Weight { get; set; }
     public ConfidenceLevel? ConfidenceLevel { get; set; }
     public ReviewRating Rating { get; set; }
+    // How the answer was checked, AI marks answers accepted by meaning
+    public EvaluationMethod Method { get; set; }
+    public string? AiExplanation { get; set; }
     // Filled for option and true/false questions, so results can show the right answers
     public List<Guid> CorrectOptionIds { get; set; } = [];
+    // Model answer of an open question
+    public string? CorrectAnswer { get; set; }
+    // Why the right answer is right, written with the question
+    public string? QuestionExplanation { get; set; }
     public int? AnswerChangedCount { get; set; }
     public TimeSpan TimeSpent { get; set; }
     public required DateTime AnsweredAt { get; set; }
