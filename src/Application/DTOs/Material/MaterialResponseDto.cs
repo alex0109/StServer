@@ -22,5 +22,7 @@ public class MaterialResponseDto
     public DateTime UpdatedAt { get; set; }
     public int Version { get; set; }
     public bool IsImported { get; set; }
+    // Imported from the global library (not from a share link)
+    public bool IsFromLibrary { get; set; }
     public DateTime? ImportedAt { get; set; }
 }

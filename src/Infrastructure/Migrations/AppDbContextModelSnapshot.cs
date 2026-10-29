@@ -24,6 +24,42 @@ namespace StServer.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Domain.Entities.AdminAuditEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("AdminUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Details")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Ip")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.ToTable("AdminAuditEntries");
+                });
+
             modelBuilder.Entity("Domain.Entities.AiUsage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -60,11 +96,62 @@ namespace StServer.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CreatedAt");
+
                     b.HasIndex("Status", "CreatedAt");
 
                     b.HasIndex("UserId", "Feature", "CreatedAt");
 
                     b.ToTable("AiUsages");
+                });
+
+            modelBuilder.Entity("Domain.Entities.AiUsageMonthly", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<int>("FailedRequests")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Feature")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("InputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Model")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Month")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("OutputTokens")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Requests")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "Year", "Month", "Feature", "Provider", "Model")
+                        .IsUnique();
+
+                    b.ToTable("AiUsageMonthly");
                 });
 
             modelBuilder.Entity("Domain.Entities.Assessment", b =>
@@ -112,6 +199,10 @@ namespace StServer.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("AssessmentId");
+
+                    b.HasIndex("AttemptStatus", "StartedAt");
+
+                    b.HasIndex("UserId", "AttemptStatus", "FinishedAt");
 
                     b.ToTable("Attempts");
                 });
@@ -272,6 +363,28 @@ namespace StServer.Migrations
                     b.ToTable("DictionaryEntryProgresses");
                 });
 
+            modelBuilder.Entity("Domain.Entities.FeedbackSubmission", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SenderKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("SenderKey", "CreatedAt");
+
+                    b.ToTable("FeedbackSubmissions");
+                });
+
             modelBuilder.Entity("Domain.Entities.FlashcardReview", b =>
                 {
                     b.Property<Guid>("Id")
@@ -365,7 +478,146 @@ namespace StServer.Migrations
 
                     b.HasIndex("DictionaryId", "UserId");
 
+                    b.HasIndex(new[] { "StartedAt" }, "IX_FlashcardSessions_Unfinished")
+                        .HasFilter("\"FinishedAt\" IS NULL");
+
                     b.ToTable("FlashcardSessions");
+                });
+
+            modelBuilder.Entity("Domain.Entities.LibraryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AuthorNickname")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("AuthorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DictionariesCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ImportsCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("NotesCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("QuestionsCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("RemovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<JsonDocument>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid?>("SourceMaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("WordsCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorUserId");
+
+                    b.HasIndex("Status", "PublishedAt");
+
+                    b.ToTable("LibraryItems");
+                });
+
+            modelBuilder.Entity("Domain.Entities.LibraryRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AuthorNickname")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("LibraryItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MaterialType")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("RejectionReason")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReviewedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<JsonDocument>("Snapshot")
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(70)
+                        .HasColumnType("character varying(70)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LibraryItemId", "Status");
+
+                    b.HasIndex("MaterialId", "Status");
+
+                    b.HasIndex("Status", "CreatedAt");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("LibraryRequests");
                 });
 
             modelBuilder.Entity("Domain.Entities.Material", b =>
@@ -386,6 +638,9 @@ namespace StServer.Migrations
 
                     b.Property<DateTime?>("ImportedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ImportedFromLibraryItemId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid?>("ImportedFromMaterialId")
                         .HasColumnType("uuid");
@@ -417,6 +672,8 @@ namespace StServer.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("UserId", "ImportedFromLibraryItemId");
 
                     b.HasIndex("UserId", "ImportedFromMaterialId");
 
@@ -656,6 +913,11 @@ namespace StServer.Migrations
 
                     b.HasIndex("NoteId");
 
+                    b.HasIndex("UserId");
+
+                    b.HasIndex(new[] { "DeletedAt" }, "IX_Questions_DeletedAt")
+                        .HasFilter("\"DeletedAt\" IS NOT NULL");
+
                     b.ToTable("Questions");
                 });
 
@@ -723,6 +985,8 @@ namespace StServer.Migrations
 
                     b.HasIndex("QuestionId");
 
+                    b.HasIndex("UserId", "AnsweredAt");
+
                     b.ToTable("Results");
                 });
 
@@ -747,7 +1011,88 @@ namespace StServer.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Tags");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserNotification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<JsonDocument>("Data")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("EmailSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PeriodKey")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.HasIndex("UserId", "Type", "PeriodKey")
+                        .IsUnique();
+
+                    b.ToTable("UserNotifications");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserNotificationSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(254)
+                        .HasColumnType("character varying(254)");
+
+                    b.Property<bool>("EmailDailyReminder")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EmailStreakReminder")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EmailWeeklyDigest")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("UserNotificationSettings");
                 });
 
             modelBuilder.Entity("Domain.Entities.UserSubscription", b =>

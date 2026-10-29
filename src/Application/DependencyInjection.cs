@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Application.Admin;
 using Application.Ai;
+using Application.Email;
+using Application.Notifications;
 using Application.Evaluators;
 using Application.Interfaces;
 using Application.Schedulers;
@@ -16,7 +19,10 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(
         this IServiceCollection services,
         FlashcardSchedulerOptions? flashcardSchedulerOptions = null,
-        AiOptions? aiOptions = null)
+        AiOptions? aiOptions = null,
+        EmailOptions? emailOptions = null,
+        NotificationOptions? notificationOptions = null,
+        AiPricingOptions? aiPricingOptions = null)
     {
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IQuestionService, QuestionService>();
@@ -40,6 +46,17 @@ public static class DependencyInjection
         services.AddScoped<IFlashcardService, FlashcardService>();
         services.AddScoped<IMaterialShareService, MaterialShareService>();
         services.AddScoped<ILimitsService, LimitsService>();
+        services.AddSingleton(emailOptions ?? new EmailOptions());
+        services.AddScoped<IFeedbackService, FeedbackService>();
+        services.AddScoped<ILibraryService, LibraryService>();
+        services.AddScoped<ILibraryAdminService, LibraryAdminService>();
+        services.AddSingleton(aiPricingOptions ?? new AiPricingOptions());
+        services.AddScoped<IAdminStatsService, AdminStatsService>();
+
+        services.AddSingleton(notificationOptions ?? new NotificationOptions());
+        services.AddScoped<IStudyActivityService, StudyActivityService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<INotificationGenerator, NotificationGenerator>();
         services.AddScoped<IFlashcardProgressRebuilder, FlashcardProgressRebuilder>();
 
         // Every algorithm is registered, configuration picks the current one

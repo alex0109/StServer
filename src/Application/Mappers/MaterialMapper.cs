@@ -48,7 +48,7 @@ public static class MaterialMapper
                     MaterialId = m.MaterialId,
                     Title = m.Title,
                     Type = m.Type,
-                    TextContent = m.TextContent == null ? null : JsonSerializer.Deserialize<RichTextDocument>(m.TextContent),
+                    TextContent = RichTextJson.Parse(m.TextContent),
                     DrawingContent = m.DrawingContent,
                     Order = m.Order,
                     CreatedAt = m.CreatedAt,
@@ -59,10 +59,11 @@ public static class MaterialMapper
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            Content = entity.Content == null ? null : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
+            Content = RichTextJson.Parse(entity.Content),
             Version = entity.Version,
             IsActive =  entity.IsActive,
-            IsImported = entity.ImportedFromMaterialId is not null,
+            IsImported = entity.ImportedFromMaterialId is not null || entity.ImportedFromLibraryItemId is not null,
+            IsFromLibrary = entity.ImportedFromLibraryItemId is not null,
             ImportedAt = entity.ImportedAt
         };
     }

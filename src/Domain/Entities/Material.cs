@@ -28,6 +28,8 @@ public class Material
     public int Version { get; set; } = 1;
     // Set when the material is a copy imported from a share link, no FK: the source may be deleted
     public Guid? ImportedFromMaterialId { get; set; }
+    // Set when the material is a copy of a library material, no FK: it may leave the library
+    public Guid? ImportedFromLibraryItemId { get; set; }
     public DateTime? ImportedAt { get; set; }
     
     public void AddTag(Guid tagId)

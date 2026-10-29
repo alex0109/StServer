@@ -61,6 +61,7 @@ public class DictionaryRepository : IDictionaryRepository
                 .ThenInclude(q => q!.Options)
             .Include(e => e.Progress)
             .OrderBy(e => e.Position)
+            .AsSplitQuery()
             .ToListAsync();
     }
 

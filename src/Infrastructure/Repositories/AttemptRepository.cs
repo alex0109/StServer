@@ -61,6 +61,7 @@ public class AttemptRepository : IAttemptRepository
             .Include(m => m.Results)
                 .ThenInclude(r => r.Question)
                     .ThenInclude(q => q.Options)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
 

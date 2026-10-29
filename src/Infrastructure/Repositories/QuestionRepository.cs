@@ -70,6 +70,17 @@ public class QuestionRepository : IQuestionRepository
             .AnyAsync(x => x.Id == materialId && x.UserId == userId);
     }
 
+    public async Task<int> PurgeDeletedAsync(DateTime deletedBefore)
+    {
+        // Options go with the question through the cascade in the database
+        return await _db.Questions
+            .Where(q => !q.IsActive
+                        && q.DeletedAt != null
+                        && q.DeletedAt < deletedBefore
+                        && !q.Results.Any())
+            .ExecuteDeleteAsync();
+    }
+
     public Task SaveChangesAsync()
     {
         return _db.SaveChangesAsync();

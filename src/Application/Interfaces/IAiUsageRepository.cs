@@ -12,5 +12,7 @@ public interface IAiUsageRepository
     Task AddAsync(AiUsage usage);
     Task<AiUsage?> GetByIdAsync(Guid usageId);
     Task<int> FailPendingAsync(DateTime createdBefore, DateTime now);
+    // Single requests created before the date become monthly totals
+    Task<int> RollUpBeforeAsync(DateTime createdBefore);
     Task SaveChangesAsync();
 }

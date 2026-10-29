@@ -57,6 +57,71 @@ public class AiUsageRepository : IAiUsageRepository
                 .SetProperty(u => u.CompletedAt, now));
     }
 
+    public async Task<int> RollUpBeforeAsync(DateTime createdBefore)
+    {
+        await using var transaction = await _db.Database.BeginTransactionAsync();
+
+        var totals = await _db.AiUsages
+            .Where(x => x.CreatedAt < createdBefore)
+            .GroupBy(x => new
+            {
+                x.UserId,
+                x.CreatedAt.Year,
+                x.CreatedAt.Month,
+                x.Feature,
+                Provider = x.Provider ?? "",
+                Model = x.Model ?? "",
+            })
+            .Select(g => new
+            {
+                g.Key,
+                Requests = g.Count(x => x.Status == AiUsageStatus.Succeeded),
+                Failed = g.Count(x => x.Status != AiUsageStatus.Succeeded),
+                InputTokens = g.Sum(x => x.InputTokens),
+                OutputTokens = g.Sum(x => x.OutputTokens),
+            })
+            .ToListAsync();
+
+        if (totals.Count == 0) return 0;
+
+        foreach (var total in totals)
+        {
+            var key = total.Key;
+            var monthly = await _db.AiUsageMonthly.FirstOrDefaultAsync(x =>
+                x.UserId == key.UserId && x.Year == key.Year && x.Month == key.Month
+                && x.Feature == key.Feature && x.Provider == key.Provider && x.Model == key.Model);
+
+            if (monthly is null)
+            {
+                monthly = new AiUsageMonthly
+                {
+                    UserId = key.UserId,
+                    Year = key.Year,
+                    Month = key.Month,
+                    Feature = key.Feature,
+                    Provider = key.Provider,
+                    Model = key.Model,
+                };
+                await _db.AiUsageMonthly.AddAsync(monthly);
+            }
+
+            monthly.Requests += total.Requests;
+            monthly.FailedRequests += total.Failed;
+            monthly.InputTokens += total.InputTokens;
+            monthly.OutputTokens += total.OutputTokens;
+        }
+
+        await _db.SaveChangesAsync();
+
+        var removed = await _db.AiUsages
+            .Where(x => x.CreatedAt < createdBefore)
+            .ExecuteDeleteAsync();
+
+        await transaction.CommitAsync();
+
+        return removed;
+    }
+
     public async Task SaveChangesAsync()
     {
         await _db.SaveChangesAsync();

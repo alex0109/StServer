@@ -102,6 +102,15 @@ public class FlashcardRepository : IFlashcardRepository
         _context.DictionaryEntryProgresses.Remove(progress);
     }
 
+    public async Task<int> CloseStaleSessionsAsync(DateTime startedBefore)
+    {
+        return await _context.FlashcardSessions
+            .Where(s => s.FinishedAt == null && s.StartedAt < startedBefore)
+            .ExecuteUpdateAsync(x => x.SetProperty(
+                s => s.FinishedAt,
+                s => s.Reviews.Max(r => (DateTime?)r.ReviewedAt) ?? s.StartedAt));
+    }
+
     public async Task SaveChangesAsync()
     {
         await _context.SaveChangesAsync();

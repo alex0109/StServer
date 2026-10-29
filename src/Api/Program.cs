@@ -7,12 +7,17 @@ using System.Text.Json.Serialization;
 using Hangfire;
 using Hangfire.PostgreSql;
 using System.Security.Claims;
+using System.IO.Compression;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.RateLimiting;
 using Api.Common;
 using Api.Middleware;
 using Application;
+using Application.Admin;
 using Application.Ai;
+using Application.Email;
+using Application.Notifications;
 using Application.Interfaces;
 using Application.Jobs;
 using Application.Schedulers;
@@ -78,6 +83,8 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
+// The admin panel: listed accounts with a second factor only
+builder.Services.AddAdminAccess();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -90,7 +97,16 @@ builder.Services.AddApplication(
         .Get<FlashcardSchedulerOptions>(),
     builder.Configuration
         .GetSection(AiOptions.SectionName)
-        .Get<AiOptions>());
+        .Get<AiOptions>(),
+    builder.Configuration
+        .GetSection(EmailOptions.SectionName)
+        .Get<EmailOptions>(),
+    builder.Configuration
+        .GetSection(NotificationOptions.SectionName)
+        .Get<NotificationOptions>(),
+    builder.Configuration
+        .GetSection(AiPricingOptions.SectionName)
+        .Get<AiPricingOptions>());
 
 // Models and endpoints come from configuration, API keys only from environment variables
 builder.Services.AddAiProviders(options =>
@@ -135,7 +151,32 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 100,
         });
     });
+
+    // Feedback can be sent without an account, so it has its own small window
+    options.AddPolicy("feedback", httpContext =>
+    {
+        var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var partitionKey = userId is not null
+            ? $"user:{userId}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(10),
+            PermitLimit = 3,
+        });
+    });
 });
+
+// Lists of materials, words and questions are JSON that compresses several times over
+builder.Services.AddResponseCompression(options =>
+{
+    options.EnableForHttps = true;
+    options.Providers.Add<BrotliCompressionProvider>();
+    options.Providers.Add<GzipCompressionProvider>();
+});
+builder.Services.Configure<BrotliCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
+builder.Services.Configure<GzipCompressionProviderOptions>(options => options.Level = CompressionLevel.Fastest);
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -147,6 +188,8 @@ app.Logger.LogInformation(
     "AI providers: {Providers}",
     string.Join(", ", app.Services.GetServices<IAiProvider>()
         .Select(x => $"{x.Name} {(x.IsConfigured ? "on" : "off (needs API key and model)")}")));
+
+app.UseResponseCompression();
 
 app.UseExceptionHandler();
 
@@ -160,6 +203,28 @@ if (!app.Environment.IsDevelopment())
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// A user's cached reads are dropped by any change they make, before the response leaves,
+// so the next request already sees it
+app.Use(async (context, next) =>
+{
+    var method = context.Request.Method;
+    if (!HttpMethods.IsGet(method) && !HttpMethods.IsHead(method) && !HttpMethods.IsOptions(method))
+    {
+        context.Response.OnStarting(() =>
+        {
+            var sub = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (context.Response.StatusCode < 400 && Guid.TryParse(sub, out var userId))
+            {
+                context.RequestServices.GetRequiredService<IUserReadCache>().Invalidate(userId);
+            }
+
+            return Task.CompletedTask;
+        });
+    }
+
+    await next();
+});
 
 app.UseRateLimiter();
 
@@ -182,6 +247,10 @@ app.MapFlashcardEndpoints();
 app.MapMaterialShareEndpoints();
 app.MapLimitEndpoints();
 app.MapAiEndpoints();
+app.MapFeedbackEndpoints();
+app.MapNotificationEndpoints();
+app.MapLibraryEndpoints();
+app.MapAdminEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -212,6 +281,37 @@ if (!app.Environment.IsEnvironment("Testing"))
             "cleanup-ai-usage",
             x => x.Cleanup(),
             Cron.Hourly);
+
+        // Reminders and digests: every user at their own local hour
+        recurringJobManager.AddOrUpdate<NotificationJob>(
+            "notifications",
+            x => x.Run(),
+            Cron.Hourly(5));
+
+        recurringJobManager.AddOrUpdate<FlashcardSessionCleanupJob>(
+            "cleanup-flashcard-sessions",
+            x => x.Cleanup(),
+            Cron.Daily(3));
+
+        recurringJobManager.AddOrUpdate<DeletedQuestionsPurgeJob>(
+            "purge-deleted-questions",
+            x => x.Purge(),
+            Cron.Daily(3, 30));
+
+        recurringJobManager.AddOrUpdate<NotificationCleanupJob>(
+            "cleanup-notifications",
+            x => x.Cleanup(),
+            Cron.Daily(4));
+
+        recurringJobManager.AddOrUpdate<FeedbackLogCleanupJob>(
+            "cleanup-feedback-log",
+            x => x.Cleanup(),
+            Cron.Daily(4, 30));
+
+        recurringJobManager.AddOrUpdate<AiUsageRollupJob>(
+            "rollup-ai-usage",
+            x => x.RollUp(),
+            Cron.Monthly(1, 4));
     }
 }
 

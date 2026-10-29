@@ -32,6 +32,11 @@ public class MaterialService : IMaterialService
         return materials.Select(MaterialMapper.ToDto).ToList();
     }
 
+    public Task<List<MaterialResponseDto>> GetListAsync()
+    {
+        return _repo.GetListAsync(_user.UserId);
+    }
+
     public async Task<MaterialResponseDto?> GetByIdAsync(Guid materialId)
     {
         var material = await _repo.GetByIdAsync(materialId, _user.UserId);
@@ -73,6 +78,10 @@ public class MaterialService : IMaterialService
 
         if (material is null)
             return null;
+
+        // A link is shown as <a href>, so only web addresses: "javascript:" links would run code on click
+        if (!string.IsNullOrEmpty(materialUpdateDto.Link) && !IsWebLink(materialUpdateDto.Link))
+            throw new BadRequestException("Link must be a web address starting with http:// or https://");
 
         MaterialMapper.ApplyUpdate(material, materialUpdateDto);
 
@@ -155,4 +164,9 @@ public class MaterialService : IMaterialService
             Types = types
         };
     }
+
+    private static bool IsWebLink(string link) =>
+        link.Length <= 2048
+        && Uri.TryCreate(link.Trim(), UriKind.Absolute, out var uri)
+        && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
 }

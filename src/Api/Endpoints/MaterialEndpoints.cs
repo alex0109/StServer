@@ -20,9 +20,13 @@ public static class MaterialEndpoints
         materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
         materialGroup.MapDelete("/{materialId:guid}", DeleteMaterial);
         
-        static async Task<IResult> GetAllMaterials(IMaterialService service)
+        // includeContent=false leaves out material and note content: the list stays small however
+        // much is written. Without the parameter the full list is returned, as older clients expect
+        static async Task<IResult> GetAllMaterials(IMaterialService service, bool includeContent = true)
         {
-            var result = await service.GetAllAsync();
+            var result = includeContent
+                ? await service.GetAllAsync()
+                : await service.GetListAsync();
             
             return TypedResults.Ok(result);
         };

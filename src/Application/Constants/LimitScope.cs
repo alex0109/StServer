@@ -9,5 +9,7 @@ public enum LimitScope
     Notes = 4,
     Dictionaries = 5,
     DictionaryEntries = 6,
-    AiUsage = 7
+    AiUsage = 7,
+    Feedback = 8,
+    LibraryRequests = 9,
 }

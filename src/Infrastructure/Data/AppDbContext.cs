@@ -29,6 +29,13 @@ public class AppDbContext : DbContext
     public DbSet<MaterialShare> MaterialShares => Set<MaterialShare>();
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
+    public DbSet<AiUsageMonthly> AiUsageMonthly => Set<AiUsageMonthly>();
+    public DbSet<UserNotificationSettings> UserNotificationSettings => Set<UserNotificationSettings>();
+    public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<FeedbackSubmission> FeedbackSubmissions => Set<FeedbackSubmission>();
+    public DbSet<LibraryItem> LibraryItems => Set<LibraryItem>();
+    public DbSet<LibraryRequest> LibraryRequests => Set<LibraryRequest>();
+    public DbSet<AdminAuditEntry> AdminAuditEntries => Set<AdminAuditEntry>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -63,6 +70,14 @@ public class AppDbContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
         
         modelBuilder.Entity<Question>().HasIndex(q => q.NoteId);
+
+        // Question count per user (overview, limits)
+        modelBuilder.Entity<Question>().HasIndex(q => q.UserId);
+
+        // Purge of soft-deleted questions only looks at deleted rows
+        modelBuilder.Entity<Question>()
+            .HasIndex(q => q.DeletedAt, "IX_Questions_DeletedAt")
+            .HasFilter("\"DeletedAt\" IS NOT NULL");
         
         modelBuilder.Entity<Assessment>()
             .Property(x => x.Id)
@@ -83,6 +98,14 @@ public class AppDbContext : DbContext
             .WithMany(m => m.Attempts)
             .HasForeignKey(a => a.AssessmentId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Statistics and streak: finished attempts of a user by finish time
+        modelBuilder.Entity<Attempt>()
+            .HasIndex(a => new { a.UserId, a.AttemptStatus, a.FinishedAt });
+
+        // Cleanup of abandoned attempts
+        modelBuilder.Entity<Attempt>()
+            .HasIndex(a => new { a.AttemptStatus, a.StartedAt });
         
         modelBuilder.Entity<Result>()
             .Property(x => x.Id)
@@ -99,10 +122,17 @@ public class AppDbContext : DbContext
             .WithMany(q => q.Results)
             .HasForeignKey(r => r.QuestionId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Statistics: all answers of a user, optionally in a time range
+        modelBuilder.Entity<Result>()
+            .HasIndex(r => new { r.UserId, r.AnsweredAt });
         
         modelBuilder.Entity<Tag>()
             .Property(x => x.Id)
             .HasDefaultValueSql("gen_random_uuid()");
+
+        modelBuilder.Entity<Tag>()
+            .HasIndex(x => x.UserId);
         
         modelBuilder.Entity<MaterialTag>()
             .HasKey(mt => new { mt.MaterialId, mt.TagId });
@@ -218,6 +248,10 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasIndex(x => new { x.DictionaryId, x.UserId });
+
+            // Cleanup of sessions that were never finished
+            entity.HasIndex(x => x.StartedAt, "IX_FlashcardSessions_Unfinished")
+                .HasFilter("\"FinishedAt\" IS NULL");
         });
 
         modelBuilder.Entity<FlashcardReview>(entity =>
@@ -270,6 +304,86 @@ public class AppDbContext : DbContext
             // Quota count: user, feature and month
             entity.HasIndex(x => new { x.UserId, x.Feature, x.CreatedAt });
             entity.HasIndex(x => new { x.Status, x.CreatedAt });
+            entity.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<AiUsageMonthly>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasIndex(x => new { x.UserId, x.Year, x.Month, x.Feature, x.Provider, x.Model })
+                .IsUnique();
+        });
+
+        modelBuilder.Entity<UserNotificationSettings>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<UserNotification>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(x => x.Data)
+                .HasColumnType("jsonb");
+
+            // A reminder of one kind is made once per day or week, even if the job runs twice
+            entity.HasIndex(x => new { x.UserId, x.Type, x.PeriodKey })
+                .IsUnique();
+
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt });
+        });
+
+        modelBuilder.Entity<LibraryItem>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(x => x.Snapshot)
+                .HasColumnType("jsonb");
+
+            // The catalogue: newest published first
+            entity.HasIndex(x => new { x.Status, x.PublishedAt });
+            entity.HasIndex(x => x.AuthorUserId);
+        });
+
+        modelBuilder.Entity<LibraryRequest>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(x => x.Snapshot)
+                .HasColumnType("jsonb");
+
+            // Review queue, the author's own list, and "is something about this already waiting"
+            entity.HasIndex(x => new { x.Status, x.CreatedAt });
+            entity.HasIndex(x => new { x.UserId, x.Status });
+            entity.HasIndex(x => new { x.LibraryItemId, x.Status });
+            entity.HasIndex(x => new { x.MaterialId, x.Status });
+        });
+
+        // "Already imported" for library cards
+        modelBuilder.Entity<Material>()
+            .HasIndex(x => new { x.UserId, x.ImportedFromLibraryItemId });
+
+        modelBuilder.Entity<AdminAuditEntry>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.HasIndex(x => x.CreatedAt);
+        });
+
+        modelBuilder.Entity<FeedbackSubmission>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            // Monthly count per sender
+            entity.HasIndex(x => new { x.SenderKey, x.CreatedAt });
+            entity.HasIndex(x => x.CreatedAt);
         });
 
         modelBuilder.Entity<MaterialFile>()

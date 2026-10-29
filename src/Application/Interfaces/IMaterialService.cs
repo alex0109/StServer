@@ -5,6 +5,8 @@ namespace Application.Interfaces;
 public interface IMaterialService
 {
     Task<List<MaterialResponseDto>> GetAllAsync();
+    // Without material and note content, for lists
+    Task<List<MaterialResponseDto>> GetListAsync();
 
     Task<MaterialResponseDto?> GetByIdAsync(Guid materialId);
 

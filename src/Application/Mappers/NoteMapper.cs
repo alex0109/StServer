@@ -29,7 +29,7 @@ public static class NoteMapper
             MaterialId = entity.MaterialId,
             Title = entity.Title,
             Type = entity.Type,
-            TextContent = entity.TextContent == null ? null : JsonSerializer.Deserialize<RichTextDocument>(entity.TextContent),
+            TextContent = RichTextJson.Parse(entity.TextContent),
             DrawingContent = entity.DrawingContent,
             Order = entity.Order,
             CreatedAt = entity.CreatedAt,

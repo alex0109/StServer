@@ -48,6 +48,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             AiQuotaExceededException => (StatusCodes.Status429TooManyRequests, "AI quota exceeded"),
             AiUnavailableException => (StatusCodes.Status503ServiceUnavailable, "AI unavailable"),
             AiOutputException => (StatusCodes.Status422UnprocessableEntity, "AI could not generate"),
+            EmailUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Email unavailable"),
             LimitExceededException => (StatusCodes.Status409Conflict, "Limit exceeded"),
             ConflictException => (StatusCodes.Status409Conflict, "Conflict"),
             BadRequestException => (StatusCodes.Status400BadRequest, "Bad request"),

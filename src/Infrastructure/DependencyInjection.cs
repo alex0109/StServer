@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Application.Interfaces;
+using Infrastructure.Admin;
 using Infrastructure.Ai;
+using Infrastructure.Caching;
+using Infrastructure.Email;
 using Infrastructure.Locks;
 using Infrastructure.Repositories;
 
@@ -22,9 +25,21 @@ public static class DependencyInjection
         services.AddScoped<IMaterialShareRepository, MaterialShareRepository>();
         services.AddScoped<IAiUsageRepository, AiUsageRepository>();
         services.AddScoped<ILimitsRepository, LimitsRepository>();
+        services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IFeedbackLogRepository, FeedbackLogRepository>();
+        services.AddScoped<ILibraryRepository, LibraryRepository>();
+        services.AddScoped<IAdminStatsRepository, AdminStatsRepository>();
+        services.AddScoped<IAdminAudit, AdminAudit>();
+        services.AddScoped<IAdminAlerts, AdminAlertService>();
+
+        services.AddHttpClient(ResendEmailSender.HttpClientName);
+        services.AddSingleton<IEmailSender, ResendEmailSender>();
 
         // Scoped like the DbContext, so the lock transaction covers the repositories of the request
         services.AddScoped<ILimitLock, PostgresLimitLock>();
+
+        services.AddMemoryCache();
+        services.AddSingleton<IUserReadCache, UserReadCache>();
 
         return services;
     }

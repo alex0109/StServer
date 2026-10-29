@@ -19,5 +19,7 @@ public interface IFlashcardRepository
     Task AddProgressAsync(DictionaryEntryProgress progress);
     void RemoveProgress(DictionaryEntryProgress progress);
 
+    // Sessions left open: finished at their last review, or at start when nothing was reviewed
+    Task<int> CloseStaleSessionsAsync(DateTime startedBefore);
     Task SaveChangesAsync();
 }
