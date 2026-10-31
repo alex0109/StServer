@@ -105,7 +105,7 @@ public class AnswerNormalizerTests
             "hello 😀 world");
         
         result.ShouldBe(
-            "hello  world");
+            "hello world");
     }
     
     [Fact]
@@ -147,5 +147,40 @@ public class AnswerNormalizerTests
         
         result.ShouldBe(
             "hello world");
+    }
+
+    [Theory]
+    [InlineData("Café crème", "cafe creme")]
+    [InlineData("naïve", "naive")]
+    [InlineData("Straße", "strasse")]
+    public void Normalize_RemovesLatinAccents(string input, string expected)
+    {
+        _sut.Normalize(input).ShouldBe(expected);
+    }
+
+    [Theory]
+    [InlineData("йод")]
+    [InlineData("їжак")]
+    public void Normalize_KeepsCyrillicLettersWithMarks(string input)
+    {
+        _sut.Normalize(input).ShouldBe(input);
+    }
+
+    [Theory]
+    [InlineData("п'ять")]
+    [InlineData("пʼять")]
+    [InlineData("п’ять")]
+    public void Normalize_IgnoresApostropheStyle(string input)
+    {
+        _sut.Normalize(input).ShouldBe("пять");
+    }
+
+    [Theory]
+    [InlineData("well-known", "well known")]
+    [InlineData("km/h", "km h")]
+    [InlineData("snake_case — style", "snake case style")]
+    public void Normalize_SeparatorsBecomeSpaces(string input, string expected)
+    {
+        _sut.Normalize(input).ShouldBe(expected);
     }
 }

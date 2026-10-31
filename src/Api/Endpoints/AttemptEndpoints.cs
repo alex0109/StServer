@@ -12,12 +12,26 @@ public static class AttemptEndpoints
             .RequireAuthorization()
             .RequireRateLimiting("api");
 
-        assessmentGroup.MapGet("/m/{materialId}", GetFinishedAttempts);
-        assessmentGroup.MapGet("/{attemptId}", GetAttempt);
+        assessmentGroup.MapGet("/m/{materialId:guid}", GetFinishedAttempts);
+        assessmentGroup.MapGet("/{attemptId:guid}", GetAttempt);
         assessmentGroup.MapPost("/start", StartAttempt);
-        assessmentGroup.MapPost("/{attemptId}/answer", AnswerQuestion);
-        assessmentGroup.MapPost("/{attemptId}/finish", FinishAttempt);
-        assessmentGroup.MapGet("/{attemptId}/results", GetResults);
+        assessmentGroup.MapPost("/{attemptId:guid}/answer", AnswerQuestion);
+        assessmentGroup.MapPost("/{attemptId:guid}/finish", FinishAttempt);
+        assessmentGroup.MapGet("/{attemptId:guid}/results", GetResults);
+        assessmentGroup.MapPost("/{attemptId:guid}/results/{resultId:guid}/accept", AcceptAnswer);
+        assessmentGroup.MapDelete("/{attemptId:guid}/results/{resultId:guid}/accept", UndoAccept);
+
+        static async Task<IResult> AcceptAnswer(Guid attemptId, Guid resultId, IAttemptService service)
+        {
+            var result = await service.AcceptAnswerAsync(attemptId, resultId);
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> UndoAccept(Guid attemptId, Guid resultId, IAttemptService service)
+        {
+            var result = await service.UndoAcceptAsync(attemptId, resultId);
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
 
         static async Task<IResult> GetFinishedAttempts(Guid materialId, IAttemptService service)
         {

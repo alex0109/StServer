@@ -1,9 +1,12 @@
 using Application.Constants;
+using Application.DTOs.Option;
 using Application.DTOs.Question;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
+using Application.Schedulers;
 using Domain.Entities;
+using Domain.Utility.Question;
 
 namespace Application.Services;
 
@@ -12,18 +15,30 @@ public class QuestionService : IQuestionService
     private readonly IQuestionRepository _repo;
     private readonly IUserContext _user;
     private readonly IOptionService _optionService;
+    private readonly ILimitLock _limitLock;
+    private readonly int _leechLapses;
+    private readonly IContentLimits _limits;
 
-    public QuestionService(IQuestionRepository repo, IUserContext user, IOptionService optionService)
+    public QuestionService(
+        IQuestionRepository repo,
+        IUserContext user,
+        IOptionService optionService,
+        ILimitLock limitLock,
+        FlashcardSchedulerOptions? schedulerOptions = null,
+        IContentLimits? limits = null)
     {
         _repo = repo;
         _user = user;
         _optionService = optionService;
+        _limitLock = limitLock;
+        _leechLapses = schedulerOptions?.LeechLapses ?? FlashcardSchedulerOptions.DefaultLeechLapses;
+        _limits = limits ?? ContentLimits.Free();
     }
 
     public async Task<List<QuestionResponseDto>> GetActiveQuestionsAsync(Guid materialId)
     {
         var questions = await _repo.GetActiveQuestionsAsync(materialId, _user.UserId);
-        return questions.Select(QuestionMapper.ToDto).ToList();
+        return questions.Select(q => QuestionMapper.ToDto(q, _leechLapses)).ToList();
     }
     
     public async Task<List<QuestionReducedDto>> GetActiveReducedQuestionsAsync(Guid materialId)
@@ -47,46 +62,67 @@ public class QuestionService : IQuestionService
         if (question is null)
             return null;
         
-        return QuestionMapper.ToDto(question);
+        return QuestionMapper.ToDto(question, _leechLapses);
     }
 
-    public async Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
+    public Task<QuestionResponseDto?> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
     {
-        var count = await _repo.CountByMaterialIdAsync(materialId);
-
-        if (count >= UserLimits.MaxQuestionsPerMaterial)
-        {
-            throw new LimitExceededException("Question limit reached");
-        }
-        
-        var question = QuestionMapper.ToEntityOpenQuestion(questionDto, materialId, _user.UserId);
-
-        var response = await _repo.AddQuestionAsync(question);
-        
-        await _repo.SaveChangesAsync();
-
-        return QuestionMapper.ToDto(response);
+        return CreateWithinLimitAsync(materialId, () =>
+            QuestionMapper.ToEntityOpenQuestion(questionDto, materialId, _user.UserId));
     }
     
-    public async Task<QuestionResponseDto> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto)
+    public Task<QuestionResponseDto?> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto)
     {
-        var count = await _repo.CountByMaterialIdAsync(materialId);
-
-        if (count >= UserLimits.MaxQuestionsPerMaterial)
+        return CreateWithinLimitAsync(materialId, () =>
         {
-            throw new LimitExceededException("Question limit reached");
+            var question = QuestionMapper.ToEntityOptionsQuestion(questionDto, materialId, _user.UserId);
+
+            question.Options = new List<Option>();
+
+            var options = questionDto.Options
+                .Select(x => new OptionUpdateDto { Name = x.Name, IsCorrect = x.IsCorrect })
+                .ToList();
+
+            _optionService.SyncOptions(question, options);
+
+            return question;
+        });
+    }
+
+    public Task<QuestionResponseDto?> CreateTrueFalseQuestionAsync(Guid materialId, TrueFalseQuestionCreateDto questionDto)
+    {
+        return CreateWithinLimitAsync(materialId, () =>
+        {
+            var question = QuestionMapper.ToEntityTrueFalseQuestion(questionDto, materialId, _user.UserId);
+
+            _optionService.SetTrueFalseOptions(question, questionDto.IsTrue);
+
+            return question;
+        });
+    }
+
+    private async Task<QuestionResponseDto?> CreateWithinLimitAsync(Guid materialId, Func<Question> buildQuestion)
+    {
+        if (!await _repo.MaterialExistsAsync(materialId, _user.UserId))
+            return null;
+
+        await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Questions, materialId);
+
+        var max = (await _limits.ForUserAsync(_user.UserId)).QuestionsPerMaterial;
+        var count = await _repo.CountActiveByMaterialIdAsync(materialId);
+
+        if (count >= max)
+        {
+            throw new LimitExceededException($"Question limit reached: {max} per material");
         }
-        
-        var question = QuestionMapper.ToEntityOptionsQuestion(questionDto, materialId, _user.UserId);
 
-        question.Options = new List<Option>();
-
-        _optionService.SyncOptions(question, questionDto.Options);
+        var question = buildQuestion();
 
         await _repo.AddQuestionAsync(question);
         await _repo.SaveChangesAsync();
+        await limitLock.CommitAsync();
 
-        return QuestionMapper.ToDto(question);
+        return QuestionMapper.ToDto(question, _leechLapses);
     }
 
     public async Task<QuestionResponseDto?> UpdateQuestionAsync(Guid materialId, Guid id, QuestionUpdateDto questionDto)
@@ -99,16 +135,35 @@ public class QuestionService : IQuestionService
         if (question is null)
             return null;
 
+        ValidateUpdate(question.QuestionType, questionDto);
+
         QuestionMapper.ApplyUpdate(question, questionDto);
 
         if (questionDto.Options is not null)
         {
             _optionService.SyncOptions(question, questionDto.Options);
         }
+        else if (questionDto.CorrectOptionId is Guid correctOptionId)
+        {
+            _optionService.SetCorrectOption(question, correctOptionId);
+        }
 
         await _repo.SaveChangesAsync();
 
-        return QuestionMapper.ToDto(question);
+        return QuestionMapper.ToDto(question, _leechLapses);
+    }
+
+    private static void ValidateUpdate(QuestionType questionType, QuestionUpdateDto questionDto)
+    {
+        switch (questionType)
+        {
+            case QuestionType.Open when questionDto.Options is not null || questionDto.CorrectOptionId is not null:
+                throw new BadRequestException("Open question has no options");
+            case QuestionType.Options or QuestionType.TrueFalse when questionDto.Answer is not null:
+                throw new BadRequestException("Question with options has no text answer");
+            case QuestionType.TrueFalse when questionDto.Options is not null:
+                throw new BadRequestException("True/False options can't be changed, update CorrectOptionId instead");
+        }
     }
 
     public async Task<bool> DeleteQuestionAsync(Guid materialId, Guid id)

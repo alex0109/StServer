@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Tag;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -13,6 +14,8 @@ public class TagServiceTests
 {
     private readonly Mock<ITagRepository> _repo = new();
     private readonly Mock<IUserContext> _user = new();
+    private readonly Mock<ILimitLock> _limitLock = new();
+    private readonly Mock<ILimitLockScope> _limitLockScope = new();
 
     private readonly TagService _sut;
 
@@ -23,9 +26,14 @@ public class TagServiceTests
         _user.Setup(x => x.UserId)
             .Returns(_userId);
 
+        _limitLock
+            .Setup(x => x.AcquireAsync(It.IsAny<LimitScope>(), It.IsAny<Guid>()))
+            .ReturnsAsync(_limitLockScope.Object);
+
         _sut = new TagService(
             _repo.Object,
-            _user.Object);
+            _user.Object,
+            _limitLock.Object);
     }
     
     [Fact]
@@ -196,7 +204,7 @@ public class TagServiceTests
     {
         _repo
             .Setup(x => x.CountByUserIdAsync(_userId))
-            .ReturnsAsync(UserLimits.MaxTags);
+            .ReturnsAsync(ContentLimitDefaults.Free.Tags!.Value);
         
         var dto = new TagCreateDto
         {
@@ -355,5 +363,29 @@ public class TagServiceTests
         _repo.Verify(
             x => x.SaveChangesAsync(),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_CountsUnderUserLockAndCommits()
+    {
+        _repo.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(0);
+        _repo.Setup(x => x.AddTagAsync(It.IsAny<Tag>())).ReturnsAsync((Tag t) => t);
+
+        await _sut.CreateAsync(new TagCreateDto { Name = "biology", Color = "#000000" });
+
+        _limitLock.Verify(x => x.AcquireAsync(LimitScope.Tags, _userId), Times.Once);
+        _limitLockScope.Verify(x => x.CommitAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateAsync_LimitReached_DoesNotCommit()
+    {
+        _repo.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Free.Tags!.Value);
+
+        await Should.ThrowAsync<LimitExceededException>(() =>
+            _sut.CreateAsync(new TagCreateDto { Name = "biology", Color = "#000000" }));
+
+        _limitLockScope.Verify(x => x.CommitAsync(), Times.Never);
+        _limitLockScope.Verify(x => x.DisposeAsync(), Times.Once);
     }
 }

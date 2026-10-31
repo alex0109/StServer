@@ -8,18 +8,19 @@ public static class QuestionEndpoints
     public static void MapQuestionEndpoints(this WebApplication app)
     {
      
-        var questionGroup = app.MapGroup("api/materials/{materialId}/questions")
+        var questionGroup = app.MapGroup("api/materials/{materialId:guid}/questions")
             .RequireAuthorization()
             .RequireRateLimiting("api");
 
         questionGroup.MapGet("/", GetAllQuestions);
         questionGroup.MapGet("/reduced/active", GetActiveReducedQuestions);
         questionGroup.MapGet("/reduced", GetAllReducedQuestions);
-        questionGroup.MapGet("/{id}", GetQuestion);
+        questionGroup.MapGet("/{id:guid}", GetQuestion);
         questionGroup.MapPost("/open", CreateOpenQuestion);
         questionGroup.MapPost("/options", CreateOptionQuestion);
-        questionGroup.MapPatch("/{id}", UpdateQuestion);
-        questionGroup.MapDelete("/{id}", DeleteQuestion);
+        questionGroup.MapPost("/true-false", CreateTrueFalseQuestion);
+        questionGroup.MapPatch("/{id:guid}", UpdateQuestion);
+        questionGroup.MapDelete("/{id:guid}", DeleteQuestion);
         
         static async Task<IResult> GetAllQuestions(Guid materialId, IQuestionService service)
         {
@@ -54,16 +55,29 @@ public static class QuestionEndpoints
         static async Task<IResult> CreateOpenQuestion(Guid materialId, OpenQuestionCreateDto questionCreateDto, IQuestionService service)
         {
             var result = await service.CreateOpenQuestionAsync(materialId, questionCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
             
             
-            return TypedResults.Created($"materials/{materialId}/questions/{result.Id}", result);
+            return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
         };
         
         static async Task<IResult> CreateOptionQuestion(Guid materialId, OptionQuestionCreateDto questionCreateDto, IQuestionService service)
         {
             var result = await service.CreateQuestionWithOptionsAsync(materialId, questionCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
             
-            return TypedResults.Created($"materials/{materialId}/questions/{result.Id}", result);
+            return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
+        };
+
+        static async Task<IResult> CreateTrueFalseQuestion(Guid materialId, TrueFalseQuestionCreateDto questionCreateDto, IQuestionService service)
+        {
+            var result = await service.CreateTrueFalseQuestionAsync(materialId, questionCreateDto);
+
+            if (result is null) return TypedResults.NotFound();
+
+            return TypedResults.Created($"/api/materials/{materialId}/questions/{result.Id}", result);
         };
 
         static async Task<IResult> UpdateQuestion(Guid materialId, Guid id, QuestionUpdateDto questionUpdateDto, IQuestionService service)

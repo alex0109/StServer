@@ -1,0 +1,32 @@
+using Domain.Entities;
+using Domain.Utility.Flashcard;
+
+namespace Application.Interfaces;
+
+public interface IFlashcardRepository
+{
+    Task<bool> DictionaryExistsAsync(Guid dictionaryId, Guid userId);
+    Task<List<DictionaryEntry>> GetActiveEntriesWithProgressAsync(Guid dictionaryId, Guid userId);
+    Task<DictionaryEntry?> GetEntryWithProgressAsync(Guid entryId, Guid userId);
+
+    // Across all of the user's dictionaries, archived words left out
+    Task<List<DictionaryEntry>> GetDueEntriesAsync(Guid userId, DateTime dueByUtc, int take);
+    Task<List<DictionaryEntry>> GetNewEntriesAsync(Guid userId, int take);
+    Task<List<DictionaryEntry>> GetEntriesWithProgressAsync(Guid userId, IReadOnlyCollection<Guid> entryIds);
+    // Words of the user that have a review state
+    Task<List<Guid>> GetEntryIdsWithProgressAsync(Guid userId);
+    Task<FlashcardSession?> GetSessionAsync(Guid sessionId, Guid userId);
+    Task AddSessionAsync(FlashcardSession session);
+    Task<FlashcardReview?> GetReviewAsync(Guid reviewId, Guid userId);
+    Task<List<FlashcardReview>> GetReviewsForEntriesAsync(List<Guid> entryIds);
+    Task<List<DictionaryEntry>> GetEntriesWithOutdatedProgressAsync(FlashcardAlgorithm currentAlgorithm, int take);
+    Task<bool> HasLaterReviewAsync(FlashcardReview review);
+    Task AddReviewAsync(FlashcardReview review);
+    void RemoveReview(FlashcardReview review);
+    Task AddProgressAsync(DictionaryEntryProgress progress);
+    void RemoveProgress(DictionaryEntryProgress progress);
+
+    // Sessions left open: finished at their last review, or at start when nothing was reviewed
+    Task<int> CloseStaleSessionsAsync(DateTime startedBefore);
+    Task SaveChangesAsync();
+}

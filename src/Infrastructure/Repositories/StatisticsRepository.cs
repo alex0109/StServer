@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Application.DTOs.Statistics;
 using Application.Interfaces;
+using Domain.Utility.Flashcard;
 using Domain.Entities;
 using Domain.Utility.Attempt;
 using Infrastructure.Data;
@@ -31,7 +33,7 @@ public class StatisticsRepository : IStatisticsRepository
         DateTime? to = null)
     {
         var query = _db.Attempts
-            .Include(a => a.Results)
+            .AsNoTracking()
             .Where(a => a.UserId == userId && a.AttemptStatus == AttemptStatus.Finished);
 
         if (from is not null)
@@ -40,27 +42,160 @@ public class StatisticsRepository : IStatisticsRepository
         if (to is not null)
             query = query.Where(a => a.FinishedAt <= to);
 
-        return await query.ToListAsync();
+        // Scores need only these fields: answer texts, chosen options and AI explanations stay in the database
+        return await query
+            .Select(a => new Attempt
+            {
+                Id = a.Id,
+                UserId = a.UserId,
+                AssessmentId = a.AssessmentId,
+                AttemptStatus = a.AttemptStatus,
+                StartedAt = a.StartedAt,
+                FinishedAt = a.FinishedAt,
+                Results = a.Results
+                    .Select(r => new Result
+                    {
+                        Id = r.Id,
+                        AttemptId = r.AttemptId,
+                        QuestionId = r.QuestionId,
+                        UserId = r.UserId,
+                        IsCorrect = r.IsCorrect,
+                        Score = r.Score,
+                        Weight = r.Weight,
+                        TimeSpent = r.TimeSpent,
+                        ConfidenceLevel = r.ConfidenceLevel,
+                        AnsweredAt = r.AnsweredAt,
+                    })
+                    .ToList(),
+            })
+            .AsSplitQuery()
+            .ToListAsync();
     }
 
-    public async Task<List<Result>> GetResultsWithQuestionAndTagsAsync(
+    public async Task<List<AnswerStatRow>> GetAnswerStatRowsAsync(Guid userId)
+    {
+        return await _db.Results
+            .AsNoTracking()
+            .Where(r => r.UserId == userId)
+            .Select(r => new AnswerStatRow(
+                r.Question.QuestionDifficulty,
+                r.IsCorrect,
+                r.TimeSpent,
+                r.ConfidenceLevel))
+            .ToListAsync();
+    }
+
+    // Counted in SQL: one row per tag instead of every answer with its question and material
+    public async Task<List<TagAnswerStat>> GetTagAnswerStatsAsync(
         Guid userId,
         DateTime? from = null,
-        DateTime? to = null)
+        DateTime? toExclusive = null)
     {
-        var query = _db.Results
-            .Include(r => r.Question)
-                .ThenInclude(q => q.Material)
-                    .ThenInclude(m => m.MaterialTags)
-                        .ThenInclude(mt => mt.Tag)
-            .Where(r => r.UserId == userId);
+        var results = _db.Results.Where(r => r.UserId == userId);
 
         if (from is not null)
-            query = query.Where(r => r.AnsweredAt >= from);
+            results = results.Where(r => r.AnsweredAt >= from);
 
-        if (to is not null)
-            query = query.Where(r => r.AnsweredAt <= to);
+        if (toExclusive is not null)
+            results = results.Where(r => r.AnsweredAt < toExclusive);
 
-        return await query.ToListAsync();
+        return await results
+            .SelectMany(
+                r => r.Question.Material.MaterialTags,
+                (r, mt) => new { mt.TagId, mt.Tag.Name, r.IsCorrect })
+            .GroupBy(x => new { x.TagId, x.Name })
+            .Select(g => new TagAnswerStat(
+                g.Key.TagId,
+                g.Key.Name,
+                g.Count(),
+                g.Count(x => x.IsCorrect)))
+            .ToListAsync();
+    }
+
+    public async Task<List<DateTime>> GetActivityTimesAsync(Guid userId, DateTime? from = null)
+    {
+        var attempts = _db.Attempts
+            .Where(a => a.UserId == userId
+                        && a.AttemptStatus == AttemptStatus.Finished
+                        && a.FinishedAt != null
+                        && (from == null || a.FinishedAt >= from))
+            .Select(a => a.FinishedAt!.Value);
+
+        var reviews = _db.FlashcardReviews
+            .Where(r => r.UserId == userId && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        // Questions answered in the "Today" queue; reviews from attempts are already counted by their attempt
+        var questionReviews = _db.QuestionReviews
+            .Where(r => r.UserId == userId && r.SessionId != null && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        return await attempts.Concat(reviews).Concat(questionReviews).ToListAsync();
+    }
+
+    // Same rules as the flashcard stats: archived words don't count, new words are not "due"
+    public async Task<List<DictionaryDueDto>> GetDueWordsAsync(Guid userId, DateTime dueBeforeUtc)
+    {
+        return await _db.Dictionaries
+            .Where(d => d.UserId == userId)
+            .Select(d => new DictionaryDueDto
+            {
+                DictionaryId = d.Id,
+                MaterialId = d.MaterialId,
+                Title = d.Title,
+                Due = d.Entries.Count(e =>
+                    !e.IsArchived
+                    && e.Progress != null
+                    && e.Progress.State != FlashcardState.New
+                    && e.Progress.Due <= dueBeforeUtc),
+                New = d.Entries.Count(e =>
+                    !e.IsArchived && (e.Progress == null || e.Progress.State == FlashcardState.New)),
+            })
+            .Where(x => x.Due > 0 || x.New > 0)
+            .OrderByDescending(x => x.Due)
+            .ToListAsync();
+    }
+
+    public async Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc)
+    {
+        return await _db.QuestionProgresses
+            .CountAsync(p => p.UserId == userId
+                             && p.State != FlashcardState.New
+                             && p.Due <= dueBeforeUtc
+                             && p.Question.IsActive
+                             && p.Question.DeletedAt == null);
+    }
+
+    public async Task<int> GetReviewsCountAsync(Guid userId, DateTime from, DateTime to)
+    {
+        return await _db.FlashcardReviews
+            .CountAsync(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to);
+    }
+
+    public async Task<List<DateTime>> GetReviewTimesAsync(Guid userId, DateTime? from = null)
+    {
+        var words = _db.FlashcardReviews
+            .Where(r => r.UserId == userId && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        var questions = _db.QuestionReviews
+            .Where(r => r.UserId == userId && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        return await words.Concat(questions).ToListAsync();
+    }
+
+    public async Task<(int Reviews, int NewWords)> CountReviewsAsync(Guid userId, DateTime from, DateTime to)
+    {
+        var words = await _db.FlashcardReviews
+            .Where(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to)
+            .GroupBy(_ => 1)
+            .Select(g => new { All = g.Count(), New = g.Count(r => r.PrevState == FlashcardState.New) })
+            .FirstOrDefaultAsync();
+
+        var questions = await _db.QuestionReviews
+            .CountAsync(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to);
+
+        return ((words?.All ?? 0) + questions, words?.New ?? 0);
     }
 }

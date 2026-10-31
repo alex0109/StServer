@@ -8,6 +8,6 @@ public class ResultRequestDto
     public Guid QuestionId { get; set; }
     [MaxLength(1000)]
     public string? UserAnswer { get; set; }
-    public Guid? UserAnswerOptionId { get; set; }
+    public List<Guid>? UserAnswerOptionIds { get; set; }
     public ConfidenceLevel? ConfidenceLevel { get; set; }
 }

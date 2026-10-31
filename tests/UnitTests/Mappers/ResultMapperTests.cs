@@ -18,7 +18,7 @@ public class ResultMapperTests
         {
             QuestionId = questionId,
             UserAnswer = "Answer",
-            UserAnswerOptionId = optionId
+            UserAnswerOptionIds = [optionId]
         };
 
         var result = ResultMapper.ToEntity(
@@ -38,7 +38,7 @@ public class ResultMapperTests
         result.UserId.ShouldBe(userId);
 
         result.UserAnswer.ShouldBe("Answer");
-        result.UserAnswerOptionId.ShouldBe(optionId);
+        result.UserAnswerOptionIds.ShouldBe([optionId]);
 
         result.IsCorrect.ShouldBeTrue();
         result.Score.ShouldBe(95);
@@ -68,7 +68,7 @@ public class ResultMapperTests
             timeSpent: TimeSpan.FromHours(2));
 
         result.UserAnswer.ShouldBeNull();
-        result.UserAnswerOptionId.ShouldBeNull();
+        result.UserAnswerOptionIds.ShouldBeEmpty();
     }
 
 
@@ -81,7 +81,7 @@ public class ResultMapperTests
             AttemptId = Guid.NewGuid(),
             QuestionId = Guid.NewGuid(),
             UserAnswer = "My answer",
-            UserAnswerOptionId = Guid.NewGuid(),
+            UserAnswerOptionIds = [Guid.NewGuid()],
             IsCorrect = true,
             Score = 100,
             Weight = 2,
@@ -97,7 +97,7 @@ public class ResultMapperTests
         result.QuestionId.ShouldBe(entity.QuestionId);
 
         result.UserAnswer.ShouldBe(entity.UserAnswer);
-        result.UserAnswerOptionId.ShouldBe(entity.UserAnswerOptionId);
+        result.UserAnswerOptionIds.ShouldBe(entity.UserAnswerOptionIds);
 
         result.IsCorrect.ShouldBeTrue();
         result.Score.ShouldBe(100);
@@ -116,7 +116,6 @@ public class ResultMapperTests
             AttemptId = Guid.NewGuid(),
             QuestionId = Guid.NewGuid(),
             UserAnswer = null,
-            UserAnswerOptionId = null,
             IsCorrect = false,
             Score = 0,
             Weight = 1,
@@ -126,6 +125,6 @@ public class ResultMapperTests
         var result = ResultMapper.ToDto(entity);
 
         result.UserAnswer.ShouldBeNull();
-        result.UserAnswerOptionId.ShouldBeNull();
+        result.UserAnswerOptionIds.ShouldBeEmpty();
     }
 }

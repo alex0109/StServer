@@ -1,5 +1,7 @@
+using Domain.Utility.Result;
 using Domain.Entities;
 using Application.DTOs.Result;
+using Domain.Utility.Question;
 
 namespace Application.Mappers;
 
@@ -20,7 +22,7 @@ public class ResultMapper
             AttemptId = attemptId,
             UserId = userId,
             UserAnswer = dto.UserAnswer ?? null,
-            UserAnswerOptionId = dto.UserAnswerOptionId ?? null,
+            UserAnswerOptionIds = dto.UserAnswerOptionIds?.Distinct().ToList() ?? [],
             IsCorrect = isCorrect,
             Score = score,
             Weight = weight,
@@ -38,11 +40,22 @@ public class ResultMapper
             AttemptId = entity.AttemptId,
             QuestionId = entity.QuestionId,
             UserAnswer = entity.UserAnswer ?? null,
-            UserAnswerOptionId = entity.UserAnswerOptionId ?? null,
+            UserAnswerOptionIds = entity.UserAnswerOptionIds,
             IsCorrect = entity.IsCorrect,
             Score = entity.Score,
             Weight = entity.Weight,
             ConfidenceLevel = entity.ConfidenceLevel,
+            Rating = entity.Rating,
+            Method = entity.Method,
+            CanAccept = CanAccept(entity),
+            OverriddenAt = entity.OverriddenAt,
+            AiExplanation = entity.AiExplanation,
+            CorrectOptionIds = entity.Question?.Options
+                .Where(o => o.IsCorrect)
+                .Select(o => o.Id)
+                .ToList() ?? [],
+            CorrectAnswer = entity.Question?.QuestionType == QuestionType.Open ? entity.Question.Answer : null,
+            QuestionExplanation = entity.Question?.Explanation,
             AnswerChangedCount = entity.AnswerChangedCount,
             TimeSpent = entity.TimeSpent,
             AnsweredAt = entity.AnsweredAt,
@@ -52,10 +65,18 @@ public class ResultMapper
     public static void ApplyUpdate(Result entity, ResultRequestDto dto, bool isCorrect, double score)
     {
         entity.UserAnswer = dto.UserAnswer ?? null;
-        entity.UserAnswerOptionId = dto.UserAnswerOptionId ?? null;
+        entity.UserAnswerOptionIds = dto.UserAnswerOptionIds?.Distinct().ToList() ?? [];
         entity.IsCorrect = isCorrect;
         entity.Score = score;
         entity.ConfidenceLevel = dto.ConfidenceLevel;
+        // An explanation of the previous answer would be wrong for the new one
+        entity.AiExplanation = null;
+        entity.AiExplanationLanguage = null;
         entity.AnswerChangedCount++;
     }
+
+    // Only open answers judged by similarity or AI can be wrong in a way the user can see
+    public static bool CanAccept(Result entity) =>
+        !entity.IsCorrect
+        && entity.Method is EvaluationMethod.Fuzzy or EvaluationMethod.Embedding or EvaluationMethod.AI;
 }

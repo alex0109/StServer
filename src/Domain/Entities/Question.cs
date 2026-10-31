@@ -10,12 +10,15 @@ public class Question
     public ICollection<Result> Results { get; set; } = new List<Result>();
     public Guid MaterialId { get; set; }
     public Material Material { get; set; } = null!;
+    public Guid? NoteId { get; set; }
+    public Note? Note { get; set; }
+    public Guid? DictionaryEntryId { get; set; }
+    public DictionaryEntry? DictionaryEntry { get; set; }
     [MaxLength(100)]
     public required string Title { get; set; }
     [MaxLength(1000)] 
     public string? Answer { get; set; }
     public QuestionType QuestionType  { get; set; }
-    public Guid? CorrectOptionId { get; set; }
     public ICollection<Option> Options { get; set; } = new List<Option>();
     public QuestionDifficulty QuestionDifficulty { get; set; }
     public string? Explanation { get; set; }
@@ -24,4 +27,7 @@ public class Question
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
+    // Spaced repetition of the question, personal: never copied with the material
+    public QuestionProgress? Progress { get; set; }
+    public ICollection<QuestionReview> Reviews { get; set; } = new List<QuestionReview>();
 }

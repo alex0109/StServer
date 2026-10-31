@@ -18,7 +18,7 @@ public class AssessmentService : IAssessmentService
     public async Task<Guid> StartAssessment(Guid materialId)
     {
         var existing = await _repo.GetAssessmentByMaterialIdAsync(materialId, _user.UserId);
-
+        
         if (existing is not null)
             return existing.Id;
 

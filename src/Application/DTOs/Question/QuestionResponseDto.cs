@@ -8,12 +8,12 @@ public class QuestionResponseDto
 {
     public Guid Id { get; set; }
     public Guid MaterialId { get; set; }
+    public Guid? NoteId { get; set; }
     [MaxLength(100)]
     public required string Title { get; set; }
     [MaxLength(1000)]
     public string? Answer { get; set; }
     public QuestionType QuestionType  { get; set; }
-    public Guid? CorrectOptionId { get; set; }
     public List<OptionResponseDto>? Options { get; set; }
     public QuestionDifficulty QuestionDifficulty { get; set; }
     [MaxLength(1000)]
@@ -22,4 +22,5 @@ public class QuestionResponseDto
     public bool IsActive { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public QuestionProgressDto? Progress { get; set; }
 }

@@ -1,3 +1,4 @@
+using Application.Schedulers;
 using Application.DTOs.Option;
 using Domain.Entities;
 using Application.DTOs.Question;
@@ -13,6 +14,7 @@ public static class QuestionMapper
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            NoteId = dto.NoteId,
             UserId = userId,
             Title = dto.Title,
             Answer = dto.Answer,
@@ -30,6 +32,7 @@ public static class QuestionMapper
         {
             Id = Guid.NewGuid(),
             MaterialId = materialId,
+            NoteId = dto.NoteId,
             UserId = userId,
             Title = dto.Title,
             QuestionType = QuestionType.Options,
@@ -40,27 +43,49 @@ public static class QuestionMapper
         };
     }
 
-    public static QuestionResponseDto ToDto(Question entity)
+    public static Question ToEntityTrueFalseQuestion(TrueFalseQuestionCreateDto dto, Guid materialId, Guid userId)
+    {
+        return new Question
+        {
+            Id = Guid.NewGuid(),
+            MaterialId = materialId,
+            NoteId = dto.NoteId,
+            UserId = userId,
+            Title = dto.Title,
+            QuestionType = QuestionType.TrueFalse,
+            QuestionDifficulty =  dto.QuestionDifficulty,
+            Explanation = dto.Explanation,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+    }
+
+    public static QuestionResponseDto ToDto(Question entity) =>
+        ToDto(entity, FlashcardSchedulerOptions.DefaultLeechLapses);
+
+    public static QuestionResponseDto ToDto(Question entity, int leechLapses)
     {
         return new QuestionResponseDto
         {
             Id = entity.Id,
             MaterialId = entity.MaterialId,
+            NoteId = entity.NoteId,
             Title = entity.Title,
             Answer = entity.Answer,
             QuestionType = entity.QuestionType,
             Explanation = entity.Explanation,
             QuestionDifficulty = entity.QuestionDifficulty,
-            Options = entity.Options.Select(o => new OptionResponseDto
+            Options = entity.Options.OrderBy(o => o.Position).Select(o => new OptionResponseDto
             {
                 Id = o.Id,
                 Name = o.Name,
-                IsCorrect = o.Id == entity.CorrectOptionId
+                IsCorrect = o.IsCorrect
             }).ToList(),
             IsActive = entity.IsActive,
             Version = entity.Version,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt
+            UpdatedAt = entity.UpdatedAt,
+            Progress = entity.Progress is null ? null : QuestionReviewMapper.ToProgressDto(entity.Progress, leechLapses),
         };
     }
     
@@ -71,11 +96,10 @@ public static class QuestionMapper
             Id = entity.Id,
             Title = entity.Title,
             QuestionType = entity.QuestionType,
-            Options = entity.Options.Select(o => new OptionResponseDto
+            Options = entity.Options.OrderBy(o => o.Position).Select(o => new OptionResponseDto
             {
                 Id = o.Id,
-                Name = o.Name,
-                IsCorrect = o.Id == entity.CorrectOptionId
+                Name = o.Name
             }).ToList()
         };
     }
@@ -87,9 +111,6 @@ public static class QuestionMapper
 
         if (dto.Answer is not null)
             entity.Answer = dto.Answer;
-        
-        if (dto.CorrectOptionId is not null)
-            entity.CorrectOptionId = dto.CorrectOptionId;
         
         if (dto.QuestionDifficulty is QuestionDifficulty diff)
             entity.QuestionDifficulty = diff;

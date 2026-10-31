@@ -59,6 +59,9 @@ public class AttemptRepository : IAttemptRepository
         return await _db.Attempts
             .Include(m => m.Assessment)
             .Include(m => m.Results)
+                .ThenInclude(r => r.Question)
+                    .ThenInclude(q => q.Options)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == id && x.UserId == userId);
     }
 

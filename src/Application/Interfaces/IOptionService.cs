@@ -1,5 +1,4 @@
 using Application.DTOs.Option;
-using Application.DTOs.Question;
 using Domain.Entities;
 
 namespace Application.Interfaces;
@@ -7,4 +6,8 @@ namespace Application.Interfaces;
 public interface IOptionService
 {
     void SyncOptions(Question question, List<OptionUpdateDto> options);
+
+    void SetTrueFalseOptions(Question question, bool isTrue);
+
+    void SetCorrectOption(Question question, Guid optionId);
 }

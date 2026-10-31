@@ -2,6 +2,7 @@ using System.Text.Json;
 using Domain.Entities;
 using Application.DTOs.RichTextDocument;
 using Application.DTOs.Material;
+using Application.DTOs.Note;
 using Application.DTOs.Tag;
 using Domain.Utility.Material;
 
@@ -40,15 +41,30 @@ public static class MaterialMapper
                     Color = mt.Tag.Color,
                 })
                 .ToList(),
+            Notes = entity.Notes
+                .Select(m => new NoteResponseDto()
+                {
+                    Id = m.Id,
+                    MaterialId = m.MaterialId,
+                    Title = m.Title,
+                    Type = m.Type,
+                    TextContent = RichTextJson.Parse(m.TextContent),
+                    DrawingContent = m.DrawingContent,
+                    Order = m.Order,
+                    CreatedAt = m.CreatedAt,
+                    UpdatedAt = m.UpdatedAt
+                })
+                .ToList(),
             Link = entity.Link,
             Status = entity.Status,
             CreatedAt = entity.CreatedAt,
             UpdatedAt = entity.UpdatedAt,
-            Content = entity.Content == null
-                ? null
-                : JsonSerializer.Deserialize<RichTextDocument>(entity.Content),
+            Content = RichTextJson.Parse(entity.Content),
             Version = entity.Version,
-            IsActive =  entity.IsActive
+            IsActive =  entity.IsActive,
+            IsImported = entity.ImportedFromMaterialId is not null || entity.ImportedFromLibraryItemId is not null,
+            IsFromLibrary = entity.ImportedFromLibraryItemId is not null,
+            ImportedAt = entity.ImportedAt
         };
     }
     

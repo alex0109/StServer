@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  # The job name is what the admin panel asks about (up{job="studytracker-api"})
+  - job_name: studytracker-api
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics_token
+    # Local API from Rider or `dotnet run`. For production replace with the API host and https:
+    #   scheme: https
+    #   static_configs: [{ targets: ["<your-api>.azurewebsites.net"] }]
+    scheme: http
+    static_configs:
+      - targets: ["host.docker.internal:5089"]

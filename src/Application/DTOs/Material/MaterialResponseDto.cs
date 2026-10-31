@@ -1,6 +1,7 @@
 using Application.DTOs.Tag;
 using Domain.Utility.Material;
 using System.ComponentModel.DataAnnotations;
+using Application.DTOs.Note;
 
 namespace Application.DTOs.Material;
 
@@ -12,6 +13,7 @@ public class MaterialResponseDto
     public required string Title { get; set; }
     public required MaterialType Type { get; set; }
     public List<TagResponseDto>? MaterialTags { get; set; }
+    public List<NoteResponseDto>? Notes { get; set; }
     public string? Link { get; set; }
     public RichTextDocument.RichTextDocument? Content { get; set; }
     public required MaterialStatus Status { get; set; }
@@ -19,4 +21,8 @@ public class MaterialResponseDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int Version { get; set; }
+    public bool IsImported { get; set; }
+    // Imported from the global library (not from a share link)
+    public bool IsFromLibrary { get; set; }
+    public DateTime? ImportedAt { get; set; }
 }

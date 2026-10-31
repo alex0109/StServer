@@ -12,17 +12,24 @@ public static class MaterialEndpoints
             .RequireRateLimiting("api");
 
         materialGroup.MapGet("/", GetAllMaterials);
-        materialGroup.MapGet("/{materialId}", GetMaterial);
+        materialGroup.MapGet("/{materialId:guid}", GetMaterial);
         materialGroup.MapGet("/stats/data", GetStatisticalData);
         materialGroup.MapPost("/", CreateMaterial);
-        materialGroup.MapPatch("/{materialId}", UpdateMaterial);
-        materialGroup.MapPost("/{materialId}/tags/{tagId}", AddTagToMaterial);
-        materialGroup.MapDelete("/{materialId}/tags/{tagId}", DeleteTagFromMaterial);
-        materialGroup.MapDelete("/{materialId}", DeleteMaterial);
+        // An article from a link: the server fetches the page, so it has a small window of its own
+        materialGroup.MapPost("/import-url", ImportFromUrl)
+            .RequireRateLimiting("import");
+        materialGroup.MapPatch("/{materialId:guid}", UpdateMaterial);
+        materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);
+        materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
+        materialGroup.MapDelete("/{materialId:guid}", DeleteMaterial);
         
-        static async Task<IResult> GetAllMaterials(IMaterialService service)
+        // includeContent=false leaves out material and note content: the list stays small however
+        // much is written. Without the parameter the full list is returned, as older clients expect
+        static async Task<IResult> GetAllMaterials(IMaterialService service, bool includeContent = true)
         {
-            var result = await service.GetAllAsync();
+            var result = includeContent
+                ? await service.GetAllAsync()
+                : await service.GetListAsync();
             
             return TypedResults.Ok(result);
         };
@@ -35,6 +42,16 @@ public static class MaterialEndpoints
             
             return TypedResults.Ok(result);
         };
+
+        static async Task<IResult> ImportFromUrl(
+            MaterialImportDto dto,
+            IMaterialImportService service,
+            CancellationToken cancellationToken)
+        {
+            var result = await service.ImportAsync(dto, cancellationToken);
+
+            return TypedResults.Created($"/api/materials/{result.Material.Id}", result);
+        }
 
         static async Task<IResult> CreateMaterial(MaterialCreateDto materialCreateDto, IMaterialService service)
         {

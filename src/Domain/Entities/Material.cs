@@ -10,10 +10,14 @@ public class Material
     public Guid UserId { get; set; }
     public ICollection<Question> Questions { get; set; } = new List<Question>();
     public ICollection<Assessment> Assessments { get; set; } = new List<Assessment>();
+    public ICollection<Note> Notes { get; set; } = new List<Note>();
+    public ICollection<Dictionary> Dictionaries { get; set; } = new List<Dictionary>();
+    public ICollection<MaterialFile> MaterialFiles { get; set; } = new List<MaterialFile>();
+    public ICollection<MaterialTag> MaterialTags { get; set; } = new List<MaterialTag>();
+    public ICollection<MaterialShare> Shares { get; set; } = new List<MaterialShare>();
     [MaxLength(70)]
     public required string Title { get; set; }
     public required MaterialType Type { get; set; }
-    public ICollection<MaterialTag> MaterialTags { get; set; } = new List<MaterialTag>();
     public string? Link { get; set; }
     public JsonDocument? Content { get; set; }
     public required MaterialStatus Status { get; set; }
@@ -22,6 +26,11 @@ public class Material
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
     public int Version { get; set; } = 1;
+    // Set when the material is a copy imported from a share link, no FK: the source may be deleted
+    public Guid? ImportedFromMaterialId { get; set; }
+    // Set when the material is a copy of a library material, no FK: it may leave the library
+    public Guid? ImportedFromLibraryItemId { get; set; }
+    public DateTime? ImportedAt { get; set; }
     
     public void AddTag(Guid tagId)
     {

@@ -6,6 +6,7 @@ using Shouldly;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Application.Constants;
+using Application.Limits;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -67,12 +68,15 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
         var createResponse = await _client.PostAsJsonAsync(
             "/api/materials",
             createDto,
-            JsonOptions);
+            JsonOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
         
         createResponse.StatusCode.ShouldBe(HttpStatusCode.Created);
 
         var created = await createResponse.Content
-            .ReadFromJsonAsync<MaterialResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<MaterialResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
         created.ShouldNotBeNull();
 
@@ -80,13 +84,14 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
         created.Type.ShouldBe(createDto.Type);
         created.Status.ShouldBe(createDto.Status);
         
-        var getResponse = await _client.GetAsync(
-            $"/api/materials/{created.Id}");
+        var getResponse = await _client.GetAsync($"/api/materials/{created.Id}", TestContext.Current.CancellationToken);
         
         getResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var fetched = await getResponse.Content
-            .ReadFromJsonAsync<MaterialResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<MaterialResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
 
         fetched.ShouldNotBeNull();
 
@@ -98,7 +103,7 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
     public async Task CreateMaterial_WhenLimitExceeded_ReturnsConflictWithProblemDetails()
     {
         // створити MaxMaterials матеріалів
-        for (int i = 0; i < UserLimits.MaxMaterials; i++)
+        for (int i = 0; i < ContentLimitDefaults.Free.Materials!.Value; i++)
             await CreateMaterial();
 
         var response = await _client.PostAsJsonAsync("/api/materials", new MaterialCreateDto
@@ -106,11 +111,12 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
             Title = "One too many",
             Type = MaterialType.article,
             Status = MaterialStatus.tolearn
-        });
+        }, cancellationToken: TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.Conflict);
 
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(
+            cancellationToken: TestContext.Current.CancellationToken);
         problem!.Title.ShouldBe("Limit exceeded");
     }
 
@@ -118,7 +124,8 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
     public async Task GetMaterial_WhenNotExists_ReturnsNotFound()
     {
         var response = await _client.GetAsync(
-            $"/api/materials/{Guid.NewGuid()}");
+            $"/api/materials/{Guid.NewGuid()}",
+            TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -136,17 +143,22 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
         var createResponse = await _client.PostAsJsonAsync(
             "/api/materials",
             dto,
-            JsonOptions);
+            JsonOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
         
         var created = await createResponse.Content
-            .ReadFromJsonAsync<MaterialResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<MaterialResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
-        var response = await _client.GetAsync("/api/materials");
+        var response = await _client.GetAsync("/api/materials", TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
         var materials = await response.Content
-            .ReadFromJsonAsync<List<MaterialResponseDto>>(JsonOptions);
+            .ReadFromJsonAsync<List<MaterialResponseDto>>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
         materials.ShouldNotBeNull();
         
@@ -167,15 +179,19 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
         var createResponse = await _client.PostAsJsonAsync(
             "/api/materials",
             createDto,
-            JsonOptions);
+            JsonOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
 
         var created = await createResponse.Content
-            .ReadFromJsonAsync<MaterialResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<MaterialResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
         var otherUserClient = _factory.CreateAuthenticatedClient();
         
         var response = await otherUserClient.GetAsync(
-            $"/api/materials/{created!.Id}");
+            $"/api/materials/{created!.Id}",
+            TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -183,7 +199,7 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task GetMaterials_WithoutAuth_ReturnsUnauthorized()
     {
-        var response = await _noAuthClient.GetAsync("/api/materials");
+        var response = await _noAuthClient.GetAsync("/api/materials", TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }

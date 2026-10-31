@@ -11,12 +11,16 @@ namespace Application.Services;
 public class TagService : ITagService
 {
     private readonly ITagRepository _repo;
+    private readonly IContentLimits _limits;
     private readonly IUserContext _user;
+    private readonly ILimitLock _limitLock;
 
-    public TagService(ITagRepository repo, IUserContext user)
+    public TagService(ITagRepository repo, IUserContext user, ILimitLock limitLock, IContentLimits? limits = null)
     {
         _repo = repo;
         _user = user;
+        _limitLock = limitLock;
+        _limits = limits ?? ContentLimits.Free();
     }
 
     public async Task<List<TagResponseDto>?> GetAllTagsAsync()
@@ -55,11 +59,14 @@ public class TagService : ITagService
     
     public async Task<TagResponseDto> CreateAsync(TagCreateDto dto)
     {
+        await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Tags, _user.UserId);
+
+        var max = (await _limits.ForUserAsync(_user.UserId)).Tags;
         var count = await _repo.CountByUserIdAsync(_user.UserId);
 
-        if (count >= UserLimits.MaxTags)
+        if (count >= max)
         {
-            throw new LimitExceededException("Tag limit reached");
+            throw new LimitExceededException($"Tag limit reached: {max}");
         }
         
         var entity = TagMapper.ToEntity(dto, _user.UserId);
@@ -67,6 +74,7 @@ public class TagService : ITagService
         var response = await _repo.AddTagAsync(entity);
 
         await _repo.SaveChangesAsync();
+        await limitLock.CommitAsync();
 
         return TagMapper.ToDto(response);
     }

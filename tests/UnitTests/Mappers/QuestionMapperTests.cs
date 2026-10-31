@@ -52,14 +52,14 @@ public class QuestionMapperTests
         var dto = new OptionQuestionCreateDto
         {
             Title = "2 + 2 = ?",
-            CorrectOptionId = Guid.NewGuid(),
             Explanation = "Math",
             QuestionDifficulty = QuestionDifficulty.Medium,
             Options =
             [
-                new OptionUpdateDto
+                new OptionCreateDto
                 {
-                    Name = "4"
+                    Name = "4",
+                    IsCorrect = true
                 }
             ]
         };
@@ -91,7 +91,6 @@ public class QuestionMapperTests
             Title = "Question",
             Answer = "Answer",
             QuestionType = QuestionType.Options,
-            CorrectOptionId = correctOptionId,
             QuestionDifficulty = QuestionDifficulty.Easy,
             Explanation = "Explain",
             Version = 2,
@@ -103,7 +102,8 @@ public class QuestionMapperTests
                 new Option
                 {
                     Id = correctOptionId,
-                    Name = "Correct"
+                    Name = "Correct",
+                    IsCorrect = true
                 },
                 new Option
                 {
@@ -179,7 +179,6 @@ public class QuestionMapperTests
 
         entity.Title.ShouldBe("New title");
         entity.Answer.ShouldBe("New answer");
-        entity.CorrectOptionId.ShouldBe(dto.CorrectOptionId);
         entity.QuestionDifficulty.ShouldBe(QuestionDifficulty.Hard);
         entity.Explanation.ShouldBe("New explanation");
 

@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Option;
 using Application.DTOs.Question;
 using Application.Exceptions;
@@ -16,6 +17,8 @@ public class QuestionServiceTests
     private readonly Mock<IQuestionRepository> _repo = new();
     private readonly Mock<IUserContext> _user = new();
     private readonly Mock<IOptionService> _optionService = new();
+    private readonly Mock<ILimitLock> _limitLock = new();
+    private readonly Mock<ILimitLockScope> _limitLockScope = new();
 
     private readonly QuestionService _sut;
 
@@ -26,10 +29,20 @@ public class QuestionServiceTests
         _user.Setup(x => x.UserId)
             .Returns(_userId);
 
+        _limitLock
+            .Setup(x => x.AcquireAsync(It.IsAny<LimitScope>(), It.IsAny<Guid>()))
+            .ReturnsAsync(_limitLockScope.Object);
+
+        // Material belongs to the user unless a test says otherwise
+        _repo
+            .Setup(x => x.MaterialExistsAsync(It.IsAny<Guid>(), _userId))
+            .ReturnsAsync(true);
+
         _sut = new QuestionService(
             _repo.Object,
             _user.Object,
-            _optionService.Object);
+            _optionService.Object,
+            _limitLock.Object);
     }
     
     [Fact]
@@ -172,8 +185,8 @@ public class QuestionServiceTests
     public async Task CreateQuestionWithOptions_LimitReached_Throws()
     {
         _repo.Setup(x =>
-                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(UserLimits.MaxQuestionsPerMaterial);
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(
             () =>
@@ -181,7 +194,6 @@ public class QuestionServiceTests
                     Guid.NewGuid(),
                     new OptionQuestionCreateDto
                     {
-                        CorrectOptionId =  Guid.NewGuid(),
                         Title = "Test",
                         Options = []
                     }));
@@ -195,7 +207,7 @@ public class QuestionServiceTests
     public async Task CreateQuestionWithOptions_CreatesQuestionAndSyncsOptions()
     {
         _repo.Setup(x =>
-                x.CountByMaterialIdAsync(It.IsAny<Guid>()))
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync(0);
 
         _repo.Setup(x =>
@@ -204,13 +216,13 @@ public class QuestionServiceTests
         
         var dto = new OptionQuestionCreateDto
         {
-            CorrectOptionId =  Guid.NewGuid(),
             Title = "Options",
             Options =
             [
-                new OptionUpdateDto
+                new OptionCreateDto
                 {
-                    Name = "A"
+                    Name = "A",
+                    IsCorrect = true
                 }
             ]
         };
@@ -220,12 +232,14 @@ public class QuestionServiceTests
                 Guid.NewGuid(),
                 dto);
 
+        result.ShouldNotBeNull();
         result.Title.ShouldBe("Options");
         
         _optionService.Verify(x =>
             x.SyncOptions(
                 It.IsAny<Question>(),
-                dto.Options),
+                It.Is<List<OptionUpdateDto>>(o =>
+                    o.Count == 1 && o[0].Name == "A" && o[0].IsCorrect == true && o[0].Id == null)),
             Times.Once);
         
         _repo.Verify(x =>
@@ -294,6 +308,8 @@ public class QuestionServiceTests
     public async Task UpdateQuestionAsync_WithOptions_SyncsOptions()
     {
         var question = CreateQuestion("Test");
+        question.QuestionType = QuestionType.Options;
+        question.Answer = null;
         
         _repo.Setup(x =>
                 x.GetByIdQuestionAsync(
@@ -366,6 +382,164 @@ public class QuestionServiceTests
         _repo.Verify(x =>
             x.SaveChangesAsync(),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTrueFalseQuestionAsync_CreatesQuestionWithFixedOptions()
+    {
+        _repo.Setup(x =>
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(0);
+
+        var result = await _sut.CreateTrueFalseQuestionAsync(
+            Guid.NewGuid(),
+            new TrueFalseQuestionCreateDto
+            {
+                Title = "The Earth is round",
+                IsTrue = true,
+                QuestionDifficulty = QuestionDifficulty.Easy
+            });
+
+        result.ShouldNotBeNull();
+        result.QuestionType.ShouldBe(QuestionType.TrueFalse);
+
+        _optionService.Verify(x =>
+            x.SetTrueFalseOptions(
+                It.Is<Question>(q => q.QuestionType == QuestionType.TrueFalse),
+                true),
+            Times.Once);
+
+        _repo.Verify(x => x.AddQuestionAsync(It.IsAny<Question>()), Times.Once);
+        _repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTrueFalseQuestionAsync_LimitReached_Throws()
+    {
+        _repo.Setup(x =>
+                x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
+
+        await Should.ThrowAsync<LimitExceededException>(() =>
+            _sut.CreateTrueFalseQuestionAsync(
+                Guid.NewGuid(),
+                new TrueFalseQuestionCreateDto { Title = "Test", IsTrue = false }));
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_OpenQuestionWithOptions_ThrowsBadRequest()
+    {
+        var question = CreateQuestion("Open");
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateQuestionAsync(
+                question.MaterialId,
+                question.Id,
+                new QuestionUpdateDto { Options = [] }));
+
+        _repo.Verify(x => x.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_TrueFalseWithOptions_ThrowsBadRequest()
+    {
+        var question = CreateQuestion("True/False");
+        question.QuestionType = QuestionType.TrueFalse;
+        question.Answer = null;
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateQuestionAsync(
+                question.MaterialId,
+                question.Id,
+                new QuestionUpdateDto { Options = [] }));
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_TrueFalseCorrectOption_SetsItThroughOptionService()
+    {
+        var question = CreateQuestion("True/False");
+        question.QuestionType = QuestionType.TrueFalse;
+        question.Answer = null;
+        var optionId = Guid.NewGuid();
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await _sut.UpdateQuestionAsync(
+            question.MaterialId,
+            question.Id,
+            new QuestionUpdateDto { CorrectOptionId = optionId });
+
+        _optionService.Verify(x => x.SetCorrectOption(question, optionId), Times.Once);
+        _repo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateQuestionAsync_OptionsQuestionWithTextAnswer_ThrowsBadRequest()
+    {
+        var question = CreateQuestion("Options");
+        question.QuestionType = QuestionType.Options;
+        question.Answer = null;
+
+        _repo.Setup(x =>
+                x.GetByIdQuestionAsync(question.MaterialId, question.Id, _userId))
+            .ReturnsAsync(question);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateQuestionAsync(
+                question.MaterialId,
+                question.Id,
+                new QuestionUpdateDto { Answer = "text" }));
+    }
+
+    [Fact]
+    public async Task CreateOpenQuestionAsync_ForeignMaterial_ReturnsNullWithoutLocking()
+    {
+        var materialId = Guid.NewGuid();
+        _repo.Setup(x => x.MaterialExistsAsync(materialId, _userId)).ReturnsAsync(false);
+
+        var result = await _sut.CreateOpenQuestionAsync(materialId,
+            new OpenQuestionCreateDto { Title = "Q", Answer = "A" });
+
+        result.ShouldBeNull();
+        _limitLock.Verify(x => x.AcquireAsync(It.IsAny<LimitScope>(), It.IsAny<Guid>()), Times.Never);
+        _repo.Verify(x => x.AddQuestionAsync(It.IsAny<Question>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateOpenQuestionAsync_CountsUnderMaterialLockAndCommits()
+    {
+        var materialId = Guid.NewGuid();
+        _repo.Setup(x => x.CountActiveByMaterialIdAsync(materialId)).ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value - 1);
+
+        var result = await _sut.CreateOpenQuestionAsync(materialId,
+            new OpenQuestionCreateDto { Title = "Q", Answer = "A" });
+
+        result.ShouldNotBeNull();
+        _limitLock.Verify(x => x.AcquireAsync(LimitScope.Questions, materialId), Times.Once);
+        _limitLockScope.Verify(x => x.CommitAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task CreateTrueFalseQuestionAsync_LimitReached_DoesNotCommit()
+    {
+        _repo.Setup(x => x.CountActiveByMaterialIdAsync(It.IsAny<Guid>())).ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
+
+        await Should.ThrowAsync<LimitExceededException>(() =>
+            _sut.CreateTrueFalseQuestionAsync(Guid.NewGuid(),
+                new TrueFalseQuestionCreateDto { Title = "Q", IsTrue = true }));
+
+        _limitLockScope.Verify(x => x.CommitAsync(), Times.Never);
+        _optionService.Verify(x => x.SetTrueFalseOptions(It.IsAny<Question>(), It.IsAny<bool>()), Times.Never);
     }
 
     private Question CreateQuestion(string title)

@@ -12,9 +12,11 @@ public interface IQuestionService
     
     Task<QuestionResponseDto?> GetByIdQuestionAsync(Guid materialId, Guid id);
 
-    Task<QuestionResponseDto> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto);
+    Task<QuestionResponseDto?> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto);
     
-    Task<QuestionResponseDto> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto);
+    Task<QuestionResponseDto?> CreateQuestionWithOptionsAsync(Guid materialId, OptionQuestionCreateDto questionDto);
+
+    Task<QuestionResponseDto?> CreateTrueFalseQuestionAsync(Guid materialId, TrueFalseQuestionCreateDto questionDto);
 
     Task<QuestionResponseDto?> UpdateQuestionAsync(Guid materialId, Guid id, QuestionUpdateDto questionDto);
 

@@ -18,6 +18,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _db.Questions
             .Include(q => q.Options)
+            .Include(q => q.Progress)
             .Where(x => x.MaterialId == materialId && x.UserId == userId)
             .ToListAsync();
     }
@@ -26,6 +27,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _db.Questions
             .Include(q => q.Options)
+            .Include(q => q.Progress)
             .Where(x => x.MaterialId == materialId && x.UserId == userId && x.IsActive == true)
             .ToListAsync();
     }
@@ -34,6 +36,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _db.Questions
             .Include(m => m.Options)
+            .Include(m => m.Progress)
             .FirstOrDefaultAsync(x => x.MaterialId == materialId && x.Id == id && x.UserId == userId);
     }
     
@@ -58,10 +61,27 @@ public class QuestionRepository : IQuestionRepository
         
     }
     
-    public async Task<int> CountByMaterialIdAsync(Guid materialId)
+    public async Task<int> CountActiveByMaterialIdAsync(Guid materialId)
     {
         return await _db.Questions
-            .CountAsync(x => x.MaterialId == materialId);
+            .CountAsync(x => x.MaterialId == materialId && x.IsActive && x.DeletedAt == null);
+    }
+
+    public async Task<bool> MaterialExistsAsync(Guid materialId, Guid userId)
+    {
+        return await _db.Materials
+            .AnyAsync(x => x.Id == materialId && x.UserId == userId);
+    }
+
+    public async Task<int> PurgeDeletedAsync(DateTime deletedBefore)
+    {
+        // Options go with the question through the cascade in the database
+        return await _db.Questions
+            .Where(q => !q.IsActive
+                        && q.DeletedAt != null
+                        && q.DeletedAt < deletedBefore
+                        && !q.Results.Any())
+            .ExecuteDeleteAsync();
     }
 
     public Task SaveChangesAsync()

@@ -11,8 +11,8 @@ public static class AssessmentEndpoints
             .RequireRateLimiting("api")
             .RequireAuthorization();
 
-        assessmentGroup.MapPost("/{materialId}/start", StartAssessment);
-        assessmentGroup.MapGet("/{materialId}", GetAssessment);
+        assessmentGroup.MapPost("/{materialId:guid}/start", StartAssessment);
+        assessmentGroup.MapGet("/{materialId:guid}", GetAssessment);
 
         static async Task<IResult> StartAssessment(Guid materialId, IAssessmentService service)
         {
