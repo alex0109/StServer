@@ -26,16 +26,6 @@ public class NotificationRepository : INotificationRepository
         await _db.UserNotificationSettings.AddAsync(settings);
     }
 
-    public async Task<List<UserNotificationSettings>> GetSettingsPageAsync(int skip, int take)
-    {
-        return await _db.UserNotificationSettings
-            .AsNoTracking()
-            .OrderBy(x => x.UserId)
-            .Skip(skip)
-            .Take(take)
-            .ToListAsync();
-    }
-
     public async Task<bool> ExistsAsync(Guid userId, NotificationType type, string periodKey)
     {
         return await _db.UserNotifications

@@ -19,15 +19,14 @@ public class NotificationGeneratorTests
     private readonly Mock<TimeProvider> _time = new();
     private readonly List<UserNotification> _added = [];
 
-    private readonly UserNotificationSettings _settings = new()
-    {
-        UserId = Guid.NewGuid(),
-        TimeZone = "Europe/Kyiv",
-        Language = "uk",
-        Email = "user@example.com",
-        EmailDailyReminder = true,
-        CreatedAt = DateTime.UtcNow,
-    };
+    private NotificationRecipient _settings = new(
+        Guid.NewGuid(),
+        "Europe/Kyiv",
+        "uk",
+        "user@example.com",
+        EmailDailyReminder: true,
+        EmailWeeklyDigest: false,
+        EmailStreakReminder: false);
 
     public NotificationGeneratorTests()
     {
@@ -46,7 +45,7 @@ public class NotificationGeneratorTests
     }
 
     private NotificationGenerator Create() => new(
-        _repo.Object, _activity.Object, _email.Object, new NotificationOptions(), new EmailOptions(),
+        _repo.Object, new Mock<IUserProfileRepository>().Object, _activity.Object, _email.Object, new NotificationOptions(), new EmailOptions(),
         _time.Object, NullLogger<NotificationGenerator>.Instance);
 
     // Wednesday; Kyiv is UTC+3 until the last Sunday of October
@@ -88,7 +87,7 @@ public class NotificationGeneratorTests
     [Fact]
     public async Task EmailsOff_OnlyInAppReminder()
     {
-        _settings.EmailDailyReminder = false;
+        _settings = _settings with { EmailDailyReminder = false };
 
         (await Create().GenerateForUserAsync(_settings, KyivTime(9))).ShouldBe(1);
 
@@ -126,7 +125,7 @@ public class NotificationGeneratorTests
     {
         _activity.Setup(x => x.GetWeekAsync(It.IsAny<Guid>(), It.IsAny<TimeZoneInfo>(), It.IsAny<DateOnly>(), It.IsAny<DateTime>()))
             .ReturnsAsync(new WeeklyDigestData("2026-10-19", "2026-10-25", 4, 3, 2, 10, 80, null, 75, 30, []));
-        _settings.EmailDailyReminder = false;
+        _settings = _settings with { EmailDailyReminder = false };
 
         // Monday 26 October, 09:10 in Kyiv (UTC+2 after the clock change)
         await Create().GenerateForUserAsync(_settings, new DateTime(2026, 10, 26, 7, 10, 0, DateTimeKind.Utc));

@@ -9,4 +9,7 @@ public interface IFlashcardProgressRebuilder
 
     // Rebuilds every card scheduled by another algorithm, returns how many were processed
     Task<int> RebuildOutdatedAsync();
+
+    // Replays every word of the user with their current settings, e.g. a new retention. Saves
+    Task<int> RescheduleUserAsync(Guid userId);
 }

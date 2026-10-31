@@ -15,6 +15,9 @@ public static class MaterialEndpoints
         materialGroup.MapGet("/{materialId:guid}", GetMaterial);
         materialGroup.MapGet("/stats/data", GetStatisticalData);
         materialGroup.MapPost("/", CreateMaterial);
+        // An article from a link: the server fetches the page, so it has a small window of its own
+        materialGroup.MapPost("/import-url", ImportFromUrl)
+            .RequireRateLimiting("import");
         materialGroup.MapPatch("/{materialId:guid}", UpdateMaterial);
         materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);
         materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
@@ -39,6 +42,16 @@ public static class MaterialEndpoints
             
             return TypedResults.Ok(result);
         };
+
+        static async Task<IResult> ImportFromUrl(
+            MaterialImportDto dto,
+            IMaterialImportService service,
+            CancellationToken cancellationToken)
+        {
+            var result = await service.ImportAsync(dto, cancellationToken);
+
+            return TypedResults.Created($"/api/materials/{result.Material.Id}", result);
+        }
 
         static async Task<IResult> CreateMaterial(MaterialCreateDto materialCreateDto, IMaterialService service)
         {

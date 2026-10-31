@@ -1,3 +1,4 @@
+using Domain.Utility.Result;
 using Domain.Entities;
 using Application.DTOs.Result;
 using Domain.Utility.Question;
@@ -46,6 +47,8 @@ public class ResultMapper
             ConfidenceLevel = entity.ConfidenceLevel,
             Rating = entity.Rating,
             Method = entity.Method,
+            CanAccept = CanAccept(entity),
+            OverriddenAt = entity.OverriddenAt,
             AiExplanation = entity.AiExplanation,
             CorrectOptionIds = entity.Question?.Options
                 .Where(o => o.IsCorrect)
@@ -68,6 +71,12 @@ public class ResultMapper
         entity.ConfidenceLevel = dto.ConfidenceLevel;
         // An explanation of the previous answer would be wrong for the new one
         entity.AiExplanation = null;
+        entity.AiExplanationLanguage = null;
         entity.AnswerChangedCount++;
     }
+
+    // Only open answers judged by similarity or AI can be wrong in a way the user can see
+    public static bool CanAccept(Result entity) =>
+        !entity.IsCorrect
+        && entity.Method is EvaluationMethod.Fuzzy or EvaluationMethod.Embedding or EvaluationMethod.AI;
 }

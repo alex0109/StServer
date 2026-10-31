@@ -3,6 +3,7 @@ using Application.Constants;
 using Application.DTOs.Ai;
 using Application.Exceptions;
 using Application.Interfaces;
+using Application.Profile;
 using Domain.Entities;
 using Domain.Utility.Attempt;
 using Domain.Utility.Question;
@@ -17,12 +18,18 @@ public class MistakeExplanationService : IMistakeExplanationService
     private readonly IAttemptRepository _attemptRepository;
     private readonly IAiService _ai;
     private readonly IUserContext _user;
+    private readonly IUserProfileService? _profiles;
 
-    public MistakeExplanationService(IAttemptRepository attemptRepository, IAiService ai, IUserContext user)
+    public MistakeExplanationService(
+        IAttemptRepository attemptRepository,
+        IAiService ai,
+        IUserContext user,
+        IUserProfileService? profiles = null)
     {
         _attemptRepository = attemptRepository;
         _ai = ai;
         _user = user;
+        _profiles = profiles;
     }
 
     public async Task<List<ResultExplanationDto>?> ExplainAsync(Guid attemptId, CancellationToken cancellationToken = default)
@@ -39,9 +46,15 @@ public class MistakeExplanationService : IMistakeExplanationService
             .OrderBy(x => x.AnsweredAt)
             .ToList();
 
-        // Explanations are cached on results: a repeated click costs nothing
+        var language = _profiles is null
+            ? ProfileLanguages.QuestionLanguage
+            : await _profiles.GetExplanationLanguageAsync(_user.UserId);
+
+        // Explanations are cached on results: a repeated click costs nothing. A text in another
+        // language than the one chosen now is written again; old texts were in the question's language
         var missing = mistakes
-            .Where(x => x.AiExplanation is null)
+            .Where(x => x.AiExplanation is null
+                        || (x.AiExplanationLanguage ?? ProfileLanguages.QuestionLanguage) != language)
             .Take(AiLimits.MaxExplainedMistakes)
             .ToList();
 
@@ -56,21 +69,25 @@ public class MistakeExplanationService : IMistakeExplanationService
                     result.Question.Explanation))
                 .ToList();
 
-            var explanations = (await _ai.RunAsync(new MistakeExplanationPrompt(items), cancellationToken)).Value;
+            var prompt = new MistakeExplanationPrompt(items, ProfileLanguages.PromptName(language));
+            var explanations = (await _ai.RunAsync(prompt, cancellationToken)).Value;
 
             for (var i = 0; i < missing.Count; i++)
             {
                 if (explanations.TryGetValue(i + 1, out var text))
                 {
                     missing[i].AiExplanation = text.Length <= MaxExplanationLength ? text : text[..MaxExplanationLength];
+                    missing[i].AiExplanationLanguage = language;
                 }
             }
 
             await _attemptRepository.SaveChangesAsync();
         }
 
+        // Only texts in the chosen language: one the model skipped is not shown in the old language
         return mistakes
-            .Where(x => x.AiExplanation is not null)
+            .Where(x => x.AiExplanation is not null
+                        && (x.AiExplanationLanguage ?? ProfileLanguages.QuestionLanguage) == language)
             .Select(x => new ResultExplanationDto
             {
                 ResultId = x.Id,

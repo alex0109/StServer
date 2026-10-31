@@ -125,7 +125,12 @@ public class StatisticsRepository : IStatisticsRepository
             .Where(r => r.UserId == userId && (from == null || r.ReviewedAt >= from))
             .Select(r => r.ReviewedAt);
 
-        return await attempts.Concat(reviews).ToListAsync();
+        // Questions answered in the "Today" queue; reviews from attempts are already counted by their attempt
+        var questionReviews = _db.QuestionReviews
+            .Where(r => r.UserId == userId && r.SessionId != null && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        return await attempts.Concat(reviews).Concat(questionReviews).ToListAsync();
     }
 
     // Same rules as the flashcard stats: archived words don't count, new words are not "due"
@@ -151,9 +156,46 @@ public class StatisticsRepository : IStatisticsRepository
             .ToListAsync();
     }
 
+    public async Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc)
+    {
+        return await _db.QuestionProgresses
+            .CountAsync(p => p.UserId == userId
+                             && p.State != FlashcardState.New
+                             && p.Due <= dueBeforeUtc
+                             && p.Question.IsActive
+                             && p.Question.DeletedAt == null);
+    }
+
     public async Task<int> GetReviewsCountAsync(Guid userId, DateTime from, DateTime to)
     {
         return await _db.FlashcardReviews
             .CountAsync(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to);
+    }
+
+    public async Task<List<DateTime>> GetReviewTimesAsync(Guid userId, DateTime? from = null)
+    {
+        var words = _db.FlashcardReviews
+            .Where(r => r.UserId == userId && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        var questions = _db.QuestionReviews
+            .Where(r => r.UserId == userId && (from == null || r.ReviewedAt >= from))
+            .Select(r => r.ReviewedAt);
+
+        return await words.Concat(questions).ToListAsync();
+    }
+
+    public async Task<(int Reviews, int NewWords)> CountReviewsAsync(Guid userId, DateTime from, DateTime to)
+    {
+        var words = await _db.FlashcardReviews
+            .Where(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to)
+            .GroupBy(_ => 1)
+            .Select(g => new { All = g.Count(), New = g.Count(r => r.PrevState == FlashcardState.New) })
+            .FirstOrDefaultAsync();
+
+        var questions = await _db.QuestionReviews
+            .CountAsync(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to);
+
+        return ((words?.All ?? 0) + questions, words?.New ?? 0);
     }
 }

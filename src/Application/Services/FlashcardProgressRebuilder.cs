@@ -12,13 +12,16 @@ public class FlashcardProgressRebuilder : IFlashcardProgressRebuilder
 
     private readonly IFlashcardRepository _flashcardRepository;
     private readonly IFlashcardSchedulerProvider _schedulers;
+    private readonly ILearningSettingsProvider? _learning;
 
     public FlashcardProgressRebuilder(
         IFlashcardRepository flashcardRepository,
-        IFlashcardSchedulerProvider schedulers)
+        IFlashcardSchedulerProvider schedulers,
+        ILearningSettingsProvider? learning = null)
     {
         _flashcardRepository = flashcardRepository;
         _schedulers = schedulers;
+        _learning = learning;
     }
 
     public async Task RebuildEntryAsync(DictionaryEntry entry)
@@ -61,12 +64,35 @@ public class FlashcardProgressRebuilder : IFlashcardProgressRebuilder
         return processed;
     }
 
+    public async Task<int> RescheduleUserAsync(Guid userId)
+    {
+        var ids = await _flashcardRepository.GetEntryIdsWithProgressAsync(userId);
+
+        foreach (var chunk in ids.Chunk(BatchSize))
+        {
+            var entries = await _flashcardRepository.GetEntriesWithProgressAsync(userId, chunk);
+            var reviews = (await _flashcardRepository.GetReviewsForEntriesAsync(chunk.ToList())).ToLookup(x => x.EntryId);
+            var now = DateTime.UtcNow;
+
+            foreach (var entry in entries)
+                await RebuildAsync(entry, reviews[entry.Id].ToList(), _schedulers.Current, now);
+
+            await _flashcardRepository.SaveChangesAsync();
+        }
+
+        return ids.Count;
+    }
+
     private async Task RebuildAsync(
         DictionaryEntry entry,
         List<FlashcardReview> reviews,
         IFlashcardScheduler scheduler,
         DateTime now)
     {
+        // The history is replayed with the owner's current retention
+        if (_learning is not null && reviews.Count > 0)
+            scheduler = UserFlashcardScheduler.For(scheduler, (await _learning.GetAsync(reviews[0].UserId)).Overrides);
+
         var card = Replay(reviews, scheduler);
 
         if (card is null)
@@ -92,7 +118,8 @@ public class FlashcardProgressRebuilder : IFlashcardProgressRebuilder
 
     // Applies every answer in order and rewrites the "before" snapshot of each review,
     // so undo restores states produced by the same algorithm
-    internal static FlashcardCard? Replay(IEnumerable<FlashcardReview> reviews, IFlashcardScheduler scheduler)
+    internal static FlashcardCard? Replay<TReview>(IEnumerable<TReview> reviews, IFlashcardScheduler scheduler)
+        where TReview : IReviewLogEntry
     {
         FlashcardCard? card = null;
 

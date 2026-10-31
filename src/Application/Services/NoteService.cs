@@ -10,6 +10,7 @@ namespace Application.Services;
 public class NoteService : INoteService
 {
     private readonly INoteRepository _repo;
+    private readonly IContentLimits _limits;
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
     
@@ -17,11 +18,13 @@ public class NoteService : INoteService
     public NoteService(
         INoteRepository repo,
         IUserContext user,
-        ILimitLock limitLock)
+        ILimitLock limitLock,
+        IContentLimits? limits = null)
     {
         _repo = repo;
         _user = user;
         _limitLock = limitLock;
+        _limits = limits ?? ContentLimits.Free();
     }
 
     public async Task<List<NoteResponseDto>> GetAllAsync(Guid materialId)
@@ -48,11 +51,12 @@ public class NoteService : INoteService
 
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Notes, materialId);
 
+        var max = (await _limits.ForUserAsync(_user.UserId)).NotesPerMaterial;
         var count = await _repo.CountByUserIdAsync(materialId, _user.UserId);
 
-        if (count >= UserLimits.MaxNotesPerMaterial)
+        if (count >= max)
         {
-            throw new LimitExceededException($"Notes limit reached: {UserLimits.MaxNotesPerMaterial} per material");
+            throw new LimitExceededException($"Notes limit reached: {max} per material");
         }
 
         // Checked under the same lock, the unique index is the last line of defence

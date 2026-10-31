@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Services;
@@ -190,7 +191,7 @@ public class MaterialShareServiceTests
         var share = CreateShare(CreateMaterial());
 
         _shareRepo.Setup(x => x.GetActiveByTokenAsync(share.Token)).ReturnsAsync(share);
-        _materialRepo.Setup(x => x.CountByUserIdAsync(_recipientId)).ReturnsAsync(UserLimits.MaxMaterials);
+        _materialRepo.Setup(x => x.CountOwnByUserIdAsync(_recipientId)).ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() => _sut.ImportAsync(share.Token));
 

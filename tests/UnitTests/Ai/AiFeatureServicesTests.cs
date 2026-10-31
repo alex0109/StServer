@@ -1,6 +1,7 @@
 using Application.Ai;
 using Application.Ai.Prompts;
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Ai;
 using Application.DTOs.Note;
 using Application.Exceptions;
@@ -88,7 +89,9 @@ public class AiFeatureServicesTests
             .Callback<IAiPrompt<IReadOnlyDictionary<int, string>>, CancellationToken>((p, _) => sent = (MistakeExplanationPrompt)p)
             .ReturnsAsync(Answer<IReadOnlyDictionary<int, string>>(new Dictionary<int, string> { [1] = "Open why", [2] = "Options why" }));
 
-        var result = await new MistakeExplanationService(repo.Object, _ai.Object, _user.Object).ExplainAsync(attempt.Id);
+        var result = await new MistakeExplanationService(repo.Object, _ai.Object, _user.Object).ExplainAsync(
+            attempt.Id,
+            TestContext.Current.CancellationToken);
 
         result!.Select(x => x.ResultId).ShouldBe([wrongOpen.Id, wrongOptions.Id]);
         wrongOpen.AiExplanation.ShouldBe("Open why");
@@ -107,10 +110,60 @@ public class AiFeatureServicesTests
         var repo = new Mock<IAttemptRepository>();
         repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
 
-        var result = await new MistakeExplanationService(repo.Object, _ai.Object, _user.Object).ExplainAsync(attempt.Id);
+        var result = await new MistakeExplanationService(repo.Object, _ai.Object, _user.Object).ExplainAsync(
+            attempt.Id,
+            TestContext.Current.CancellationToken);
 
         result!.Select(x => x.Explanation).ShouldBe(["cached 1", "cached 2"]);
         _ai.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task ExplainMistakes_CachedInAnotherLanguage_IsWrittenAgainInTheChosenOne()
+    {
+        var attempt = FinishedAttemptWithMistakes(out var wrongOpen, out var wrongOptions, out _);
+        // Texts from before the setting were in the language of the question
+        wrongOpen.AiExplanation = "Forklaring";
+        wrongOptions.AiExplanation = "Пояснення";
+        wrongOptions.AiExplanationLanguage = "uk";
+        var repo = new Mock<IAttemptRepository>();
+        repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        var profiles = new Mock<IUserProfileService>();
+        profiles.Setup(x => x.GetExplanationLanguageAsync(_userId)).ReturnsAsync("uk");
+
+        MistakeExplanationPrompt? sent = null;
+        _ai.Setup(x => x.RunAsync(It.IsAny<IAiPrompt<IReadOnlyDictionary<int, string>>>(), It.IsAny<CancellationToken>()))
+            .Callback<IAiPrompt<IReadOnlyDictionary<int, string>>, CancellationToken>((p, _) => sent = (MistakeExplanationPrompt)p)
+            .ReturnsAsync(Answer<IReadOnlyDictionary<int, string>>(new Dictionary<int, string> { [1] = "Нове пояснення" }));
+
+        var result = await new MistakeExplanationService(repo.Object, _ai.Object, _user.Object, profiles.Object)
+            .ExplainAsync(attempt.Id, TestContext.Current.CancellationToken);
+
+        // Only the text in the old language goes to the model again
+        sent!.BuildRequest().UserPrompt.ShouldContain("Write in Ukrainian");
+        sent.BuildRequest().UserPrompt.ShouldContain("Student answer: Energy from water");
+        sent.BuildRequest().UserPrompt.ShouldNotContain("Student answer: Roots");
+        wrongOpen.AiExplanation.ShouldBe("Нове пояснення");
+        wrongOpen.AiExplanationLanguage.ShouldBe("uk");
+        result!.Select(x => x.Explanation).ShouldBe(["Нове пояснення", "Пояснення"]);
+    }
+
+    [Fact]
+    public async Task ExplainMistakes_ModelSkipsOne_TheOldLanguageIsNotShown()
+    {
+        var attempt = FinishedAttemptWithMistakes(out var wrongOpen, out _, out _);
+        wrongOpen.AiExplanation = "Forklaring";
+        var repo = new Mock<IAttemptRepository>();
+        repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        var profiles = new Mock<IUserProfileService>();
+        profiles.Setup(x => x.GetExplanationLanguageAsync(_userId)).ReturnsAsync("uk");
+        _ai.Setup(x => x.RunAsync(It.IsAny<IAiPrompt<IReadOnlyDictionary<int, string>>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Answer<IReadOnlyDictionary<int, string>>(new Dictionary<int, string>()));
+
+        var result = await new MistakeExplanationService(repo.Object, _ai.Object, _user.Object, profiles.Object)
+            .ExplainAsync(attempt.Id, TestContext.Current.CancellationToken);
+
+        result.ShouldBeEmpty();
     }
 
     [Fact]
@@ -145,7 +198,7 @@ public class AiFeatureServicesTests
         var result = await sut.GenerateAsync(dictionary.Id, new DictionaryEntriesGenerateDto
         {
             NoteId = Guid.NewGuid(), Count = 5, Language = "Ukrainian",
-        });
+        }, TestContext.Current.CancellationToken);
 
         result.ShouldBeNull();
         notes.Verify(x => x.GetByIdAsync(It.IsAny<Guid>(), dictionary.MaterialId, _userId), Times.Once);
@@ -181,7 +234,7 @@ public class AiFeatureServicesTests
         var materials = new Mock<IMaterialRepository>();
         materials.Setup(x => x.GetByIdAsync(material.Id, _userId)).ReturnsAsync(material);
         var questions = new Mock<IQuestionRepository>();
-        questions.Setup(x => x.CountActiveByMaterialIdAsync(material.Id)).ReturnsAsync(UserLimits.MaxQuestionsPerMaterial);
+        questions.Setup(x => x.CountActiveByMaterialIdAsync(material.Id)).ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
 
         var sut = new QuestionGenerationService(
             questions.Object, materials.Object, Mock.Of<INoteRepository>(), Mock.Of<IOptionService>(),

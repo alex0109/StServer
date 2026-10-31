@@ -120,6 +120,16 @@ public class MaterialRepository : IMaterialRepository
         
     }
     
+    public async Task<int> CountOwnByUserIdAsync(Guid userId)
+    {
+        return await _db.Materials.CountAsync(m => m.UserId == userId && m.ImportedFromLibraryItemId == null);
+    }
+
+    public async Task<int> CountLibraryCopiesAsync(Guid userId)
+    {
+        return await _db.Materials.CountAsync(m => m.UserId == userId && m.ImportedFromLibraryItemId != null);
+    }
+
     public async Task<int> CountByUserIdAsync(Guid userId)
     {
         return await _db.Materials.CountAsync(x => x.UserId == userId);

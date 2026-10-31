@@ -27,4 +27,7 @@ public class Question
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
+    // Spaced repetition of the question, personal: never copied with the material
+    public QuestionProgress? Progress { get; set; }
+    public ICollection<QuestionReview> Reviews { get; set; } = new List<QuestionReview>();
 }

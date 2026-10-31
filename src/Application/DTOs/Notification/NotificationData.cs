@@ -2,7 +2,8 @@ using Application.DTOs.Statistics;
 
 namespace Application.DTOs.Notification;
 
-public record DailyReviewData(int DueWords, int NewWords, List<DictionaryDueDto> Dictionaries);
+// DueQuestions defaults to 0 for reminders saved before questions had repetition
+public record DailyReviewData(int DueWords, int NewWords, List<DictionaryDueDto> Dictionaries, int DueQuestions = 0);
 
 public record StreakAtRiskData(int StreakDays);
 

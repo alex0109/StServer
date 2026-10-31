@@ -5,6 +5,7 @@ using Application.DTOs.Share;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
+using Application.Observability;
 
 namespace Application.Services;
 
@@ -13,6 +14,7 @@ public class MaterialShareService : IMaterialShareService
     private const int MaxTokenLength = 64;
 
     private readonly IMaterialShareRepository _shareRepository;
+    private readonly IContentLimits _limits;
     private readonly IMaterialRepository _materialRepository;
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
@@ -21,12 +23,14 @@ public class MaterialShareService : IMaterialShareService
         IMaterialShareRepository shareRepository,
         IMaterialRepository materialRepository,
         IUserContext user,
-        ILimitLock limitLock)
+        ILimitLock limitLock,
+        IContentLimits? limits = null)
     {
         _shareRepository = shareRepository;
         _materialRepository = materialRepository;
         _user = user;
         _limitLock = limitLock;
+        _limits = limits ?? ContentLimits.Free(materialRepository);
     }
 
     public async Task<MaterialShareResponseDto?> GetShareAsync(Guid materialId)
@@ -92,11 +96,7 @@ public class MaterialShareService : IMaterialShareService
         // Same lock as creating a material, an import also takes a material place
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Materials, userId);
 
-        var count = await _materialRepository.CountByUserIdAsync(userId);
-        if (count >= UserLimits.MaxMaterials)
-        {
-            throw new LimitExceededException($"Material limit reached: {UserLimits.MaxMaterials}");
-        }
+        await _limits.EnsureMaterialPlaceAsync(userId, libraryCopy: false);
 
         var copy = MaterialCopyMapper.Copy(share.Material, userId, DateTime.UtcNow);
         share.ImportsCount++;
@@ -104,6 +104,7 @@ public class MaterialShareService : IMaterialShareService
         await _materialRepository.AddAsync(copy);
         await _materialRepository.SaveChangesAsync();
         await limitLock.CommitAsync();
+        AppMetrics.MaterialCreated("share");
 
         return MaterialMapper.ToDto(copy);
     }

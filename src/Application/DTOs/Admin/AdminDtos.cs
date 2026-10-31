@@ -31,9 +31,12 @@ public record AdminOverviewDto(
     List<AdminDayDto> Days,
     DateTime GeneratedAt);
 
+// ManualAccepts30: open answers users accepted after the check said no; many of them means
+// the fuzzy or AI threshold is too strict
 public record AdminAiTotalsDto(
     long AllTime, int Today, int Last7Days, int Last30Days, int ThisMonth,
-    int FailedLast30Days, double AveragePerDay30, double AveragePerActiveUser30, int AiUsers30);
+    int FailedLast30Days, double AveragePerDay30, double AveragePerActiveUser30, int AiUsers30,
+    int ManualAccepts30 = 0);
 
 public record AdminAiTokensDto(long InputLast30Days, long OutputLast30Days, long InputThisMonth, long OutputThisMonth);
 

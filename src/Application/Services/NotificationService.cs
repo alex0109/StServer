@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.DTOs.Notification;
+using Application.DTOs.Profile;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Notifications;
@@ -14,17 +15,23 @@ public class NotificationService : INotificationService
 
     private readonly INotificationRepository _repo;
     private readonly IStudyActivityService _activity;
+    private readonly IUserProfileService _profiles;
+    private readonly IUserTimeZoneProvider _timeZones;
     private readonly IUserContext _user;
     private readonly TimeProvider _time;
 
     public NotificationService(
         INotificationRepository repo,
         IStudyActivityService activity,
+        IUserProfileService profiles,
+        IUserTimeZoneProvider timeZones,
         IUserContext user,
         TimeProvider time)
     {
         _repo = repo;
         _activity = activity;
+        _profiles = profiles;
+        _timeZones = timeZones;
         _user = user;
         _time = time;
     }
@@ -32,38 +39,36 @@ public class NotificationService : INotificationService
     public async Task<NotificationSettingsDto> GetSettingsAsync()
     {
         var settings = await _repo.GetSettingsAsync(_user.UserId);
-        return ToDto(settings);
+        return ToDto(settings, await _profiles.GetAsync());
     }
 
     public async Task<NotificationSettingsDto> UpdateSettingsAsync(NotificationSettingsUpdateDto dto)
     {
         var now = _time.GetUtcNow().UtcDateTime;
+
+        // Older clients still send these here; they belong to the profile now
+        var profile = dto.TimeZone is not null || dto.Language is not null
+            ? await _profiles.UpdateAsync(new ProfileUpdateDto
+            {
+                TimeZone = dto.TimeZone,
+                InterfaceLanguage = dto.Language is null
+                    ? null
+                    : NotificationOptions.Languages.Contains(dto.Language) ? dto.Language : NotificationOptions.DefaultLanguage,
+            })
+            : await _profiles.GetAsync();
+
         var settings = await _repo.GetSettingsAsync(_user.UserId);
-
-        if (dto.TimeZone is not null && !UserTimeZone.TryResolve(dto.TimeZone, out _))
-            throw new BadRequestException("Unknown time zone");
-
         if (settings is null)
         {
-            if (dto.TimeZone is null)
-                throw new BadRequestException("Time zone is required");
-
             settings = new UserNotificationSettings
             {
                 UserId = _user.UserId,
-                TimeZone = dto.TimeZone,
-                Language = NotificationOptions.DefaultLanguage,
+                // Legacy columns, kept in step with the profile
+                TimeZone = profile.TimeZone ?? "UTC",
+                Language = profile.InterfaceLanguage,
                 CreatedAt = now,
             };
             await _repo.AddSettingsAsync(settings);
-        }
-
-        if (dto.TimeZone is not null) settings.TimeZone = dto.TimeZone;
-        if (dto.Language is not null)
-        {
-            settings.Language = NotificationOptions.Languages.Contains(dto.Language)
-                ? dto.Language
-                : NotificationOptions.DefaultLanguage;
         }
 
         settings.EmailDailyReminder = dto.EmailDailyReminder ?? settings.EmailDailyReminder;
@@ -84,14 +89,13 @@ public class NotificationService : INotificationService
         settings.UpdatedAt = now;
         await _repo.SaveChangesAsync();
 
-        return ToDto(settings);
+        return ToDto(settings, profile);
     }
 
     public async Task<NotificationFeedDto> GetFeedAsync()
     {
         var userId = _user.UserId;
-        var settings = await _repo.GetSettingsAsync(userId);
-        var timeZone = UserTimeZone.Resolve(settings?.TimeZone);
+        var timeZone = await _timeZones.GetAsync(userId);
 
         var today = await _activity.GetTodayAsync(userId, timeZone, _time.GetUtcNow().UtcDateTime);
         var notifications = await _repo.GetRecentAsync(userId, FeedSize);
@@ -117,10 +121,10 @@ public class NotificationService : INotificationService
 
     public Task MarkAllReadAsync() => _repo.MarkAllReadAsync(_user.UserId, _time.GetUtcNow().UtcDateTime);
 
-    private static NotificationSettingsDto ToDto(UserNotificationSettings? settings) => new()
+    private static NotificationSettingsDto ToDto(UserNotificationSettings? settings, ProfileDto profile) => new()
     {
-        TimeZone = settings?.TimeZone,
-        Language = settings?.Language ?? NotificationOptions.DefaultLanguage,
+        TimeZone = profile.TimeZone,
+        Language = profile.InterfaceLanguage,
         Email = settings?.Email,
         EmailDailyReminder = settings?.EmailDailyReminder ?? false,
         EmailWeeklyDigest = settings?.EmailWeeklyDigest ?? false,

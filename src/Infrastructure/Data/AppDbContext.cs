@@ -25,13 +25,18 @@ public class AppDbContext : DbContext
     public DbSet<DictionaryEntryProgress> DictionaryEntryProgresses => Set<DictionaryEntryProgress>();
     public DbSet<FlashcardSession> FlashcardSessions => Set<FlashcardSession>();
     public DbSet<FlashcardReview> FlashcardReviews => Set<FlashcardReview>();
+    public DbSet<QuestionProgress> QuestionProgresses => Set<QuestionProgress>();
+    public DbSet<QuestionReview> QuestionReviews => Set<QuestionReview>();
+    public DbSet<QuestionReviewSession> QuestionReviewSessions => Set<QuestionReviewSession>();
     public DbSet<MaterialFile> MaterialFiles => Set<MaterialFile>();
     public DbSet<MaterialShare> MaterialShares => Set<MaterialShare>();
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
+    public DbSet<SubscriptionEvent> SubscriptionEvents => Set<SubscriptionEvent>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<AiUsageMonthly> AiUsageMonthly => Set<AiUsageMonthly>();
     public DbSet<UserNotificationSettings> UserNotificationSettings => Set<UserNotificationSettings>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
     public DbSet<FeedbackSubmission> FeedbackSubmissions => Set<FeedbackSubmission>();
     public DbSet<LibraryItem> LibraryItems => Set<LibraryItem>();
     public DbSet<LibraryRequest> LibraryRequests => Set<LibraryRequest>();
@@ -237,6 +242,55 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => new { x.UserId, x.Due });
         });
 
+        modelBuilder.Entity<QuestionProgress>(entity =>
+        {
+            entity.HasKey(x => x.QuestionId);
+
+            entity.HasOne(p => p.Question)
+                .WithOne(q => q.Progress)
+                .HasForeignKey<QuestionProgress>(p => p.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // The review queue: what is due for a user
+            entity.HasIndex(x => new { x.UserId, x.Due });
+        });
+
+        modelBuilder.Entity<QuestionReview>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.HasOne(r => r.Question)
+                .WithMany(q => q.Reviews)
+                .HasForeignKey(r => r.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new { x.QuestionId, x.ReviewedAt });
+
+            // One review per question per attempt: finishing an attempt twice schedules nothing new
+            entity.HasIndex(x => new { x.AttemptId, x.QuestionId })
+                .IsUnique()
+                .HasFilter("\"AttemptId\" IS NOT NULL");
+
+            // The log outlives its session, a question is answered once per session
+            entity.HasOne(r => r.Session)
+                .WithMany(s => s.Reviews)
+                .HasForeignKey(r => r.SessionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasIndex(x => new { x.SessionId, x.QuestionId })
+                .IsUnique()
+                .HasFilter("\"SessionId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<QuestionReviewSession>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .HasDefaultValueSql("gen_random_uuid()");
+
+            entity.HasIndex(x => new { x.UserId, x.StartedAt });
+        });
+
         modelBuilder.Entity<FlashcardSession>(entity =>
         {
             entity.Property(x => x.Id)
@@ -294,6 +348,29 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<UserSubscription>(entity =>
         {
             entity.HasKey(x => x.UserId);
+
+            // A provider's ids point at exactly one user
+            entity.HasIndex(x => new { x.Provider, x.ProviderSubscriptionId })
+                .IsUnique()
+                .HasFilter("\"ProviderSubscriptionId\" IS NOT NULL");
+            entity.HasIndex(x => new { x.Provider, x.ProviderCustomerId })
+                .IsUnique()
+                .HasFilter("\"ProviderCustomerId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<SubscriptionEvent>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(x => x.Payload)
+                .HasColumnType("jsonb");
+
+            // Repeated deliveries of one event are stored once
+            entity.HasIndex(x => new { x.Provider, x.ProviderEventId })
+                .IsUnique();
+            entity.HasIndex(x => x.ReceivedAt);
+            entity.HasIndex(x => x.UserId);
         });
 
         modelBuilder.Entity<AiUsage>(entity =>
@@ -317,6 +394,12 @@ public class AppDbContext : DbContext
         });
 
         modelBuilder.Entity<UserNotificationSettings>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+        });
+
+        // No FK to the settings: either row can exist first
+        modelBuilder.Entity<UserProfile>(entity =>
         {
             entity.HasKey(x => x.UserId);
         });

@@ -2,6 +2,7 @@ using Application.Ai;
 using Application.Ai.Prompts;
 using Application.Exceptions;
 using Application.Interfaces;
+using Application.Observability;
 
 namespace Application.Services.Ai;
 
@@ -31,10 +32,13 @@ public class AiService : IAiService
         {
             // Nothing was produced, so the request does not count
             await _usage.FailAsync(usageId);
+            AppMetrics.AiRequest(prompt.Feature.ToString(), "none", "failed");
             throw;
         }
 
         await _usage.CompleteAsync(usageId, result.Completion);
+        AppMetrics.AiRequest(prompt.Feature.ToString(), result.Completion.Provider, "succeeded");
+        AppMetrics.AiTokensUsed(prompt.Feature.ToString(), result.Completion.Provider, result.Completion.InputTokens, result.Completion.OutputTokens);
 
         return result;
     }

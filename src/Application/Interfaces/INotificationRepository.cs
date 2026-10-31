@@ -7,8 +7,6 @@ public interface INotificationRepository
 {
     Task<UserNotificationSettings?> GetSettingsAsync(Guid userId);
     Task AddSettingsAsync(UserNotificationSettings settings);
-    // For the job: settings ordered by user id
-    Task<List<UserNotificationSettings>> GetSettingsPageAsync(int skip, int take);
 
     Task<bool> ExistsAsync(Guid userId, NotificationType type, string periodKey);
     // False when the same kind for the same period already exists

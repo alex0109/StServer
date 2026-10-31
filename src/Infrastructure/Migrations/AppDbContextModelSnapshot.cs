@@ -459,13 +459,16 @@ namespace StServer.Migrations
                     b.Property<int>("CardsTotal")
                         .HasColumnType("integer");
 
-                    b.Property<Guid>("DictionaryId")
+                    b.Property<Guid?>("DictionaryId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Mode")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Scope")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("StartedAt")
@@ -921,6 +924,154 @@ namespace StServer.Migrations
                     b.ToTable("Questions");
                 });
 
+            modelBuilder.Entity("Domain.Entities.QuestionProgress", b =>
+                {
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Algorithm")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("Difficulty")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("Due")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Lapses")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("LastReviewAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("LearningSteps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Reps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ScheduledDays")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("Stability")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("QuestionId");
+
+                    b.HasIndex("UserId", "Due");
+
+                    b.ToTable("QuestionProgresses");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AttemptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<double>("ElapsedDays")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("PrevDifficulty")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("PrevDue")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PrevLapses")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("PrevLastReviewAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("PrevLearningSteps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PrevReps")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PrevScheduledDays")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("PrevStability")
+                        .HasColumnType("double precision");
+
+                    b.Property<int>("PrevState")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("QuestionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("ResultId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("SessionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AttemptId", "QuestionId")
+                        .IsUnique()
+                        .HasFilter("\"AttemptId\" IS NOT NULL");
+
+                    b.HasIndex("QuestionId", "ReviewedAt");
+
+                    b.HasIndex("SessionId", "QuestionId")
+                        .IsUnique()
+                        .HasFilter("\"SessionId\" IS NOT NULL");
+
+                    b.ToTable("QuestionReviews");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionReviewSession", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("QuestionsTotal")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "StartedAt");
+
+                    b.ToTable("QuestionReviewSessions");
+                });
+
             modelBuilder.Entity("Domain.Entities.Result", b =>
                 {
                     b.Property<Guid>("Id")
@@ -931,6 +1082,10 @@ namespace StServer.Migrations
                     b.Property<string>("AiExplanation")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("AiExplanationLanguage")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<int>("AnswerChangedCount")
                         .HasColumnType("integer");
@@ -952,6 +1107,18 @@ namespace StServer.Migrations
 
                     b.Property<int>("Method")
                         .HasColumnType("integer");
+
+                    b.Property<bool?>("OriginalIsCorrect")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("OriginalMethod")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("OriginalScore")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime?>("OverriddenAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("QuestionId")
                         .HasColumnType("uuid");
@@ -988,6 +1155,53 @@ namespace StServer.Migrations
                     b.HasIndex("UserId", "AnsweredAt");
 
                     b.ToTable("Results");
+                });
+
+            modelBuilder.Entity("Domain.Entities.SubscriptionEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<JsonDocument>("Payload")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderEventId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReceivedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Provider", "ProviderEventId")
+                        .IsUnique();
+
+                    b.ToTable("SubscriptionEvents");
                 });
 
             modelBuilder.Entity("Domain.Entities.Tag", b =>
@@ -1095,7 +1309,7 @@ namespace StServer.Migrations
                     b.ToTable("UserNotificationSettings");
                 });
 
-            modelBuilder.Entity("Domain.Entities.UserSubscription", b =>
+            modelBuilder.Entity("Domain.Entities.UserProfile", b =>
                 {
                     b.Property<Guid>("UserId")
                         .ValueGeneratedOnAdd()
@@ -1104,16 +1318,120 @@ namespace StServer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("CurrentPeriodEnd")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("Tier")
+                    b.Property<int?>("DailyGoal")
                         .HasColumnType("integer");
+
+                    b.Property<int?>("DailyReminderHour")
+                        .HasColumnType("integer");
+
+                    b.Property<double?>("DesiredRetention")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("ExplanationLanguage")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("InterfaceLanguage")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("character varying(8)");
+
+                    b.Property<int?>("MaxReviewsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NativeLanguage")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int?>("NewCardsPerDay")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Nickname")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int?>("StreakFreezesPerMonth")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("StreakReminderHour")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StudyLanguage")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("TimeZone")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("UserId");
+
+                    b.ToTable("UserProfiles");
+                });
+
+            modelBuilder.Entity("Domain.Entities.UserSubscription", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("CancelAtPeriodEnd")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CurrentPeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CurrentPeriodStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("GrantReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("GrantedByAdminId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("LastEventAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Provider")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ProviderCustomerId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ProviderSubscriptionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Tier")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("TrialEndsAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("Provider", "ProviderCustomerId")
+                        .IsUnique()
+                        .HasFilter("\"ProviderCustomerId\" IS NOT NULL");
+
+                    b.HasIndex("Provider", "ProviderSubscriptionId")
+                        .IsUnique()
+                        .HasFilter("\"ProviderSubscriptionId\" IS NOT NULL");
 
                     b.ToTable("UserSubscriptions");
                 });
@@ -1196,8 +1514,7 @@ namespace StServer.Migrations
                     b.HasOne("Domain.Entities.Dictionary", "Dictionary")
                         .WithMany("FlashcardSessions")
                         .HasForeignKey("DictionaryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.Navigation("Dictionary");
                 });
@@ -1297,6 +1614,35 @@ namespace StServer.Migrations
                     b.Navigation("Note");
                 });
 
+            modelBuilder.Entity("Domain.Entities.QuestionProgress", b =>
+                {
+                    b.HasOne("Domain.Entities.Question", "Question")
+                        .WithOne("Progress")
+                        .HasForeignKey("Domain.Entities.QuestionProgress", "QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionReview", b =>
+                {
+                    b.HasOne("Domain.Entities.Question", "Question")
+                        .WithMany("Reviews")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.QuestionReviewSession", "Session")
+                        .WithMany("Reviews")
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Question");
+
+                    b.Navigation("Session");
+                });
+
             modelBuilder.Entity("Domain.Entities.Result", b =>
                 {
                     b.HasOne("Domain.Entities.Attempt", "Attempt")
@@ -1373,7 +1719,16 @@ namespace StServer.Migrations
                 {
                     b.Navigation("Options");
 
+                    b.Navigation("Progress");
+
                     b.Navigation("Results");
+
+                    b.Navigation("Reviews");
+                });
+
+            modelBuilder.Entity("Domain.Entities.QuestionReviewSession", b =>
+                {
+                    b.Navigation("Reviews");
                 });
 
             modelBuilder.Entity("Domain.Entities.Tag", b =>

@@ -1,4 +1,4 @@
-using System.Text.RegularExpressions;
+using Application.Ai;
 using Application.Ai.Prompts;
 using Application.Constants;
 using Application.DTOs.Ai;
@@ -10,9 +10,10 @@ using Domain.Entities;
 
 namespace Application.Services.Ai;
 
-public partial class DictionaryGenerationService : IDictionaryGenerationService
+public class DictionaryGenerationService : IDictionaryGenerationService
 {
     private readonly IDictionaryRepository _dictionaryRepository;
+    private readonly IContentLimits _limits;
     private readonly IMaterialRepository _materialRepository;
     private readonly INoteRepository _noteRepository;
     private readonly IAiService _ai;
@@ -25,7 +26,8 @@ public partial class DictionaryGenerationService : IDictionaryGenerationService
         INoteRepository noteRepository,
         IAiService ai,
         IUserContext user,
-        ILimitLock limitLock)
+        ILimitLock limitLock,
+        IContentLimits? limits = null)
     {
         _dictionaryRepository = dictionaryRepository;
         _materialRepository = materialRepository;
@@ -33,11 +35,9 @@ public partial class DictionaryGenerationService : IDictionaryGenerationService
         _ai = ai;
         _user = user;
         _limitLock = limitLock;
+        _limits = limits ?? ContentLimits.Free();
     }
 
-    // Language goes into the prompt, so it is a plain name and nothing else
-    [GeneratedRegex(@"^\p{L}[\p{L} \-]{1,39}$")]
-    private static partial Regex LanguagePattern();
 
     public async Task<List<DictionaryEntryResponseDto>?> GenerateAsync(
         Guid dictionaryId,
@@ -48,7 +48,7 @@ public partial class DictionaryGenerationService : IDictionaryGenerationService
             throw new BadRequestException($"Count must be from 1 to {AiLimits.MaxGeneratedEntries}");
 
         var language = dto.Language?.Trim() ?? string.Empty;
-        if (!LanguagePattern().IsMatch(language))
+        if (!AiLanguageName.IsValid(language))
             throw new BadRequestException("Language must be a language name, e.g. \"English\"");
 
         var userId = _user.UserId;
@@ -73,9 +73,10 @@ public partial class DictionaryGenerationService : IDictionaryGenerationService
             content = AiSourceText.FromMaterial(material);
         }
 
-        var free = UserLimits.MaxEntriesPerDictionary - await _dictionaryRepository.CountEntriesAsync(dictionaryId);
+        var max = (await _limits.ForUserAsync(userId)).EntriesPerDictionary;
+        var free = (max ?? int.MaxValue) - await _dictionaryRepository.CountEntriesAsync(dictionaryId);
         if (free <= 0)
-            throw new LimitExceededException($"Word limit reached: {UserLimits.MaxEntriesPerDictionary} per dictionary");
+            throw new LimitExceededException($"Word limit reached: {max} per dictionary");
 
         var existingTerms = dictionary.Entries.Select(x => x.Term).ToList();
 
@@ -88,9 +89,9 @@ public partial class DictionaryGenerationService : IDictionaryGenerationService
         // The lock also keeps positions unique when words are added in parallel
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.DictionaryEntries, dictionaryId);
 
-        free = UserLimits.MaxEntriesPerDictionary - await _dictionaryRepository.CountEntriesAsync(dictionaryId);
+        free = (max ?? int.MaxValue) - await _dictionaryRepository.CountEntriesAsync(dictionaryId);
         if (free <= 0)
-            throw new LimitExceededException($"Word limit reached: {UserLimits.MaxEntriesPerDictionary} per dictionary");
+            throw new LimitExceededException($"Word limit reached: {max} per dictionary");
 
         var position = await _dictionaryRepository.GetMaxEntryPositionAsync(dictionaryId);
         var entries = new List<DictionaryEntry>();

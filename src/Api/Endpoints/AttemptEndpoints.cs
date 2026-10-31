@@ -18,6 +18,20 @@ public static class AttemptEndpoints
         assessmentGroup.MapPost("/{attemptId:guid}/answer", AnswerQuestion);
         assessmentGroup.MapPost("/{attemptId:guid}/finish", FinishAttempt);
         assessmentGroup.MapGet("/{attemptId:guid}/results", GetResults);
+        assessmentGroup.MapPost("/{attemptId:guid}/results/{resultId:guid}/accept", AcceptAnswer);
+        assessmentGroup.MapDelete("/{attemptId:guid}/results/{resultId:guid}/accept", UndoAccept);
+
+        static async Task<IResult> AcceptAnswer(Guid attemptId, Guid resultId, IAttemptService service)
+        {
+            var result = await service.AcceptAnswerAsync(attemptId, resultId);
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> UndoAccept(Guid attemptId, Guid resultId, IAttemptService service)
+        {
+            var result = await service.UndoAcceptAsync(attemptId, resultId);
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
 
         static async Task<IResult> GetFinishedAttempts(Guid materialId, IAttemptService service)
         {

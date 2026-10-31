@@ -1,9 +1,10 @@
 using Domain.Utility.Flashcard;
+using Domain.Utility.Review;
 
 namespace Domain.Entities;
 
 // FSRS card state of a dictionary entry, row exists only after the first review
-public class DictionaryEntryProgress
+public class DictionaryEntryProgress : IReviewCardState
 {
     public Guid EntryId { get; set; }
     public DictionaryEntry Entry { get; set; } = null!;

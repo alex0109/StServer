@@ -58,8 +58,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
             ("term", AiJson.String()),
             ("translation", AiJson.String()),
             ("transcription", AiJson.String()),
-            ("partOfSpeech", AiJson.Enum(
-                "noun", "pronoun", "verb", "adjective", "adverb", "preposition", "conjunction", "interjection", "other")),
+            ("partOfSpeech", AiJson.Enum(AiPartsOfSpeech.Values)),
             ("example", AiJson.String()),
             ("exampleTranslation", AiJson.String()));
 
@@ -86,9 +85,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
             var translation = AiJson.Limit(item.Translation, 200);
             if (term.Length == 0 || translation.Length == 0 || !seen.Add(term)) continue;
 
-            PartOfSpeech? partOfSpeech = Enum.TryParse<PartOfSpeech>(item.PartOfSpeech, true, out var parsed)
-                ? parsed
-                : null;
+            var partOfSpeech = AiPartsOfSpeech.Parse(item.PartOfSpeech);
 
             result.Add(new GeneratedEntry(
                 term,

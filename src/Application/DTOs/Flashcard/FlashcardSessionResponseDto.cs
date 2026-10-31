@@ -6,7 +6,9 @@ namespace Application.DTOs.Flashcard;
 public class FlashcardSessionResponseDto
 {
     public Guid Id { get; set; }
-    public Guid DictionaryId { get; set; }
+    // Null for a session of the whole "Today" queue
+    public Guid? DictionaryId { get; set; }
+    public FlashcardSessionScope Scope { get; set; }
     public FlashcardSessionMode Mode { get; set; }
     public int CardsTotal { get; set; }
     public List<DictionaryEntryResponseDto> Cards { get; set; } = [];

@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Dictionary;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -61,7 +62,7 @@ public class DictionaryServiceTests
     public async Task CreateAsync_UnderLimit_CountsUnderMaterialLockAndCommits()
     {
         _dictionaryRepo.Setup(x => x.CountByMaterialIdAsync(_material.Id, _userId))
-            .ReturnsAsync(UserLimits.MaxDictionariesPerMaterial - 1);
+            .ReturnsAsync(ContentLimitDefaults.Free.DictionariesPerMaterial!.Value - 1);
 
         var result = await _sut.CreateAsync(_material.Id, new DictionaryCreateDto { Title = "Second" });
 
@@ -74,7 +75,7 @@ public class DictionaryServiceTests
     public async Task CreateAsync_LimitReached_Throws()
     {
         _dictionaryRepo.Setup(x => x.CountByMaterialIdAsync(_material.Id, _userId))
-            .ReturnsAsync(UserLimits.MaxDictionariesPerMaterial);
+            .ReturnsAsync(ContentLimitDefaults.Free.DictionariesPerMaterial!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateAsync(_material.Id, new DictionaryCreateDto { Title = "Third" }));
@@ -87,7 +88,7 @@ public class DictionaryServiceTests
     public async Task CreateEntryAsync_UnderLimit_TakesNextPositionAndCommits()
     {
         _dictionaryRepo.Setup(x => x.CountEntriesAsync(_dictionary.Id))
-            .ReturnsAsync(UserLimits.MaxEntriesPerDictionary - 1);
+            .ReturnsAsync(ContentLimitDefaults.Free.EntriesPerDictionary!.Value - 1);
         _dictionaryRepo.Setup(x => x.GetMaxEntryPositionAsync(_dictionary.Id)).ReturnsAsync(98);
 
         var result = await _sut.CreateEntryAsync(_dictionary.Id,
@@ -103,7 +104,7 @@ public class DictionaryServiceTests
     public async Task CreateEntryAsync_LimitReached_Throws()
     {
         _dictionaryRepo.Setup(x => x.CountEntriesAsync(_dictionary.Id))
-            .ReturnsAsync(UserLimits.MaxEntriesPerDictionary);
+            .ReturnsAsync(ContentLimitDefaults.Free.EntriesPerDictionary!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateEntryAsync(_dictionary.Id,

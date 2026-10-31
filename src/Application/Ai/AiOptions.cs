@@ -50,6 +50,7 @@ public static class AiQuotaDefaults
             [AiFeature.AnswerGrading] = 30,
             [AiFeature.SummaryGeneration] = 3,
             [AiFeature.MistakeExplanation] = 5,
+            [AiFeature.WordLookup] = 100,
         },
         [SubscriptionTier.Plus] = new()
         {
@@ -58,6 +59,7 @@ public static class AiQuotaDefaults
             [AiFeature.AnswerGrading] = 300,
             [AiFeature.SummaryGeneration] = 30,
             [AiFeature.MistakeExplanation] = 50,
+            [AiFeature.WordLookup] = 1000,
         },
         [SubscriptionTier.Pro] = new()
         {
@@ -66,6 +68,7 @@ public static class AiQuotaDefaults
             [AiFeature.AnswerGrading] = 1500,
             [AiFeature.SummaryGeneration] = 150,
             [AiFeature.MistakeExplanation] = 250,
+            [AiFeature.WordLookup] = 5000,
         },
     };
 

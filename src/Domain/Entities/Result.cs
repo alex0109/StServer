@@ -26,7 +26,15 @@ public class Result
     // Cached AI explanation of a wrong answer, so it is paid for once
     [MaxLength(2000)]
     public string? AiExplanation { get; set; }
+    // Explanation language the cached text was written for, null for texts from before the setting
+    [MaxLength(16)]
+    public string? AiExplanationLanguage { get; set; }
     public int AnswerChangedCount { get; set; } = 0;
+    // Set when the user accepted an answer the automatic check rejected; the original grade is kept for undo
+    public DateTime? OverriddenAt { get; set; }
+    public bool? OriginalIsCorrect { get; set; }
+    public double? OriginalScore { get; set; }
+    public EvaluationMethod? OriginalMethod { get; set; }
     public DateTime? LastModifiedAt { get; set; }
     public required DateTime AnsweredAt { get; set; }
 }

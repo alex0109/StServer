@@ -4,6 +4,7 @@ using Application.DTOs.Question;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
+using Application.Schedulers;
 using Domain.Entities;
 using Domain.Utility.Question;
 
@@ -15,23 +16,29 @@ public class QuestionService : IQuestionService
     private readonly IUserContext _user;
     private readonly IOptionService _optionService;
     private readonly ILimitLock _limitLock;
+    private readonly int _leechLapses;
+    private readonly IContentLimits _limits;
 
     public QuestionService(
         IQuestionRepository repo,
         IUserContext user,
         IOptionService optionService,
-        ILimitLock limitLock)
+        ILimitLock limitLock,
+        FlashcardSchedulerOptions? schedulerOptions = null,
+        IContentLimits? limits = null)
     {
         _repo = repo;
         _user = user;
         _optionService = optionService;
         _limitLock = limitLock;
+        _leechLapses = schedulerOptions?.LeechLapses ?? FlashcardSchedulerOptions.DefaultLeechLapses;
+        _limits = limits ?? ContentLimits.Free();
     }
 
     public async Task<List<QuestionResponseDto>> GetActiveQuestionsAsync(Guid materialId)
     {
         var questions = await _repo.GetActiveQuestionsAsync(materialId, _user.UserId);
-        return questions.Select(QuestionMapper.ToDto).ToList();
+        return questions.Select(q => QuestionMapper.ToDto(q, _leechLapses)).ToList();
     }
     
     public async Task<List<QuestionReducedDto>> GetActiveReducedQuestionsAsync(Guid materialId)
@@ -55,7 +62,7 @@ public class QuestionService : IQuestionService
         if (question is null)
             return null;
         
-        return QuestionMapper.ToDto(question);
+        return QuestionMapper.ToDto(question, _leechLapses);
     }
 
     public Task<QuestionResponseDto?> CreateOpenQuestionAsync(Guid materialId, OpenQuestionCreateDto questionDto)
@@ -101,11 +108,12 @@ public class QuestionService : IQuestionService
 
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Questions, materialId);
 
+        var max = (await _limits.ForUserAsync(_user.UserId)).QuestionsPerMaterial;
         var count = await _repo.CountActiveByMaterialIdAsync(materialId);
 
-        if (count >= UserLimits.MaxQuestionsPerMaterial)
+        if (count >= max)
         {
-            throw new LimitExceededException($"Question limit reached: {UserLimits.MaxQuestionsPerMaterial} per material");
+            throw new LimitExceededException($"Question limit reached: {max} per material");
         }
 
         var question = buildQuestion();
@@ -114,7 +122,7 @@ public class QuestionService : IQuestionService
         await _repo.SaveChangesAsync();
         await limitLock.CommitAsync();
 
-        return QuestionMapper.ToDto(question);
+        return QuestionMapper.ToDto(question, _leechLapses);
     }
 
     public async Task<QuestionResponseDto?> UpdateQuestionAsync(Guid materialId, Guid id, QuestionUpdateDto questionDto)
@@ -142,7 +150,7 @@ public class QuestionService : IQuestionService
 
         await _repo.SaveChangesAsync();
 
-        return QuestionMapper.ToDto(question);
+        return QuestionMapper.ToDto(question, _leechLapses);
     }
 
     private static void ValidateUpdate(QuestionType questionType, QuestionUpdateDto questionDto)

@@ -15,6 +15,8 @@ public interface IDictionaryRepository
     Task<int> GetMaxEntryPositionAsync(Guid dictionaryId);
     Task<int> CountByMaterialIdAsync(Guid materialId, Guid userId);
     Task<int> CountEntriesAsync(Guid dictionaryId);
+    // Case-insensitive, so "Hund" and "hund" are one word
+    Task<Guid?> FindEntryIdByTermAsync(Guid dictionaryId, string term);
 
     Task SaveChangesAsync();
 }

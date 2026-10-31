@@ -12,8 +12,7 @@ namespace E2ETests;
 
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder()
-        .WithImage("postgres:16-alpine")
+    private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -62,7 +61,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         }).CreateClient();
     }
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         await _db.StartAsync();
         
@@ -74,5 +73,10 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         await ctx.Database.MigrateAsync();
     }
 
-    public new async Task DisposeAsync() => await _db.DisposeAsync();
+    // The host goes first, it still holds connections to the database
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await _db.DisposeAsync();
+    }
 }

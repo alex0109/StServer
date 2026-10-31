@@ -1,3 +1,4 @@
+using Application.Schedulers;
 using Application.DTOs.Option;
 using Domain.Entities;
 using Application.DTOs.Question;
@@ -59,7 +60,10 @@ public static class QuestionMapper
         };
     }
 
-    public static QuestionResponseDto ToDto(Question entity)
+    public static QuestionResponseDto ToDto(Question entity) =>
+        ToDto(entity, FlashcardSchedulerOptions.DefaultLeechLapses);
+
+    public static QuestionResponseDto ToDto(Question entity, int leechLapses)
     {
         return new QuestionResponseDto
         {
@@ -80,7 +84,8 @@ public static class QuestionMapper
             IsActive = entity.IsActive,
             Version = entity.Version,
             CreatedAt = entity.CreatedAt,
-            UpdatedAt = entity.UpdatedAt
+            UpdatedAt = entity.UpdatedAt,
+            Progress = entity.Progress is null ? null : QuestionReviewMapper.ToProgressDto(entity.Progress, leechLapses),
         };
     }
     

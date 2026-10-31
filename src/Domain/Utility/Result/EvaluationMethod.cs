@@ -6,5 +6,7 @@ public enum EvaluationMethod
     Exact,
     Fuzzy,
     Embedding,
-    AI
+    AI,
+    // The user accepted the answer after automatic checking said no; new values only at the end
+    Manual
 }

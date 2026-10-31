@@ -102,12 +102,15 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         var created = await CreateOpenQuestion(material.Id);
 
         var response = await _client.GetAsync(
-            $"/api/materials/{material.Id}/questions/{created.Id}");
+            $"/api/materials/{material.Id}/questions/{created.Id}",
+            TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
         var question = await response.Content
-            .ReadFromJsonAsync<QuestionResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<QuestionResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
         question.ShouldNotBeNull();
 
@@ -121,7 +124,8 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         var material = await CreateMaterial();
         
         var response = await _client.GetAsync(
-            $"/api/materials/{material.Id}/questions/{Guid.NewGuid()}");
+            $"/api/materials/{material.Id}/questions/{Guid.NewGuid()}",
+            TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
@@ -135,12 +139,15 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         await CreateOpenQuestion(material.Id);
         
         var response = await _client.GetAsync(
-            $"/api/materials/{material.Id}/questions");
+            $"/api/materials/{material.Id}/questions",
+            TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
         var questions = await response.Content
-            .ReadFromJsonAsync<List<QuestionResponseDto>>(JsonOptions);
+            .ReadFromJsonAsync<List<QuestionResponseDto>>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
         questions.ShouldNotBeNull();
 
@@ -155,12 +162,15 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         await CreateOpenQuestion(material.Id);
         
         var response = await _client.GetAsync(
-            $"/api/materials/{material.Id}/questions/reduced");
+            $"/api/materials/{material.Id}/questions/reduced",
+            TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
         var questions = await response.Content
-            .ReadFromJsonAsync<List<QuestionReducedDto>>(JsonOptions);
+            .ReadFromJsonAsync<List<QuestionReducedDto>>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
 
         questions.ShouldNotBeNull();
 
@@ -186,12 +196,15 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         var response = await _client.PatchAsJsonAsync(
             $"/api/materials/{material.Id}/questions/{question.Id}",
             updateDto,
-            JsonOptions);
+            JsonOptions,
+            cancellationToken: TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
         
         var updated = await response.Content
-            .ReadFromJsonAsync<QuestionResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<QuestionResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
         
         updated.ShouldNotBeNull();
 
@@ -207,17 +220,21 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         var question = await CreateOpenQuestion(material.Id);
 
         var deleteResponse = await _client.DeleteAsync(
-            $"/api/materials/{material.Id}/questions/{question.Id}");
+            $"/api/materials/{material.Id}/questions/{question.Id}",
+            TestContext.Current.CancellationToken);
 
         deleteResponse.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         var getResponse = await _client.GetAsync(
-            $"/api/materials/{material.Id}/questions/{question.Id}");
+            $"/api/materials/{material.Id}/questions/{question.Id}",
+            TestContext.Current.CancellationToken);
 
         getResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var deleted = await getResponse.Content
-            .ReadFromJsonAsync<QuestionResponseDto>(JsonOptions);
+            .ReadFromJsonAsync<QuestionResponseDto>(
+                JsonOptions,
+                cancellationToken: TestContext.Current.CancellationToken);
 
         deleted.ShouldNotBeNull();
 
@@ -236,7 +253,8 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
         var otherUserClient = _factory.CreateAuthenticatedClient();
         
         var response = await otherUserClient.GetAsync(
-            $"/api/materials/{material.Id}/questions/{question.Id}");
+            $"/api/materials/{material.Id}/questions/{question.Id}",
+            TestContext.Current.CancellationToken);
         
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }

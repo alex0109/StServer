@@ -101,7 +101,8 @@ public class AdminStatsService : IAdminStatsService
             FailedLast30Days: Failed(window),
             AveragePerDay30: Math.Round(requests30 / (double)Window, 1),
             AveragePerActiveUser30: aiUsers30 == 0 ? 0 : Math.Round(requests30 / (double)aiUsers30, 1),
-            AiUsers30: aiUsers30);
+            AiUsers30: aiUsers30,
+            ManualAccepts30: await _repo.CountManualAcceptsAsync(StartOf(firstDay)));
 
         var tokens = new AdminAiTokensDto(
             window.Sum(x => x.Row.InputTokens), window.Sum(x => x.Row.OutputTokens),

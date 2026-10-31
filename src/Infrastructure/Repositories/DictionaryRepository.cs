@@ -92,6 +92,16 @@ public class DictionaryRepository : IDictionaryRepository
             .CountAsync(d => d.MaterialId == materialId && d.UserId == userId);
     }
 
+    public async Task<Guid?> FindEntryIdByTermAsync(Guid dictionaryId, string term)
+    {
+        var lowered = term.Trim().ToLower();
+
+        return await _context.DictionaryEntries
+            .Where(e => e.DictionaryId == dictionaryId && e.Term.ToLower() == lowered)
+            .Select(e => (Guid?)e.Id)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<int> CountEntriesAsync(Guid dictionaryId)
     {
         return await _context.DictionaryEntries

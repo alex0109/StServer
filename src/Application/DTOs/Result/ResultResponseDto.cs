@@ -20,6 +20,10 @@ public class ResultResponseDto
     // How the answer was checked, AI marks answers accepted by meaning
     public EvaluationMethod Method { get; set; }
     public string? AiExplanation { get; set; }
+    // A rejected answer checked by similarity or AI, which the user may accept as right
+    public bool CanAccept { get; set; }
+    // When the user accepted it; undo is possible for a short time after
+    public DateTime? OverriddenAt { get; set; }
     // Filled for option and true/false questions, so results can show the right answers
     public List<Guid> CorrectOptionIds { get; set; } = [];
     // Model answer of an open question

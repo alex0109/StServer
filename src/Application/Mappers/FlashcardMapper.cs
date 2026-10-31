@@ -8,7 +8,8 @@ namespace Application.Mappers;
 
 public static class FlashcardMapper
 {
-    public static FlashcardCard ToCard(DictionaryEntryProgress? progress, DateTime now)
+    // Card helpers take the shared contracts, so words and questions are scheduled by the same code
+    public static FlashcardCard ToCard(IReviewCardState? progress, DateTime now)
     {
         if (progress is null) return FlashcardCard.CreateNew(now);
 
@@ -26,7 +27,7 @@ public static class FlashcardMapper
         };
     }
 
-    public static FlashcardCard ToPrevCard(FlashcardReview review)
+    public static FlashcardCard ToPrevCard(IReviewLogEntry review)
     {
         return new FlashcardCard
         {
@@ -56,7 +57,7 @@ public static class FlashcardMapper
         return progress;
     }
 
-    public static void ApplyCard(DictionaryEntryProgress progress, FlashcardCard card, DateTime now)
+    public static void ApplyCard(IReviewCardState progress, FlashcardCard card, DateTime now)
     {
         progress.State = card.State;
         progress.Due = card.Due;
@@ -120,7 +121,7 @@ public static class FlashcardMapper
         };
     }
 
-    public static void ApplyPrevCard(FlashcardReview review, FlashcardCard before)
+    public static void ApplyPrevCard(IReviewLogEntry review, FlashcardCard before)
     {
         review.ElapsedDays = before.LastReviewAt is DateTime lastReviewAt
             ? Math.Max(0, (review.ReviewedAt - lastReviewAt).TotalDays)
@@ -150,17 +151,19 @@ public static class FlashcardMapper
     }
 
     public static FlashcardSession ToSessionEntity(
-        Guid dictionaryId,
+        Guid? dictionaryId,
         Guid userId,
         FlashcardSessionMode mode,
         int cardsTotal,
-        DateTime now)
+        DateTime now,
+        FlashcardSessionScope scope = FlashcardSessionScope.Dictionary)
     {
         return new FlashcardSession
         {
             Id = Guid.NewGuid(),
             UserId = userId,
             DictionaryId = dictionaryId,
+            Scope = scope,
             Mode = mode,
             CardsTotal = cardsTotal,
             StartedAt = now,
@@ -173,6 +176,7 @@ public static class FlashcardMapper
         {
             Id = session.Id,
             DictionaryId = session.DictionaryId,
+            Scope = session.Scope,
             Mode = session.Mode,
             CardsTotal = session.CardsTotal,
             Cards = cards.Select(DictionaryMapper.ToEntryDto).ToList(),
@@ -187,6 +191,7 @@ public static class FlashcardMapper
         {
             Id = session.Id,
             DictionaryId = session.DictionaryId,
+            Scope = session.Scope,
             Mode = session.Mode,
             CardsTotal = session.CardsTotal,
             Reviewed = session.Reviews.Count,

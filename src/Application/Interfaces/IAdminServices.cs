@@ -18,6 +18,9 @@ public interface IAdminAlerts
     Task SignedInAsync(string? sessionId);
 
     Task AccessDeniedAsync(string reason);
+
+    // A plan given or taken back by hand
+    Task SubscriptionChangedAsync(string summary);
 }
 
 public interface IAdminStatsRepository
@@ -29,6 +32,8 @@ public interface IAdminStatsRepository
     Task<List<AiUsageGroupRow>> GetAiUsageTotalsAsync();
 
     Task<List<AiMonthlyRow>> GetAiMonthlyAsync();
+
+    Task<int> CountManualAcceptsAsync(DateTime since);
 }
 
 public interface IAdminStatsService

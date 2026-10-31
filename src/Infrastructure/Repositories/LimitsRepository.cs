@@ -35,9 +35,12 @@ public class LimitsRepository : ILimitsRepository
 
         var tags = await _db.Tags.CountAsync(t => t.UserId == userId);
 
+        var libraryCopies = await _db.Materials.CountAsync(m => m.UserId == userId && m.ImportedFromLibraryItemId != null);
+
         return new LimitsUsageDto
         {
             Materials = materials.Count,
+            LibraryCopies = libraryCopies,
             Tags = tags,
             MaterialsUsage = materials,
         };

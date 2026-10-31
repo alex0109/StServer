@@ -3,6 +3,7 @@ using System.Reflection;
 using Api.Common;
 using Application.Ai;
 using Application.DTOs.Admin;
+using Application.DTOs.Billing;
 using Application.Interfaces;
 using Domain.Utility.Admin;
 using Hangfire;
@@ -28,6 +29,13 @@ public static class AdminEndpoints
         admin.MapGet("/stats/ai", Ai);
         admin.MapGet("/health", Health);
         admin.MapGet("/audit", Audit);
+        // Prometheus, Grafana and Sentry in one answer; Google Analytics separately (it is slower)
+        admin.MapGet("/monitoring", Monitoring);
+        admin.MapGet("/analytics", Analytics);
+        // Plans given by hand, e.g. Plus for beta testers
+        admin.MapGet("/subscriptions", Subscriptions);
+        admin.MapPost("/subscriptions", GrantSubscription);
+        admin.MapDelete("/subscriptions/{userId:guid}", RevokeSubscription);
 
         // Before the second factor: tells the panel whether to ask for a TOTP code at all.
         // Any signed-in account may ask; a refusal also emails the owner
@@ -64,6 +72,21 @@ public static class AdminEndpoints
 
         static async Task<IResult> Audit(IAdminAudit audit, int take = 100) =>
             TypedResults.Ok(await audit.ListAsync(Math.Clamp(take, 1, 500)));
+
+        static async Task<IResult> Monitoring(IObservabilityService service, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await service.GetMonitoringAsync(cancellationToken));
+
+        static async Task<IResult> Analytics(IObservabilityService service, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await service.GetAnalyticsAsync(cancellationToken));
+
+        static async Task<IResult> Subscriptions(ISubscriptionAdminService service, int take = 100) =>
+            TypedResults.Ok(await service.ListAsync(Math.Clamp(take, 1, 500)));
+
+        static async Task<IResult> GrantSubscription(SubscriptionGrantDto dto, ISubscriptionAdminService service) =>
+            TypedResults.Ok(await service.GrantAsync(dto));
+
+        static async Task<IResult> RevokeSubscription(Guid userId, ISubscriptionAdminService service) =>
+            await service.RevokeAsync(userId) ? TypedResults.NoContent() : TypedResults.NotFound();
 
         static async Task<IResult> Health(
             AppDbContext db,

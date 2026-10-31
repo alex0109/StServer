@@ -2,10 +2,14 @@ using Application.Constants;
 using Application.DTOs.Flashcard;
 using Application.Exceptions;
 using Application.Interfaces;
+using Application.Profile;
+using Application.Schedulers;
+using Application.Statistics;
 using Application.Mappers;
 using Domain.Entities;
 using Domain.Utility.Flashcard;
 using Domain.Utility.Review;
+using Application.Observability;
 
 namespace Application.Services;
 
@@ -15,17 +19,23 @@ public class FlashcardService : IFlashcardService
     private readonly IFlashcardSchedulerProvider _schedulers;
     private readonly IFlashcardProgressRebuilder _progressRebuilder;
     private readonly IUserContext _user;
+    private readonly ILearningSettingsProvider? _learning;
+    private readonly IUserTimeZoneProvider? _timeZones;
 
     public FlashcardService(
         IFlashcardRepository flashcardRepository,
         IFlashcardSchedulerProvider schedulers,
         IFlashcardProgressRebuilder progressRebuilder,
-        IUserContext user)
+        IUserContext user,
+        ILearningSettingsProvider? learning = null,
+        IUserTimeZoneProvider? timeZones = null)
     {
         _flashcardRepository = flashcardRepository;
         _schedulers = schedulers;
         _progressRebuilder = progressRebuilder;
         _user = user;
+        _learning = learning;
+        _timeZones = timeZones;
     }
 
     public async Task<FlashcardStatsResponseDto?> GetStatsAsync(Guid dictionaryId)
@@ -57,7 +67,12 @@ public class FlashcardService : IFlashcardService
         var entries = await _flashcardRepository.GetActiveEntriesWithProgressAsync(dictionaryId, userId);
         var now = DateTime.UtcNow;
 
-        var cards = SelectCards(entries, dto, now);
+        // Daily limits hold for "due" sessions; "all" and picked words are practice the user asked for
+        var budget = dto.Mode == FlashcardSessionMode.Due ? await BudgetAsync(userId, now) : DailyBudget.Unlimited;
+        if (budget.ReviewsLeft == 0)
+            throw new ConflictException("The daily review limit is reached");
+
+        var cards = SelectCards(entries, dto, now, budget);
         if (cards.Count == 0)
             throw new ConflictException("There are no cards to review");
 
@@ -67,6 +82,41 @@ public class FlashcardService : IFlashcardService
         await _flashcardRepository.SaveChangesAsync();
 
         return FlashcardMapper.ToSessionDto(session, cards);
+    }
+
+    public async Task<FlashcardSessionResponseDto> StartTodaySessionAsync(
+        FlashcardSessionCreateDto dto, DateTime dueByUtc, int newLimit, int maxCards)
+    {
+        var userId = _user.UserId;
+        var limit = Math.Clamp(dto.Limit ?? maxCards, 1, FlashcardLimits.MaxSessionSize);
+
+        List<DictionaryEntry> cards;
+        if (dto.Mode == FlashcardSessionMode.Custom)
+        {
+            if (dto.EntryIds is null || dto.EntryIds.Count == 0)
+                throw new BadRequestException("EntryIds are required for Custom mode");
+
+            cards = (await _flashcardRepository.GetEntriesWithProgressAsync(userId, dto.EntryIds)).Take(limit).ToList();
+        }
+        else
+        {
+            // Most overdue first, new words fill what is left
+            var due = await _flashcardRepository.GetDueEntriesAsync(userId, dueByUtc, limit);
+            var fresh = await _flashcardRepository.GetNewEntriesAsync(userId, Math.Min(newLimit, limit - due.Count));
+            cards = due.Concat(fresh).ToList();
+        }
+
+        if (cards.Count == 0)
+            throw new ConflictException("There are no cards to review");
+
+        var now = DateTime.UtcNow;
+        var mode = dto.Mode == FlashcardSessionMode.Custom ? FlashcardSessionMode.Custom : FlashcardSessionMode.Due;
+        var session = FlashcardMapper.ToSessionEntity(null, userId, mode, cards.Count, now, FlashcardSessionScope.Today);
+
+        await _flashcardRepository.AddSessionAsync(session);
+        await _flashcardRepository.SaveChangesAsync();
+
+        return FlashcardMapper.ToSessionDto(session, Shuffle(cards));
     }
 
     public async Task<FlashcardSessionSummaryDto?> GetSessionAsync(Guid sessionId)
@@ -119,9 +169,12 @@ public class FlashcardService : IFlashcardService
             throw new ConflictException("Session is already finished");
 
         var entry = await _flashcardRepository.GetEntryWithProgressAsync(dto.EntryId, userId);
-        if (entry is null || entry.DictionaryId != session.DictionaryId) return null;
+        // A "Today" session takes words from any of the user's dictionaries
+        if (entry is null || (session.DictionaryId is Guid dictionaryId && entry.DictionaryId != dictionaryId)) return null;
 
-        var scheduler = _schedulers.Current;
+        var scheduler = _learning is null
+            ? _schedulers.Current
+            : UserFlashcardScheduler.For(_schedulers.Current, (await _learning.GetAsync(userId)).Overrides);
 
         // Card was scheduled by another algorithm and the background job has not reached it yet
         if (entry.Progress is not null && entry.Progress.Algorithm != scheduler.Algorithm)
@@ -151,6 +204,7 @@ public class FlashcardService : IFlashcardService
 
         await _flashcardRepository.AddReviewAsync(review);
         await _flashcardRepository.SaveChangesAsync();
+        AppMetrics.Review("word", session.Scope == FlashcardSessionScope.Today ? "today" : "dictionary");
 
         return FlashcardMapper.ToReviewDto(review, progress);
     }
@@ -212,23 +266,36 @@ public class FlashcardService : IFlashcardService
         return true;
     }
 
+    private async Task<DailyBudget> BudgetAsync(Guid userId, DateTime now)
+    {
+        if (_learning is null || _timeZones is null) return DailyBudget.Unlimited;
+
+        var timeZone = await _timeZones.GetAsync(userId);
+        var today = UserTimeZone.LocalDate(now, timeZone);
+
+        return await _learning.GetBudgetAsync(
+            userId, UserTimeZone.StartOfLocalDayUtc(today, timeZone), UserTimeZone.EndOfLocalDayUtc(today, timeZone));
+    }
+
     private static List<DictionaryEntry> SelectCards(
         List<DictionaryEntry> entries,
         FlashcardSessionCreateDto dto,
-        DateTime now)
+        DateTime now,
+        DailyBudget budget)
     {
         var defaultLimit = dto.Mode == FlashcardSessionMode.Due
             ? FlashcardLimits.DefaultSessionSize
             : FlashcardLimits.MaxSessionSize;
         var limit = Math.Clamp(dto.Limit ?? defaultLimit, 1, FlashcardLimits.MaxSessionSize);
+        if (budget.ReviewsLeft is int reviewsLeft) limit = Math.Min(limit, reviewsLeft);
 
         var selected = dto.Mode switch
         {
-            // Most overdue cards first, new cards fill the rest
+            // Most overdue cards first, new cards fill the rest up to what the day still allows
             FlashcardSessionMode.Due => entries
                 .Where(e => IsDue(e, now))
                 .OrderBy(e => e.Progress!.Due)
-                .Concat(entries.Where(IsNew))
+                .Concat(entries.Where(IsNew).Take(budget.NewWordsLeft ?? int.MaxValue))
                 .Take(limit)
                 .ToArray(),
             FlashcardSessionMode.All => Shuffle(entries).Take(limit).ToArray(),

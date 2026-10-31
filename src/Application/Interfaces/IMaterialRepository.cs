@@ -12,5 +12,8 @@ public interface IMaterialRepository
     Task AddAsync(Material material);
     Task<bool> DeleteAsync(Guid materialId, Guid userId);
     Task<int> CountByUserIdAsync(Guid userId);
+    // Materials the user made or got by a share link, without library copies
+    Task<int> CountOwnByUserIdAsync(Guid userId);
+    Task<int> CountLibraryCopiesAsync(Guid userId);
     Task SaveChangesAsync();
 }

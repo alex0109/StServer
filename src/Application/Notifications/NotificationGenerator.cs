@@ -19,6 +19,7 @@ public class NotificationGenerator : INotificationGenerator
     private static readonly JsonSerializerOptions DataJson = new(JsonSerializerDefaults.Web);
 
     private readonly INotificationRepository _repo;
+    private readonly IUserProfileRepository _profiles;
     private readonly IStudyActivityService _activity;
     private readonly IEmailSender _emailSender;
     private readonly NotificationOptions _options;
@@ -28,6 +29,7 @@ public class NotificationGenerator : INotificationGenerator
 
     public NotificationGenerator(
         INotificationRepository repo,
+        IUserProfileRepository profiles,
         IStudyActivityService activity,
         IEmailSender emailSender,
         NotificationOptions options,
@@ -36,6 +38,7 @@ public class NotificationGenerator : INotificationGenerator
         ILogger<NotificationGenerator> logger)
     {
         _repo = repo;
+        _profiles = profiles;
         _activity = activity;
         _emailSender = emailSender;
         _options = options;
@@ -52,7 +55,7 @@ public class NotificationGenerator : INotificationGenerator
 
         while (true)
         {
-            var page = await _repo.GetSettingsPageAsync(skip, PageSize);
+            var page = await _profiles.GetRecipientsPageAsync(skip, PageSize);
             if (page.Count == 0) break;
 
             foreach (var settings in page)
@@ -74,29 +77,30 @@ public class NotificationGenerator : INotificationGenerator
         _logger.LogInformation("Reminder job made {Count} reminders", created);
     }
 
-    internal async Task<int> GenerateForUserAsync(UserNotificationSettings settings, DateTime now)
+    internal async Task<int> GenerateForUserAsync(NotificationRecipient settings, DateTime now)
     {
         var timeZone = UserTimeZone.Resolve(settings.TimeZone);
         var local = UserTimeZone.ToLocal(now, timeZone);
         var today = DateOnly.FromDateTime(local);
         var created = 0;
 
-        if (InWindow(local, _options.DailyReminderHour))
+        // The period keys stay per day and week, so a changed hour never sends a second reminder
+        if (InWindow(local, settings.DailyReminderHour ?? _options.DailyReminderHour))
         {
             var key = today.ToString("yyyy-MM-dd");
             if (!await _repo.ExistsAsync(settings.UserId, NotificationType.DailyReview, key))
             {
                 var todayData = await _activity.GetTodayAsync(settings.UserId, timeZone, now);
-                if (todayData.DueWords > 0)
+                if (todayData.DueWords > 0 || todayData.DueQuestions > 0)
                 {
-                    var data = new DailyReviewData(todayData.DueWords, todayData.NewWords, todayData.Dictionaries);
+                    var data = new DailyReviewData(todayData.DueWords, todayData.NewWords, todayData.Dictionaries, todayData.DueQuestions);
                     created += await CreateAsync(settings, NotificationType.DailyReview, key, data, now,
                         settings.EmailDailyReminder ? NotificationTexts.DailyReview(settings.Language, data) : null);
                 }
             }
         }
 
-        if (InWindow(local, _options.StreakReminderHour))
+        if (InWindow(local, settings.StreakReminderHour ?? _options.StreakReminderHour))
         {
             var key = today.ToString("yyyy-MM-dd");
             if (!await _repo.ExistsAsync(settings.UserId, NotificationType.StreakAtRisk, key))
@@ -135,7 +139,7 @@ public class NotificationGenerator : INotificationGenerator
         local.Hour >= hour && local.Hour < hour + _options.WindowHours;
 
     private async Task<int> CreateAsync<T>(
-        UserNotificationSettings settings,
+        NotificationRecipient settings,
         NotificationType type,
         string periodKey,
         T data,
@@ -173,9 +177,9 @@ public class NotificationGenerator : INotificationGenerator
         return 1;
     }
 
-    private OutgoingEmail BuildEmail(UserNotificationSettings settings, NotificationTexts.EmailText text)
+    private OutgoingEmail BuildEmail(NotificationRecipient settings, NotificationTexts.EmailText text)
     {
-        var url = $"{_emailOptions.AppUrl.TrimEnd('/')}/statistics";
+        var url = $"{_emailOptions.AppUrl.TrimEnd('/')}{text.Path}";
         var body = string.Concat(text.Lines.Select(EmailTemplates.Paragraph)) + EmailTemplates.Button(text.Button, url);
         var footer =
             $"{EmailTemplates.Encode(NotificationTexts.Footer(settings.Language))} " +

@@ -9,4 +9,9 @@ public class FlashcardSchedulerOptions
 
     public FlashcardAlgorithm Algorithm { get; set; } = FlashcardAlgorithm.Fsrs;
     public FsrsOptions Fsrs { get; set; } = new();
+
+    // A word or question failed this many times is a leech: better reworded than drilled again
+    public int LeechLapses { get; set; } = DefaultLeechLapses;
+
+    public const int DefaultLeechLapses = 8;
 }

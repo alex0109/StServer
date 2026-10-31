@@ -1,3 +1,4 @@
+using Application.DTOs.Ai;
 using Application.DTOs.Dictionary;
 using Application.Interfaces;
 
@@ -17,11 +18,24 @@ public static class DictionaryEndpoints
         dictionaryGroup.MapPut("/{dictionaryId:guid}", UpdateDictionary);
         dictionaryGroup.MapDelete("/{dictionaryId:guid}", DeleteDictionary);
         dictionaryGroup.MapPost("/{dictionaryId:guid}/entries", CreateDictionaryEntry);
+        // AI suggestion for a word selected while reading; nothing is saved
+        dictionaryGroup.MapPost("/{dictionaryId:guid}/entries/lookup", LookupEntry);
         dictionaryGroup.MapGet("/entries/{entryId:guid}", GetDictionaryEntry);
         dictionaryGroup.MapPut("/entries/{entryId:guid}", UpdateDictionaryEntry);
         dictionaryGroup.MapDelete("/entries/{entryId:guid}", DeleteDictionaryEntry);
         dictionaryGroup.MapPatch("/{dictionaryId:guid}/entries/reorder", EntriesReorder);
         dictionaryGroup.MapGet("/{dictionaryId:guid}/questions", GetDictionaryQuestions);
+
+        static async Task<IResult> LookupEntry(
+            Guid dictionaryId,
+            WordLookupRequestDto dto,
+            IWordLookupService service,
+            CancellationToken cancellationToken)
+        {
+            var result = await service.LookupAsync(dictionaryId, dto, cancellationToken);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
 
         static async Task<IResult> GetAllDictionaries(Guid materialId, IDictionaryService service)
         {

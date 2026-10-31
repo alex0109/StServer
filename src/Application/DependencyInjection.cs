@@ -4,6 +4,8 @@ using Application.Admin;
 using Application.Ai;
 using Application.Email;
 using Application.Notifications;
+using Application.Review;
+using Application.Limits;
 using Application.Evaluators;
 using Application.Interfaces;
 using Application.Schedulers;
@@ -22,7 +24,9 @@ public static class DependencyInjection
         AiOptions? aiOptions = null,
         EmailOptions? emailOptions = null,
         NotificationOptions? notificationOptions = null,
-        AiPricingOptions? aiPricingOptions = null)
+        AiPricingOptions? aiPricingOptions = null,
+        ReviewOptions? reviewOptions = null,
+        ContentLimitsOptions? contentLimitsOptions = null)
     {
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IQuestionService, QuestionService>();
@@ -46,18 +50,32 @@ public static class DependencyInjection
         services.AddScoped<IFlashcardService, FlashcardService>();
         services.AddScoped<IMaterialShareService, MaterialShareService>();
         services.AddScoped<ILimitsService, LimitsService>();
+        services.AddSingleton(contentLimitsOptions ?? new ContentLimitsOptions());
+        services.AddScoped<ISubscriptionTierProvider, SubscriptionTierProvider>();
+        services.AddScoped<IContentLimits, ContentLimits>();
         services.AddSingleton(emailOptions ?? new EmailOptions());
         services.AddScoped<IFeedbackService, FeedbackService>();
         services.AddScoped<ILibraryService, LibraryService>();
         services.AddScoped<ILibraryAdminService, LibraryAdminService>();
         services.AddSingleton(aiPricingOptions ?? new AiPricingOptions());
         services.AddScoped<IAdminStatsService, AdminStatsService>();
+        services.AddScoped<IAccountService, AccountService>();
+        services.AddScoped<IUserProfileService, UserProfileService>();
+        services.AddScoped<IBillingService, BillingService>();
+        services.AddScoped<IBillingCatalog, BillingCatalog>();
+        services.AddScoped<IMaterialImportService, MaterialImportService>();
+        services.AddScoped<ISubscriptionAdminService, SubscriptionAdminService>();
+        services.AddScoped<ILearningSettingsProvider, LearningSettingsProvider>();
 
         services.AddSingleton(notificationOptions ?? new NotificationOptions());
         services.AddScoped<IStudyActivityService, StudyActivityService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationGenerator, NotificationGenerator>();
         services.AddScoped<IFlashcardProgressRebuilder, FlashcardProgressRebuilder>();
+        services.AddScoped<IQuestionReviewService, QuestionReviewService>();
+        services.AddScoped<IUserTimeZoneProvider, UserTimeZoneProvider>();
+        services.AddSingleton(reviewOptions ?? new ReviewOptions());
+        services.AddScoped<IReviewService, ReviewService>();
 
         // Every algorithm is registered, configuration picks the current one
         services.AddSingleton(flashcardSchedulerOptions ?? new FlashcardSchedulerOptions());
@@ -76,6 +94,7 @@ public static class DependencyInjection
         services.AddScoped<IDictionaryGenerationService, DictionaryGenerationService>();
         services.AddScoped<ISummaryGenerationService, SummaryGenerationService>();
         services.AddScoped<IMistakeExplanationService, MistakeExplanationService>();
+        services.AddScoped<IWordLookupService, WordLookupService>();
 
         return services;
     }

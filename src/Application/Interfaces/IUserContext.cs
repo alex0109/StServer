@@ -17,4 +17,7 @@ public interface IUserContext
 
     // Claims of the signed in session, null when the token has none
     string? Claim(string type);
+
+    // Every claim of a type: a JSON array in the token becomes one claim per element
+    IReadOnlyList<string> Claims(string type) => Claim(type) is { } value ? [value] : [];
 }

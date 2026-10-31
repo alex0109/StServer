@@ -14,4 +14,10 @@ public interface IAttemptService
     Task<bool> FinishAttempt(Guid id);
     Task MarkAbandonedAttempts();
     Task<AttemptResponseDto?> GetResults(Guid id);
+
+    // The user says a rejected open answer is right; returns the updated results
+    Task<AttemptResponseDto?> AcceptAnswerAsync(Guid attemptId, Guid resultId);
+
+    // Takes the acceptance back, possible for a short time after it
+    Task<AttemptResponseDto?> UndoAcceptAsync(Guid attemptId, Guid resultId);
 }

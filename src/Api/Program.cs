@@ -18,13 +18,24 @@ using Application.Admin;
 using Application.Ai;
 using Application.Email;
 using Application.Notifications;
+using Application.Review;
+using Application.Limits;
 using Application.Interfaces;
 using Application.Jobs;
 using Application.Schedulers;
 using Infrastructure;
 using Infrastructure.Ai;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Before any metric exists: the old event counters only repeat the meters and add internal QUIC noise.
+// Of the .NET meters only those worth a chart are published, next to our own
+Metrics.SuppressDefaultMetrics(new SuppressDefaultMetricOptions { SuppressEventCounters = true, SuppressDebugMetrics = true });
+Metrics.ConfigureMeterAdapter(options => options.InstrumentFilterPredicate = instrument =>
+    MetricsAccess.PublishedMeters.Contains(instrument.Meter.Name));
+// The adapter starts listening on the first collection; counts made before it would be lost
+await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(Stream.Null);
 
 if (builder.Environment.IsDevelopment())
 {
@@ -80,6 +91,22 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
+
+        // A token issued before the account was deleted is still signed and fresh, but its user is gone
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = context =>
+            {
+                var sub = context.Principal?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (Guid.TryParse(sub, out var userId)
+                    && context.HttpContext.RequestServices.GetRequiredService<IDeletedAccounts>().Contains(userId))
+                {
+                    context.Fail("Account deleted");
+                }
+
+                return Task.CompletedTask;
+            },
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -89,6 +116,17 @@ builder.Services.AddAdminAccess();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IUserContext, UserContext>();
+
+if (builder.Environment.IsEnvironment("Testing"))
+{
+    builder.Services.AddSingleton<IAccountJobs, NoAccountJobs>();
+    builder.Services.AddSingleton<IBillingJobs, NoBillingJobs>();
+}
+else
+{
+    builder.Services.AddScoped<IAccountJobs, HangfireAccountJobs>();
+    builder.Services.AddScoped<IBillingJobs, HangfireBillingJobs>();
+}
 
 builder.Services.AddInfrastructure();
 builder.Services.AddApplication(
@@ -106,7 +144,13 @@ builder.Services.AddApplication(
         .Get<NotificationOptions>(),
     builder.Configuration
         .GetSection(AiPricingOptions.SectionName)
-        .Get<AiPricingOptions>());
+        .Get<AiPricingOptions>(),
+    builder.Configuration
+        .GetSection(ReviewOptions.SectionName)
+        .Get<ReviewOptions>(),
+    builder.Configuration
+        .GetSection(ContentLimitsOptions.SectionName)
+        .Get<ContentLimitsOptions>());
 
 // Models and endpoints come from configuration, API keys only from environment variables
 builder.Services.AddAiProviders(options =>
@@ -127,7 +171,7 @@ if (!builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddHangfire(config =>
     {
-        config.UsePostgreSqlStorage(connectionString);
+        config.UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString));
     });
 
     builder.Services.AddHangfireServer();
@@ -151,6 +195,29 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 100,
         });
     });
+
+    // Export builds a whole archive, deletion is once in a lifetime: both get tight windows of their own
+    options.AddPolicy("account-export", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"user:{httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString()}",
+            _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromMinutes(10), PermitLimit = 3 }));
+
+    options.AddPolicy("account-delete", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"user:{httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString()}",
+            _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromHours(1), PermitLimit = 5 }));
+
+    // Every import makes the server fetch a page from the internet
+    options.AddPolicy("import", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"user:{httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString()}",
+            _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromHours(1), PermitLimit = 10 }));
+
+    // Payment providers retry and send bursts, but never hundreds a minute from one address
+    options.AddPolicy("webhook", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            $"ip:{httpContext.Connection.RemoteIpAddress}",
+            _ => new FixedWindowRateLimiterOptions { Window = TimeSpan.FromMinutes(1), PermitLimit = 120 }));
 
     // Feedback can be sent without an account, so it has its own small window
     options.AddPolicy("feedback", httpContext =>
@@ -192,6 +259,10 @@ app.Logger.LogInformation(
 app.UseResponseCompression();
 
 app.UseExceptionHandler();
+
+// Request counts and durations per route for Prometheus; /metrics itself needs METRICS_TOKEN
+app.UseMetricsAccess(MetricsAccess.Token());
+app.UseHttpMetrics();
 
 app.UseCors("AllowFrontend");
 
@@ -250,7 +321,12 @@ app.MapAiEndpoints();
 app.MapFeedbackEndpoints();
 app.MapNotificationEndpoints();
 app.MapLibraryEndpoints();
+app.MapReviewEndpoints();
 app.MapAdminEndpoints();
+app.MapAccountEndpoints();
+app.MapMetrics(MetricsAccess.Path);
+app.MapProfileEndpoints();
+app.MapBillingEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -276,6 +352,14 @@ if (!app.Environment.IsEnvironment("Testing"))
 
         // Run once on start as well, so cards move to a newly configured algorithm right away
         recurringJobManager.Trigger("reschedule-flashcards");
+
+        recurringJobManager.AddOrUpdate<QuestionReviewJob>(
+            "question-reviews",
+            x => x.Run(),
+            Cron.Daily(2, 30));
+
+        // On start too: past attempts get their reviews without waiting for the night
+        recurringJobManager.Trigger("question-reviews");
 
         recurringJobManager.AddOrUpdate<AiUsageCleanupJob>(
             "cleanup-ai-usage",

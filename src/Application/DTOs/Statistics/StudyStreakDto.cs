@@ -8,4 +8,11 @@ public class StudyStreakDto
     public bool StudiedToday { get; set; }
     // Last 14 days, oldest first, the last one is today
     public List<bool> RecentDays { get; set; } = [];
+    // Same days: missed but covered by a streak freeze
+    public List<bool> RecentFrozenDays { get; set; } = [];
+    public int FreezesLeft { get; set; }
+    public int FreezesPerMonth { get; set; }
+    // With a goal a day counts once this many reviews are done; null means any study counts
+    public int? DailyGoal { get; set; }
+    public int ReviewsToday { get; set; }
 }

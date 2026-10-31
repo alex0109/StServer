@@ -44,7 +44,8 @@ public class AnswerGradingTests
         var result = await _sut.EvaluateAnswerAsync(
             "Що таке фотосинтез?",
             "Фотосинтез перетворює світло на хімічну енергію",
-            "Рослини з світла роблять енергію");
+            "Рослини з світла роблять енергію",
+            TestContext.Current.CancellationToken);
 
         result.IsCorrect.ShouldBeTrue();
         result.Score.ShouldBe(92);
@@ -60,7 +61,8 @@ public class AnswerGradingTests
         var result = await _sut.EvaluateAnswerAsync(
             "Що таке фотосинтез?",
             "Фотосинтез перетворює світло на хімічну енергію",
-            "Рослини з світла роблять енергію");
+            "Рослини з світла роблять енергію",
+            TestContext.Current.CancellationToken);
 
         result.IsCorrect.ShouldBeFalse();
         result.Score.ShouldBe(55);
@@ -76,7 +78,8 @@ public class AnswerGradingTests
         var result = await _sut.EvaluateAnswerAsync(
             "Що таке фотосинтез?",
             "Фотосинтез перетворює світло на хімічну енергію",
-            "Рослини з світла роблять енергію");
+            "Рослини з світла роблять енергію",
+            TestContext.Current.CancellationToken);
 
         result.IsCorrect.ShouldBeFalse();
         result.Method.ShouldBe(EvaluationMethod.None);
@@ -91,7 +94,8 @@ public class AnswerGradingTests
         var result = await _sut.EvaluateAnswerAsync(
             "When did World War II end?",
             "World War II ended in 1945",
-            "World War II ended in 1946");
+            "World War II ended in 1946",
+            TestContext.Current.CancellationToken);
 
         result.IsCorrect.ShouldBeFalse();
         result.Method.ShouldBe(EvaluationMethod.AI);
@@ -101,7 +105,11 @@ public class AnswerGradingTests
     [Fact]
     public async Task ClearlyRight_DoesNotCallAi()
     {
-        var result = await _sut.EvaluateAnswerAsync("q", "Photosynthesis", "photosyntesis");
+        var result = await _sut.EvaluateAnswerAsync(
+            "q",
+            "Photosynthesis",
+            "photosyntesis",
+            TestContext.Current.CancellationToken);
 
         result.IsCorrect.ShouldBeTrue();
         result.Method.ShouldBe(EvaluationMethod.Fuzzy);
@@ -111,7 +119,11 @@ public class AnswerGradingTests
     [Fact]
     public async Task ClearlyWrong_DoesNotCallAi()
     {
-        var result = await _sut.EvaluateAnswerAsync("q", "Photosynthesis turns light into chemical energy", "xyz");
+        var result = await _sut.EvaluateAnswerAsync(
+            "q",
+            "Photosynthesis turns light into chemical energy",
+            "xyz",
+            TestContext.Current.CancellationToken);
 
         result.IsCorrect.ShouldBeFalse();
         _grader.VerifyNoOtherCalls();
@@ -125,7 +137,8 @@ public class AnswerGradingTests
         var result = await sut.EvaluateAnswerAsync(
             "q",
             "Фотосинтез перетворює світло на хімічну енергію",
-            "Рослини з світла роблять енергію");
+            "Рослини з світла роблять енергію",
+            TestContext.Current.CancellationToken);
 
         result.ShouldBeEquivalentTo(new AnswerEvaluationResult { IsCorrect = false, Score = 0, Method = EvaluationMethod.None });
     }

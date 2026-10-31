@@ -16,9 +16,10 @@ public static class LimitEndpoints
         // What the current user already uses of every limit
         limitGroup.MapGet("/usage", GetUsage);
 
-        static IResult GetLimits()
+        static async Task<IResult> GetLimits(IUserContext user, IContentLimits limits, ISubscriptionTierProvider tiers)
         {
-            return TypedResults.Ok(UserLimitsMapper.ToDto());
+            var tier = await tiers.GetTierAsync(user.UserId);
+            return TypedResults.Ok(UserLimitsMapper.ToDto(tier, await limits.ForUserAsync(user.UserId), limits.CountLibraryImports));
         }
 
         static async Task<IResult> GetUsage(ILimitsService service)

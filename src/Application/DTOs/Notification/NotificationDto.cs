@@ -28,6 +28,8 @@ public class TodayDto
     public required string LocalDate { get; init; }
     public required int DueWords { get; init; }
     public required int NewWords { get; init; }
+    // Questions whose next review is due by the end of the day
+    public int DueQuestions { get; init; }
     public required List<DictionaryDueDto> Dictionaries { get; init; }
     public required int StreakDays { get; init; }
     public required bool StudiedToday { get; init; }

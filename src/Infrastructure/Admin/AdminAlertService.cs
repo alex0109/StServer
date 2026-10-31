@@ -61,6 +61,9 @@ public class AdminAlertService : IAdminAlerts
             $"Запит до адмін-API відхилено: {reason}. Наступні спроби з цього акаунта протягом години окремо не надсилаються.");
     }
 
+    public Task SubscriptionChangedAsync(string summary) =>
+        SendAsync("Зміна тарифу в адмінці Studytracker", summary);
+
     private async Task SendAsync(string subject, string text)
     {
         var to = string.IsNullOrWhiteSpace(_options.AdminAlertsTo) ? _options.FeedbackTo : _options.AdminAlertsTo;

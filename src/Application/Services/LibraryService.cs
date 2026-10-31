@@ -8,6 +8,7 @@ using Application.Mappers;
 using Domain.Entities;
 using Domain.Utility.Library;
 using Domain.Utility.Material;
+using Application.Observability;
 
 namespace Application.Services;
 
@@ -21,19 +22,25 @@ public class LibraryService : ILibraryService
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
     private readonly TimeProvider _time;
+    private readonly IContentLimits _limits;
+    private readonly IUserProfileService? _profiles;
 
     public LibraryService(
         ILibraryRepository library,
         IMaterialRepository materials,
         IUserContext user,
         ILimitLock limitLock,
-        TimeProvider time)
+        TimeProvider time,
+        IContentLimits? limits = null,
+        IUserProfileService? profiles = null)
     {
         _library = library;
         _materials = materials;
         _user = user;
         _limitLock = limitLock;
         _time = time;
+        _limits = limits ?? ContentLimits.Free(materials);
+        _profiles = profiles;
     }
 
     public async Task<LibraryPageDto> ListAsync(string? search, MaterialType? type, int page, int pageSize)
@@ -84,11 +91,10 @@ public class LibraryService : ILibraryService
         var item = await _library.GetItemAsync(itemId);
         if (item is null || item.Status != LibraryItemStatus.Published) return null;
 
-        // Same lock and limit as creating a material: an import takes a material place
+        // Same lock as creating a material; library copies have their own limit unless configured otherwise
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Materials, userId);
 
-        if (await _materials.CountByUserIdAsync(userId) >= UserLimits.MaxMaterials)
-            throw new LimitExceededException($"Material limit reached: {UserLimits.MaxMaterials}");
+        await _limits.EnsureMaterialPlaceAsync(userId, libraryCopy: true);
 
         var copy = LibrarySnapshotMapper.ToMaterial(
             LibrarySnapshotJson.FromDocument(item.Snapshot), item.Id, userId, _time.GetUtcNow().UtcDateTime);
@@ -97,6 +103,7 @@ public class LibraryService : ILibraryService
         await _materials.AddAsync(copy);
         await _materials.SaveChangesAsync();
         await limitLock.CommitAsync();
+        AppMetrics.MaterialCreated("library");
 
         return MaterialMapper.ToDto(copy);
     }
@@ -128,6 +135,12 @@ public class LibraryService : ILibraryService
         await _library.AddRequestAsync(request);
         await _library.SaveChangesAsync();
         await limitLock.CommitAsync();
+
+        // Next time the form is filled in from the profile
+        if (_profiles is not null && request.Type != LibraryRequestType.Remove)
+        {
+            await _profiles.RememberNicknameAsync(userId, request.AuthorNickname);
+        }
 
         return LibraryRules.ToDto(request);
     }

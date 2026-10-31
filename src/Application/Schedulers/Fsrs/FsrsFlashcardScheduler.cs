@@ -43,8 +43,14 @@ public class FsrsFlashcardScheduler : IFlashcardScheduler
 
     public FlashcardAlgorithm Algorithm => FlashcardAlgorithm.Fsrs;
 
-    public FlashcardCard Schedule(FlashcardCard card, ReviewRating rating, DateTime now)
+    public FlashcardCard Schedule(FlashcardCard card, ReviewRating rating, DateTime now) =>
+        Schedule(card, rating, now, null);
+
+    // A user's retention changes only the next intervals; memory state is the same either way
+    public FlashcardCard Schedule(FlashcardCard card, ReviewRating rating, DateTime now, SchedulerOverrides? overrides)
     {
+        var retention = overrides?.DesiredRetention ?? _options.DesiredRetention;
+
         if (rating == ReviewRating.Manual)
             throw new ArgumentException("Manual rating can't be scheduled", nameof(rating));
 
@@ -52,13 +58,13 @@ public class FsrsFlashcardScheduler : IFlashcardScheduler
 
         var (state, step, interval) = card.State switch
         {
-            FlashcardState.Review => NextFromReview(rating, stability),
+            FlashcardState.Review => NextFromReview(rating, stability, retention),
             FlashcardState.Relearning => NextFromSteps(
-                card.LearningSteps, rating, stability, _relearningSteps, FlashcardState.Relearning),
+                card.LearningSteps, rating, stability, retention, _relearningSteps, FlashcardState.Relearning),
             // New cards start at the first learning step
             _ => NextFromSteps(
                 card.State == FlashcardState.New ? 0 : card.LearningSteps,
-                rating, stability, _learningSteps, FlashcardState.Learning)
+                rating, stability, retention, _learningSteps, FlashcardState.Learning)
         };
 
         if (state == FlashcardState.Review && _options.EnableFuzzing)
@@ -105,20 +111,20 @@ public class FsrsFlashcardScheduler : IFlashcardScheduler
     }
 
     private (FlashcardState State, int Step, TimeSpan Interval) NextFromReview(
-        ReviewRating rating, double stability)
+        ReviewRating rating, double stability, double retention)
     {
         if (rating == ReviewRating.Again && _relearningSteps.Length > 0)
             return (FlashcardState.Relearning, 0, _relearningSteps[0]);
 
-        return (FlashcardState.Review, 0, ReviewInterval(stability));
+        return (FlashcardState.Review, 0, ReviewInterval(stability, retention));
     }
 
     private (FlashcardState State, int Step, TimeSpan Interval) NextFromSteps(
-        int step, ReviewRating rating, double stability, TimeSpan[] steps, FlashcardState stepState)
+        int step, ReviewRating rating, double stability, double retention, TimeSpan[] steps, FlashcardState stepState)
     {
         // No steps configured, or steps were shortened after the card started them
         if (steps.Length == 0 || (step >= steps.Length && rating != ReviewRating.Again))
-            return (FlashcardState.Review, 0, ReviewInterval(stability));
+            return (FlashcardState.Review, 0, ReviewInterval(stability, retention));
 
         switch (rating)
         {
@@ -135,17 +141,17 @@ public class FsrsFlashcardScheduler : IFlashcardScheduler
 
             case ReviewRating.Good:
                 return step + 1 >= steps.Length
-                    ? (FlashcardState.Review, 0, ReviewInterval(stability))
+                    ? (FlashcardState.Review, 0, ReviewInterval(stability, retention))
                     : (stepState, step + 1, steps[step + 1]);
 
             default:
-                return (FlashcardState.Review, 0, ReviewInterval(stability));
+                return (FlashcardState.Review, 0, ReviewInterval(stability, retention));
         }
     }
 
-    private TimeSpan ReviewInterval(double stability) =>
+    private TimeSpan ReviewInterval(double stability, double retention) =>
         TimeSpan.FromDays(FsrsMath.NextIntervalDays(
-            stability, _options.DesiredRetention, _options.MaximumIntervalDays));
+            stability, retention, _options.MaximumIntervalDays));
 
     // Spreads reviews of cards learned together over a few days
     private TimeSpan Fuzz(TimeSpan interval)

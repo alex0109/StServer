@@ -32,7 +32,7 @@ public class AiServiceTests
         _client.Setup(x => x.CompleteAsync(It.IsAny<IAiPrompt<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new AiResult<string>("value", completion));
 
-        var result = await _sut.RunAsync(new AiTestPrompt());
+        var result = await _sut.RunAsync(new AiTestPrompt(), TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("value");
         _usage.Verify(x => x.CompleteAsync(_usageId, completion), Times.Once);
@@ -67,6 +67,6 @@ public class AiServiceTests
         _client.Setup(x => x.CompleteAsync(It.IsAny<IAiPrompt<string>>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new AiUnavailableException("down"));
 
-        (await _sut.TryRunAsync(new AiTestPrompt())).ShouldBeNull();
+        (await _sut.TryRunAsync(new AiTestPrompt(), TestContext.Current.CancellationToken)).ShouldBeNull();
     }
 }

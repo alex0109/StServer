@@ -27,6 +27,14 @@ public interface IStatisticsRepository
     Task<List<DateTime>> GetActivityTimesAsync(Guid userId, DateTime? from = null);
 
     Task<List<DictionaryDueDto>> GetDueWordsAsync(Guid userId, DateTime dueBeforeUtc);
+    // Active questions whose next review is due by the given time
+    Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc);
 
     Task<int> GetReviewsCountAsync(Guid userId, DateTime from, DateTime to);
+
+    // Every review of a word or a question (attempt answers included), in UTC: the unit of the daily goal
+    Task<List<DateTime>> GetReviewTimesAsync(Guid userId, DateTime? from = null);
+
+    // Reviews in a span, and how many of them were words seen for the first time
+    Task<(int Reviews, int NewWords)> CountReviewsAsync(Guid userId, DateTime from, DateTime to);
 }

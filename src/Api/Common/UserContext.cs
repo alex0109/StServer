@@ -35,6 +35,9 @@ public class UserContext : IUserContext
 
     public string? Claim(string type) => _http.HttpContext?.User.FindFirst(type)?.Value;
 
+    public IReadOnlyList<string> Claims(string type) =>
+        _http.HttpContext?.User.FindAll(type).Select(x => x.Value).ToList() ?? [];
+
     public string? Email
     {
         get

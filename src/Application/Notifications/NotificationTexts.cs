@@ -6,38 +6,58 @@ namespace Application.Notifications;
 // Email texts in the languages of the site. In-app reminders are worded on the client
 public static class NotificationTexts
 {
-    public record EmailText(string Subject, string Title, List<string> Lines, string Button);
+    // Path is where the button leads in the app
+    public record EmailText(string Subject, string Title, List<string> Lines, string Button, string Path = "/statistics");
 
-    public static EmailText DailyReview(string language, DailyReviewData data) => language switch
+    // Words and questions due today; the button opens the "Today" queue
+    public static EmailText DailyReview(string language, DailyReviewData data)
     {
-        "uk" => new(
-            $"📚 Сьогодні на тебе чекають {data.DueWords} {Uk(data.DueWords, "слово", "слова", "слів")}",
-            "Час повторити слова",
-            [
-                $"Сьогодні час повторити {data.DueWords} {Uk(data.DueWords, "слово", "слова", "слів")}"
-                + (data.NewWords > 0 ? $" і ще є {data.NewWords} {Uk(data.NewWords, "нове", "нові", "нових")}." : "."),
-                "Кілька хвилин зараз — і вони залишаться в пам'яті на тижні.",
-            ],
-            "Повторити зараз"),
-        "nb" => new(
-            $"📚 {data.DueWords} ord venter på deg i dag",
-            "Tid for å repetere",
-            [
-                $"I dag er det på tide å repetere {data.DueWords} ord"
-                + (data.NewWords > 0 ? $", og {data.NewWords} nye venter også." : "."),
-                "Noen minutter nå, og de sitter i minnet i ukevis.",
-            ],
-            "Repeter nå"),
-        _ => new(
-            $"📚 {data.DueWords} {En(data.DueWords, "word is", "words are")} waiting for you today",
-            "Time to review",
-            [
-                $"Today it's time to review {data.DueWords} {En(data.DueWords, "word", "words")}"
-                + (data.NewWords > 0 ? $", and {data.NewWords} new {En(data.NewWords, "one is", "ones are")} waiting too." : "."),
-                "A few minutes now keeps them in your memory for weeks.",
-            ],
-            "Review now"),
-    };
+        var (words, questions, fresh) = (data.DueWords, data.DueQuestions, data.NewWords);
+
+        return language switch
+        {
+            "uk" => new(
+                $"📚 Сьогодні на тебе чекають {Join(UkWords(words), UkQuestions(questions), " і ")}",
+                "Час повторити",
+                [
+                    $"Сьогодні час повторити {Join(UkWords(words), UkQuestions(questions), " і ")}"
+                    + (fresh > 0 ? $", а ще є {fresh} {Uk(fresh, "нове слово", "нові слова", "нових слів")}." : "."),
+                    "Кілька хвилин зараз — і вони залишаться в пам'яті на тижні.",
+                ],
+                "Повторити зараз",
+                TodayPath),
+            "nb" => new(
+                $"📚 {Join(words > 0 ? $"{words} ord" : null, questions > 0 ? $"{questions} spørsmål" : null, " og ")} venter på deg i dag",
+                "Tid for å repetere",
+                [
+                    $"I dag er det på tide å repetere {Join(words > 0 ? $"{words} ord" : null, questions > 0 ? $"{questions} spørsmål" : null, " og ")}"
+                    + (fresh > 0 ? $", og {fresh} nye ord venter også." : "."),
+                    "Noen minutter nå, og de sitter i minnet i ukevis.",
+                ],
+                "Repeter nå",
+                TodayPath),
+            _ => new(
+                $"📚 {Join(EnWords(words), EnQuestions(questions), " and ")} {(words + questions == 1 ? "is" : "are")} waiting for you today",
+                "Time to review",
+                [
+                    $"Today it's time to review {Join(EnWords(words), EnQuestions(questions), " and ")}"
+                    + (fresh > 0 ? $", and {fresh} new {En(fresh, "word is", "words are")} waiting too." : "."),
+                    "A few minutes now keeps them in your memory for weeks.",
+                ],
+                "Review now",
+                TodayPath),
+        };
+    }
+
+    private const string TodayPath = "/today";
+
+    private static string? UkWords(int n) => n > 0 ? $"{n} {Uk(n, "слово", "слова", "слів")}" : null;
+    private static string? UkQuestions(int n) => n > 0 ? $"{n} {Uk(n, "питання", "питання", "питань")}" : null;
+    private static string? EnWords(int n) => n > 0 ? $"{n} {En(n, "word", "words")}" : null;
+    private static string? EnQuestions(int n) => n > 0 ? $"{n} {En(n, "question", "questions")}" : null;
+
+    private static string Join(string? first, string? second, string and) =>
+        first is not null && second is not null ? $"{first}{and}{second}" : first ?? second ?? "";
 
     public static EmailText StreakAtRisk(string language, StreakAtRiskData data) => language switch
     {

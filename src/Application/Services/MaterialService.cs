@@ -3,12 +3,14 @@ using Application.DTOs.Material;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
+using Application.Observability;
 
 namespace Application.Services;
 
 public class MaterialService : IMaterialService
 {
     private readonly IMaterialRepository _repo;
+    private readonly IContentLimits _limits;
     private readonly IAssessmentRepository _assessmentRepo;
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
@@ -17,12 +19,14 @@ public class MaterialService : IMaterialService
         IMaterialRepository repo,
         IAssessmentRepository assessmentRepo,
         IUserContext user,
-        ILimitLock limitLock)
+        ILimitLock limitLock,
+        IContentLimits? limits = null)
     {
         _repo = repo;
         _assessmentRepo = assessmentRepo;
         _user = user;
         _limitLock = limitLock;
+        _limits = limits ?? ContentLimits.Free(repo);
     }
 
     public async Task<List<MaterialResponseDto>> GetAllAsync()
@@ -51,12 +55,7 @@ public class MaterialService : IMaterialService
     {
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Materials, _user.UserId);
 
-        var count = await _repo.CountByUserIdAsync(_user.UserId);
-
-        if (count >= UserLimits.MaxMaterials)
-        {
-            throw new LimitExceededException($"Material limit reached: {UserLimits.MaxMaterials}");
-        }
+        await _limits.EnsureMaterialPlaceAsync(_user.UserId, libraryCopy: false);
         
         var material = MaterialMapper.ToEntity(materialCreateDto, _user.UserId);
         await _repo.AddAsync(material);
@@ -66,6 +65,7 @@ public class MaterialService : IMaterialService
         
         await _repo.SaveChangesAsync();
         await limitLock.CommitAsync();
+        AppMetrics.MaterialCreated("manual");
         
         return MaterialMapper.ToDto(material);
     }

@@ -12,24 +12,41 @@ public class StudyActivityService : IStudyActivityService
     private const int EveningHour = 18;
 
     private readonly IStatisticsRepository _repo;
+    private readonly ILearningSettingsProvider? _learning;
 
-    public StudyActivityService(IStatisticsRepository repo)
+    public StudyActivityService(IStatisticsRepository repo, ILearningSettingsProvider? learning = null)
     {
         _repo = repo;
+        _learning = learning;
     }
 
     public async Task<StudyStreakDto> GetStreakAsync(Guid userId, TimeZoneInfo timeZone, DateTime utcNow)
     {
-        var days = StudyCalendar.ToLocalDays(await _repo.GetActivityTimesAsync(userId), timeZone);
+        var settings = _learning is null ? null : await _learning.GetAsync(userId);
+        var goal = settings?.DailyGoal;
+        var freezes = settings?.StreakFreezesPerMonth ?? 0;
         var today = UserTimeZone.LocalDate(utcNow, timeZone);
-        var (current, longest) = StudyCalendar.Streak(days, today);
+
+        // Without a goal any study makes a day, exactly as before goals existed; then only today's reviews are needed
+        var reviews = await _repo.GetReviewTimesAsync(
+            userId, goal is null ? UserTimeZone.StartOfLocalDayUtc(today, timeZone) : null);
+        var days = goal is int target
+            ? StudyCalendar.DaysWithGoal(reviews, timeZone, target)
+            : StudyCalendar.ToLocalDays(await _repo.GetActivityTimesAsync(userId), timeZone);
+
+        var streak = StudyCalendar.Streak(days, today, freezes);
 
         return new StudyStreakDto
         {
-            CurrentStreakDays = current,
-            LongestStreakDays = longest,
+            CurrentStreakDays = streak.Current,
+            LongestStreakDays = streak.Longest,
             StudiedToday = days.Contains(today),
             RecentDays = StudyCalendar.RecentDays(days, today, RecentDaysCount),
+            RecentFrozenDays = StudyCalendar.RecentDays(streak.Frozen, today, RecentDaysCount),
+            FreezesLeft = streak.FreezesLeftThisMonth,
+            FreezesPerMonth = freezes,
+            DailyGoal = goal,
+            ReviewsToday = reviews.Count(x => UserTimeZone.LocalDate(x, timeZone) == today),
         };
     }
 
@@ -38,7 +55,8 @@ public class StudyActivityService : IStudyActivityService
         var local = UserTimeZone.ToLocal(utcNow, timeZone);
         var today = DateOnly.FromDateTime(local);
 
-        var dictionaries = await _repo.GetDueWordsAsync(userId, UserTimeZone.EndOfLocalDayUtc(today, timeZone));
+        var endOfDay = UserTimeZone.EndOfLocalDayUtc(today, timeZone);
+        var dictionaries = await _repo.GetDueWordsAsync(userId, endOfDay);
         var streak = await GetStreakAsync(userId, timeZone, utcNow);
 
         return new TodayDto
@@ -46,6 +64,7 @@ public class StudyActivityService : IStudyActivityService
             LocalDate = today.ToString("yyyy-MM-dd"),
             DueWords = dictionaries.Sum(x => x.Due),
             NewWords = dictionaries.Sum(x => x.New),
+            DueQuestions = await _repo.CountDueQuestionsAsync(userId, endOfDay),
             Dictionaries = dictionaries.Take(MaxDictionariesInReminder).ToList(),
             StreakDays = streak.CurrentStreakDays,
             StudiedToday = streak.StudiedToday,

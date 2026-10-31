@@ -24,7 +24,9 @@ public class AiClientTests
         var first = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", """{"value":"a"}""")));
         var second = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        var result = await Create(Order("A", "B"), first, second).CompleteAsync(new AiTestPrompt());
+        var result = await Create(Order("A", "B"), first, second).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("a");
         second.Calls.ShouldBe(0);
@@ -36,7 +38,9 @@ public class AiClientTests
         var first = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", """{"value":"a"}""")));
         var second = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        var result = await Create(Order("B", "A"), first, second).CompleteAsync(new AiTestPrompt());
+        var result = await Create(Order("B", "A"), first, second).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("b");
         first.Calls.ShouldBe(0);
@@ -48,7 +52,9 @@ public class AiClientTests
         var failing = new FakeAiProvider("A", () => throw new AiProviderException("A API error 529"));
         var working = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        var result = await Create(Order("A", "B"), failing, working).CompleteAsync(new AiTestPrompt());
+        var result = await Create(Order("A", "B"), failing, working).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("b");
         result.Completion.Provider.ShouldBe("B");
@@ -60,7 +66,9 @@ public class AiClientTests
         var broken = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", "not json")));
         var working = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        var result = await Create(Order("A", "B"), broken, working).CompleteAsync(new AiTestPrompt());
+        var result = await Create(Order("A", "B"), broken, working).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("b");
     }
@@ -71,7 +79,9 @@ public class AiClientTests
         var broken = new FakeAiProvider("A", () => throw new InvalidOperationException("sdk bug"));
         var working = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        var result = await Create(Order("A", "B"), broken, working).CompleteAsync(new AiTestPrompt());
+        var result = await Create(Order("A", "B"), broken, working).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("b");
     }
@@ -100,7 +110,9 @@ public class AiClientTests
         var working = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
         var options = new AiOptions { ProviderOrder = ["A", "B"], RequestTimeoutSeconds = 0 };
 
-        var result = await Create(options, slow, working).CompleteAsync(new AiTestPrompt());
+        var result = await Create(options, slow, working).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         result.Value.ShouldBe("b");
     }
@@ -111,7 +123,9 @@ public class AiClientTests
         var notConfigured = new FakeAiProvider("A", () => throw new AiProviderException("no key"), isConfigured: false);
         var working = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        await Create(Order("A", "B"), notConfigured, working).CompleteAsync(new AiTestPrompt());
+        await Create(Order("A", "B"), notConfigured, working).CompleteAsync(
+            new AiTestPrompt(),
+            TestContext.Current.CancellationToken);
 
         notConfigured.Calls.ShouldBe(0);
     }
@@ -165,11 +179,11 @@ public class AiClientTests
 
         for (var i = 0; i < 3; i++)
         {
-            await client.CompleteAsync(new AiTestPrompt());
+            await client.CompleteAsync(new AiTestPrompt(), TestContext.Current.CancellationToken);
         }
 
         // Circuit is open: the next request goes straight to the working provider
-        await client.CompleteAsync(new AiTestPrompt());
+        await client.CompleteAsync(new AiTestPrompt(), TestContext.Current.CancellationToken);
 
         failing.Calls.ShouldBe(3);
         working.Calls.ShouldBe(4);

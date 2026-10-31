@@ -18,6 +18,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _db.Questions
             .Include(q => q.Options)
+            .Include(q => q.Progress)
             .Where(x => x.MaterialId == materialId && x.UserId == userId)
             .ToListAsync();
     }
@@ -26,6 +27,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _db.Questions
             .Include(q => q.Options)
+            .Include(q => q.Progress)
             .Where(x => x.MaterialId == materialId && x.UserId == userId && x.IsActive == true)
             .ToListAsync();
     }
@@ -34,6 +36,7 @@ public class QuestionRepository : IQuestionRepository
     {
         return await _db.Questions
             .Include(m => m.Options)
+            .Include(m => m.Progress)
             .FirstOrDefaultAsync(x => x.MaterialId == materialId && x.Id == id && x.UserId == userId);
     }
     

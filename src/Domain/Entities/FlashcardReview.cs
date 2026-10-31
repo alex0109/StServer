@@ -5,7 +5,7 @@ namespace Domain.Entities;
 
 // FSRS review log. Prev* fields keep the card state before the review,
 // they are needed by the FSRS optimizer and to roll the review back on undo
-public class FlashcardReview
+public class FlashcardReview : IReviewLogEntry
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }

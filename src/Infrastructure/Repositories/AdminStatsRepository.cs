@@ -144,4 +144,9 @@ public class AdminStatsRepository : IAdminStatsRepository
         var rows = await moments.GroupBy(x => x.Date).Select(g => new { Day = g.Key, Count = g.Count() }).ToListAsync();
         return rows.ToDictionary(x => DateOnly.FromDateTime(x.Day), x => x.Count);
     }
+
+    public async Task<int> CountManualAcceptsAsync(DateTime since)
+    {
+        return await _db.Results.CountAsync(r => r.OverriddenAt != null && r.OverriddenAt >= since);
+    }
 }

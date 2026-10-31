@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Material;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -153,8 +154,8 @@ public class MaterialServiceTests
     public async Task CreateAsync_LimitReached_ThrowsException()
     {
         _materialRepo
-            .Setup(x => x.CountByUserIdAsync(_userId))
-            .ReturnsAsync(UserLimits.MaxMaterials);
+            .Setup(x => x.CountOwnByUserIdAsync(_userId))
+            .ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value);
 
         var dto = new MaterialCreateDto
         {
@@ -537,7 +538,7 @@ public class MaterialServiceTests
     [Fact]
     public async Task CreateAsync_CountsUnderUserLockAndCommits()
     {
-        _materialRepo.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(UserLimits.MaxMaterials - 1);
+        _materialRepo.Setup(x => x.CountOwnByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value - 1);
 
         await _sut.CreateAsync(new MaterialCreateDto { Title = "Last one", Type = MaterialType.article, Status = MaterialStatus.tolearn });
 
@@ -548,7 +549,7 @@ public class MaterialServiceTests
     [Fact]
     public async Task CreateAsync_LimitReached_DoesNotAddOrCommit()
     {
-        _materialRepo.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(UserLimits.MaxMaterials);
+        _materialRepo.Setup(x => x.CountOwnByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateAsync(new MaterialCreateDto { Title = "One too many", Type = MaterialType.article, Status = MaterialStatus.tolearn }));

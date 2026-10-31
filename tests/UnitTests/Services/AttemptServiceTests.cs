@@ -83,6 +83,7 @@ public class AttemptServiceTests
         var result = await _sut.GetFinishedAttempts(Guid.NewGuid());
 
 
+        result.ShouldNotBeNull();
         result.Count.ShouldBe(1);
 
         _scoring.Verify(x =>

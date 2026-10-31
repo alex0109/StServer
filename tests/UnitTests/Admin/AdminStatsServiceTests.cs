@@ -132,5 +132,7 @@ public class AdminStatsServiceTests
         public Task<List<AiUsageGroupRow>> GetAiUsageTotalsAsync() => Task.FromResult(AiTotals);
 
         public Task<List<AiMonthlyRow>> GetAiMonthlyAsync() => Task.FromResult(Monthly);
+
+        public Task<int> CountManualAcceptsAsync(DateTime since) => Task.FromResult(0);
     }
 }

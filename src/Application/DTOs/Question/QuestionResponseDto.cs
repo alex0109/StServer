@@ -22,4 +22,5 @@ public class QuestionResponseDto
     public bool IsActive { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    public QuestionProgressDto? Progress { get; set; }
 }

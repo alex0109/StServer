@@ -8,6 +8,11 @@ public interface IFlashcardService
 
     Task<FlashcardSessionResponseDto?> StartSessionAsync(Guid dictionaryId, FlashcardSessionCreateDto dto);
 
+    // Words from all dictionaries: due by the given time first, then at most newLimit new ones.
+    // Custom mode takes the given words from any dictionary
+    Task<FlashcardSessionResponseDto> StartTodaySessionAsync(
+        FlashcardSessionCreateDto dto, DateTime dueByUtc, int newLimit, int maxCards);
+
     Task<FlashcardSessionSummaryDto?> GetSessionAsync(Guid sessionId);
 
     Task<FlashcardSessionSummaryDto?> FinishSessionAsync(Guid sessionId);

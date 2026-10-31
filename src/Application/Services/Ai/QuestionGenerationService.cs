@@ -14,6 +14,7 @@ namespace Application.Services.Ai;
 public class QuestionGenerationService : IQuestionGenerationService
 {
     private readonly IQuestionRepository _questionRepository;
+    private readonly IContentLimits _limits;
     private readonly IMaterialRepository _materialRepository;
     private readonly INoteRepository _noteRepository;
     private readonly IOptionService _optionService;
@@ -28,7 +29,8 @@ public class QuestionGenerationService : IQuestionGenerationService
         IOptionService optionService,
         IAiService ai,
         IUserContext user,
-        ILimitLock limitLock)
+        ILimitLock limitLock,
+        IContentLimits? limits = null)
     {
         _questionRepository = questionRepository;
         _materialRepository = materialRepository;
@@ -37,6 +39,7 @@ public class QuestionGenerationService : IQuestionGenerationService
         _ai = ai;
         _user = user;
         _limitLock = limitLock;
+        _limits = limits ?? ContentLimits.Free();
     }
 
     public async Task<List<QuestionResponseDto>?> GenerateAsync(
@@ -66,9 +69,10 @@ public class QuestionGenerationService : IQuestionGenerationService
         }
 
         // Checked before the AI call too, so a full material does not waste a request
-        var free = UserLimits.MaxQuestionsPerMaterial - await _questionRepository.CountActiveByMaterialIdAsync(materialId);
+        var max = (await _limits.ForUserAsync(userId)).QuestionsPerMaterial;
+        var free = (max ?? int.MaxValue) - await _questionRepository.CountActiveByMaterialIdAsync(materialId);
         if (free <= 0)
-            throw new LimitExceededException($"Question limit reached: {UserLimits.MaxQuestionsPerMaterial} per material");
+            throw new LimitExceededException($"Question limit reached: {max} per material");
 
         var existingTitles = (await _questionRepository.GetActiveQuestionsAsync(materialId, userId))
             .Select(x => x.Title)
@@ -90,9 +94,9 @@ public class QuestionGenerationService : IQuestionGenerationService
 
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Questions, materialId);
 
-        free = UserLimits.MaxQuestionsPerMaterial - await _questionRepository.CountActiveByMaterialIdAsync(materialId);
+        free = (max ?? int.MaxValue) - await _questionRepository.CountActiveByMaterialIdAsync(materialId);
         if (free <= 0)
-            throw new LimitExceededException($"Question limit reached: {UserLimits.MaxQuestionsPerMaterial} per material");
+            throw new LimitExceededException($"Question limit reached: {max} per material");
 
         var questions = generated.Take(free).Select(x => ToEntity(x, materialId, dto.NoteId, userId)).ToList();
 
@@ -104,7 +108,7 @@ public class QuestionGenerationService : IQuestionGenerationService
         await _questionRepository.SaveChangesAsync();
         await limitLock.CommitAsync();
 
-        return questions.Select(QuestionMapper.ToDto).ToList();
+        return questions.Select(q => QuestionMapper.ToDto(q)).ToList();
     }
 
     // Same mappers and option rules as manual creation

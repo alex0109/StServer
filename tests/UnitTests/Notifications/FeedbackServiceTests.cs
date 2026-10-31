@@ -53,7 +53,7 @@ public class FeedbackServiceTests
         var service = Create();
 
         for (var i = 0; i < FeedbackService.MaxPerMonth + 2; i++)
-            await service.SendAsync(Message());
+            await service.SendAsync(Message(), TestContext.Current.CancellationToken);
 
         _sentCount.ShouldBe(FeedbackService.MaxPerMonth);
     }
@@ -64,10 +64,10 @@ public class FeedbackServiceTests
         var first = Guid.NewGuid();
         _user.Setup(x => x.CurrentUserId).Returns(first);
         for (var i = 0; i < FeedbackService.MaxPerMonth; i++)
-            await Create().SendAsync(Message());
+            await Create().SendAsync(Message(), TestContext.Current.CancellationToken);
 
         _user.Setup(x => x.CurrentUserId).Returns(Guid.NewGuid());
-        await Create().SendAsync(Message());
+        await Create().SendAsync(Message(), TestContext.Current.CancellationToken);
 
         _sentCount.ShouldBe(FeedbackService.MaxPerMonth + 1);
     }
@@ -79,7 +79,7 @@ public class FeedbackServiceTests
         _user.Setup(x => x.ClientIp).Returns("203.0.113.7");
 
         for (var i = 0; i < FeedbackService.MaxPerMonth + 1; i++)
-            await Create().SendAsync(Message());
+            await Create().SendAsync(Message(), TestContext.Current.CancellationToken);
 
         _sentCount.ShouldBe(FeedbackService.MaxPerMonth);
         _log.Keys.ShouldAllBe(key => key.StartsWith("ip:") && !key.Contains("203.0.113.7"));
@@ -133,7 +133,7 @@ public class FeedbackServiceTests
             Email = "olena@example.com",
             Message = "<script>alert(1)</script> Great app!",
             Category = FeedbackCategory.Idea,
-        });
+        }, TestContext.Current.CancellationToken);
 
         _sent.ShouldNotBeNull();
         _sent.To.ShouldBe("owner@example.com");
@@ -147,7 +147,9 @@ public class FeedbackServiceTests
     [Fact]
     public async Task HoneypotFilled_NothingSent()
     {
-        await Create().SendAsync(new FeedbackCreateDto { Message = "Buy cheap things now!!!", Website = "http://spam" });
+        await Create().SendAsync(
+            new FeedbackCreateDto { Message = "Buy cheap things now!!!", Website = "http://spam" },
+            TestContext.Current.CancellationToken);
 
         _sent.ShouldBeNull();
     }

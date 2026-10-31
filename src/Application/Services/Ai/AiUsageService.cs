@@ -2,6 +2,7 @@ using Application.Ai;
 using Application.Constants;
 using Application.DTOs.Ai;
 using Application.Exceptions;
+using Application.Billing;
 using Application.Interfaces;
 using Domain.Entities;
 using Domain.Utility.Ai;
@@ -19,8 +20,12 @@ public class AiUsageService : IAiUsageService
     private readonly AiOptions _options;
     private readonly TimeProvider _time;
 
-    public AiUsageService(IAiUsageRepository repo, ILimitLock limitLock, AiOptions options, TimeProvider time)
+    private readonly ISubscriptionTierProvider? _tiers;
+
+    public AiUsageService(IAiUsageRepository repo, ILimitLock limitLock, AiOptions options, TimeProvider time,
+        ISubscriptionTierProvider? tiers = null)
     {
+        _tiers = tiers;
         _repo = repo;
         _limitLock = limitLock;
         _options = options;
@@ -118,12 +123,10 @@ public class AiUsageService : IAiUsageService
 
     private async Task<SubscriptionTier> GetTierAsync(Guid userId, DateTime now)
     {
-        var subscription = await _repo.GetSubscriptionAsync(userId);
+        // The shared provider decides the plan for limits and quotas alike
+        if (_tiers is not null) return await _tiers.GetTierAsync(userId);
 
-        if (subscription is null) return SubscriptionTier.Free;
-        if (subscription.CurrentPeriodEnd is { } end && end <= now) return SubscriptionTier.Free;
-
-        return subscription.Tier;
+        return SubscriptionRules.EffectiveTier(await _repo.GetSubscriptionAsync(userId), now);
     }
 
     // Quotas reset on the first day of every month, UTC
@@ -136,6 +139,7 @@ public class AiUsageService : IAiUsageService
         AiFeature.AnswerGrading => "answer checks",
         AiFeature.SummaryGeneration => "summary generations",
         AiFeature.MistakeExplanation => "mistake explanations",
+        AiFeature.WordLookup => "word lookups",
         _ => "requests",
     };
 

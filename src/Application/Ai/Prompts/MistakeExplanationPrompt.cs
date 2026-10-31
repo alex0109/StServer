@@ -11,11 +11,14 @@ public class MistakeExplanationPrompt : IAiPrompt<IReadOnlyDictionary<int, strin
     private const int MaxFieldLength = 1000;
 
     private readonly IReadOnlyList<MistakeItem> _items;
+    private readonly string? _language;
     private readonly string _tag = AiContentSanitizer.NewContentTag();
 
-    public MistakeExplanationPrompt(IReadOnlyList<MistakeItem> items)
+    // language is a name from ProfileLanguages, never user text; null keeps the language of the question
+    public MistakeExplanationPrompt(IReadOnlyList<MistakeItem> items, string? language = null)
     {
         _items = items;
+        _language = language;
     }
 
     public AiFeature Feature => AiFeature.MistakeExplanation;
@@ -41,7 +44,7 @@ public class MistakeExplanationPrompt : IAiPrompt<IReadOnlyDictionary<int, strin
 
             Requirements:
             - Return one explanation per item, with the item's number as "index".
-            - Write in the language of the question. Friendly and direct, no praise or filler.
+            - {(_language is null ? "Write in the language of the question." : $"Write in {_language}, whatever language the question is in. Quote words of the question as they are.")} Friendly and direct, no praise or filler.
             - At most 600 characters each.
 
             The items are inside the data tags:

@@ -37,6 +37,43 @@ public class FlashcardRepository : IFlashcardRepository
             .FirstOrDefaultAsync(e => e.Id == entryId && e.Dictionary.UserId == userId);
     }
 
+    public async Task<List<DictionaryEntry>> GetDueEntriesAsync(Guid userId, DateTime dueByUtc, int take)
+    {
+        return await _context.DictionaryEntries
+            .Include(e => e.Progress)
+            .Where(e => e.Dictionary.UserId == userId
+                        && !e.IsArchived
+                        && e.Progress != null
+                        && e.Progress.State != FlashcardState.New
+                        && e.Progress.Due <= dueByUtc)
+            .OrderBy(e => e.Progress!.Due)
+            .Take(take)
+            .ToListAsync();
+    }
+
+    public async Task<List<DictionaryEntry>> GetNewEntriesAsync(Guid userId, int take)
+    {
+        if (take <= 0) return [];
+
+        return await _context.DictionaryEntries
+            .Include(e => e.Progress)
+            .Where(e => e.Dictionary.UserId == userId
+                        && !e.IsArchived
+                        && (e.Progress == null || e.Progress.State == FlashcardState.New))
+            .OrderBy(e => e.CreatedAt)
+            .ThenBy(e => e.Position)
+            .Take(take)
+            .ToListAsync();
+    }
+
+    public async Task<List<DictionaryEntry>> GetEntriesWithProgressAsync(Guid userId, IReadOnlyCollection<Guid> entryIds)
+    {
+        return await _context.DictionaryEntries
+            .Include(e => e.Progress)
+            .Where(e => entryIds.Contains(e.Id) && e.Dictionary.UserId == userId && !e.IsArchived)
+            .ToListAsync();
+    }
+
     public async Task<FlashcardSession?> GetSessionAsync(Guid sessionId, Guid userId)
     {
         return await _context.FlashcardSessions
@@ -61,6 +98,15 @@ public class FlashcardRepository : IFlashcardRepository
             .Where(r => entryIds.Contains(r.EntryId))
             .OrderBy(r => r.ReviewedAt)
             .ThenBy(r => r.Id)
+            .ToListAsync();
+    }
+
+    public async Task<List<Guid>> GetEntryIdsWithProgressAsync(Guid userId)
+    {
+        return await _context.DictionaryEntryProgresses
+            .Where(p => p.UserId == userId)
+            .OrderBy(p => p.EntryId)
+            .Select(p => p.EntryId)
             .ToListAsync();
     }
 

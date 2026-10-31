@@ -67,7 +67,7 @@ public class UserReadCacheTests
         Task<int> Load() => Task.FromResult(++calls);
 
         await _cache.GetOrCreateAsync(_user, "stats", Load, TimeSpan.FromMilliseconds(1));
-        await Task.Delay(20);
+        await Task.Delay(20, TestContext.Current.CancellationToken);
         var again = await _cache.GetOrCreateAsync(_user, "stats", Load, TimeSpan.FromMilliseconds(1));
 
         again.ShouldBe(2);

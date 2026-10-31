@@ -10,7 +10,7 @@ public class StatisticsService : IStatisticsService
     private readonly IStatisticsRepository _repo;
     private readonly IUserContext _user;
     private readonly IStudyActivityService _activity;
-    private readonly INotificationRepository _notificationRepo;
+    private readonly IUserTimeZoneProvider _timeZones;
     private readonly TimeProvider _time;
     private readonly IUserReadCache _cache;
 
@@ -18,14 +18,14 @@ public class StatisticsService : IStatisticsService
         IStatisticsRepository repo,
         IUserContext user,
         IStudyActivityService activity,
-        INotificationRepository notificationRepo,
+        IUserTimeZoneProvider timeZones,
         TimeProvider time,
         IUserReadCache cache)
     {
         _repo = repo;
         _user = user;
         _activity = activity;
-        _notificationRepo = notificationRepo;
+        _timeZones = timeZones;
         _time = time;
         _cache = cache;
     }
@@ -186,11 +186,9 @@ public class StatisticsService : IStatisticsService
     // Days are counted in the user's time zone; a finished attempt or a flashcard review makes a day
     private async Task<StudyStreakDto> BuildStudyStreakAsync()
     {
-        var settings = await _notificationRepo.GetSettingsAsync(_user.UserId);
-
         return await _activity.GetStreakAsync(
             _user.UserId,
-            UserTimeZone.Resolve(settings?.TimeZone),
+            await _timeZones.GetAsync(_user.UserId),
             _time.GetUtcNow().UtcDateTime);
     }
 

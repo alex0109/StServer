@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Tag;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -203,7 +204,7 @@ public class TagServiceTests
     {
         _repo
             .Setup(x => x.CountByUserIdAsync(_userId))
-            .ReturnsAsync(UserLimits.MaxTags);
+            .ReturnsAsync(ContentLimitDefaults.Free.Tags!.Value);
         
         var dto = new TagCreateDto
         {
@@ -379,7 +380,7 @@ public class TagServiceTests
     [Fact]
     public async Task CreateAsync_LimitReached_DoesNotCommit()
     {
-        _repo.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(UserLimits.MaxTags);
+        _repo.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Free.Tags!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateAsync(new TagCreateDto { Name = "biology", Color = "#000000" }));

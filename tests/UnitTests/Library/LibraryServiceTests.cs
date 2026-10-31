@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Limits;
 using Application.DTOs.Library;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -284,7 +285,8 @@ public class LibraryServiceTests
     public async Task Import_RespectsTheMaterialsLimit()
     {
         var item = await PublishedItemAsync();
-        _materials.Setup(x => x.CountByUserIdAsync(_reader)).ReturnsAsync(UserLimits.MaxMaterials);
+        // Library copies have their own limit, apart from the user's own materials
+        _materials.Setup(x => x.CountLibraryCopiesAsync(_reader)).ReturnsAsync(ContentLimitDefaults.Free.LibraryImports!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() => AsUser(_reader).ImportAsync(item.Id));
         item.ImportsCount.ShouldBe(0);
