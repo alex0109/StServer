@@ -30,10 +30,7 @@ public class QuestionReviewService : IQuestionReviewService
         if (attempt.Results.Count == 0) return;
 
         var reviewed = await _repo.GetReviewedQuestionIdsAsync(attempt.Id);
-        var pending = attempt.Results
-            .Where(r => !reviewed.Contains(r.QuestionId))
-            .OrderBy(AnsweredAt)
-            .ToList();
+        var pending = LastAnswers(attempt.Results.Where(r => !reviewed.Contains(r.QuestionId)));
         if (pending.Count == 0) return;
 
         var questions = (await _repo.GetQuestionsWithProgressAsync(
@@ -164,14 +161,15 @@ public class QuestionReviewService : IQuestionReviewService
             var results = await _repo.GetUnreviewedFinishedResultsAsync(BatchSize);
             if (results.Count == 0) break;
 
-            foreach (var result in results)
+            var picked = LastAnswers(results);
+            foreach (var result in picked)
             {
                 await _repo.AddReviewAsync(ToReview(result, result.AttemptId));
                 touched[result.QuestionId] = result.UserId;
             }
 
             await _repo.SaveChangesAsync();
-            added += results.Count;
+            added += picked.Count;
         }
 
         // Replaying the full log fills Prev* snapshots and progress in true time order
@@ -259,6 +257,14 @@ public class QuestionReviewService : IQuestionReviewService
             : UserFlashcardScheduler.For(_schedulers.Current, (await _learning.GetAsync(userId)).Overrides);
 
     private static DateTime AnsweredAt(Result result) => result.LastModifiedAt ?? result.AnsweredAt;
+
+    // Old attempts may hold several results for one question; an attempt reviews a question once
+    // (a unique index says so too), with the last answer given, in answer order
+    private static List<Result> LastAnswers(IEnumerable<Result> results) => results
+        .GroupBy(r => (r.AttemptId, r.QuestionId))
+        .Select(answers => answers.OrderBy(AnsweredAt).ThenBy(r => r.Id).Last())
+        .OrderBy(AnsweredAt)
+        .ToList();
 
     private static QuestionReview ToReview(Result result, Guid attemptId) => new()
     {

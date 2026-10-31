@@ -143,6 +143,35 @@ public class QuestionReviewServiceTests
         question.Progress.Lapses.ShouldBe(0);
     }
 
+    // Old data: two results for one question in one attempt. One review, from the last answer;
+    // two inserts used to break the unique index and stop the whole backfill
+    [Fact]
+    public async Task Backfill_SeveralResultsForOneQuestion_GiveOneReview()
+    {
+        var question = AddQuestion();
+        var attempt = FinishedAttempt(_start, (question, false, ReviewRating.Again), (question, true, ReviewRating.Good));
+        attempt.Results.Last().AnsweredAt = _start.AddMinutes(5);
+
+        (await _sut.BackfillAsync()).ShouldBe(1);
+
+        var review = _repo.Reviews.ShouldHaveSingleItem();
+        review.Rating.ShouldBe(ReviewRating.Good);
+        review.ResultId.ShouldBe(attempt.Results.Last().Id);
+        (await _sut.BackfillAsync()).ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Finishing_WithSeveralResultsForOneQuestion_AddsOneReview()
+    {
+        var question = AddQuestion();
+        var attempt = FinishedAttempt(_start, (question, true, ReviewRating.Easy), (question, false, ReviewRating.Again));
+        attempt.Results.Last().AnsweredAt = _start.AddMinutes(5);
+
+        await _sut.ScheduleFinishedAttemptAsync(attempt);
+
+        _repo.Reviews.ShouldHaveSingleItem().Rating.ShouldBe(ReviewRating.Again);
+    }
+
     [Fact]
     public async Task Backfill_RatesOldAnswersByCorrectness()
     {
