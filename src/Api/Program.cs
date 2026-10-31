@@ -256,6 +256,24 @@ app.Logger.LogInformation(
     string.Join(", ", app.Services.GetServices<IAiProvider>()
         .Select(x => $"{x.Name} {(x.IsConfigured ? "on" : "off (needs API key and model)")}")));
 
+// The schema follows the code on every deploy: pending migrations run before anything reads the
+// database (the start jobs below did and failed). EF holds a lock, so two instances never migrate
+// at once. Tests build their own database
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using var migrationScope = app.Services.CreateScope();
+    var database = migrationScope.ServiceProvider.GetRequiredService<AppDbContext>().Database;
+    var pending = (await database.GetPendingMigrationsAsync()).ToList();
+    if (pending.Count > 0)
+    {
+        app.Logger.LogInformation("Applying {Count} database migrations: {Migrations}", pending.Count, string.Join(", ", pending));
+        // Data moves in older migrations may take longer than a normal query
+        database.SetCommandTimeout(TimeSpan.FromMinutes(5));
+        await database.MigrateAsync();
+        app.Logger.LogInformation("Database schema is up to date");
+    }
+}
+
 app.UseResponseCompression();
 
 app.UseExceptionHandler();
