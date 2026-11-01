@@ -57,16 +57,23 @@ public sealed class GoogleAnalyticsApi : IGoogleAnalyticsApi
             ["metrics"] = new JsonArray(new JsonObject { ["name"] = "activeUsers" }),
         }, cancellationToken);
 
-        var reports = (await batch).GetProperty("reports").EnumerateArray().ToList();
+        var answer = await batch;
+        var reports = answer.TryGetProperty("reports", out var list) && list.ValueKind == JsonValueKind.Array
+            ? list.EnumerateArray().ToList()
+            : [];
+        // A report that didn't come back reads as empty
+        JsonElement ReportAt(int index) => index < reports.Count ? reports[index] : default;
         var now = await realtime;
 
-        var days = Rows(reports[0])
+        var days = Rows(ReportAt(0))
+            .Where(row => row.Dimensions.Count > 0 && row.Metrics.Count >= 3
+                          && DateTime.TryParseExact(row.Dimensions[0], "yyyyMMdd", CultureInfo.InvariantCulture, DateTimeStyles.None, out _))
             .Select(row => new AnalyticsDayDto(
                 DateTime.ParseExact(row.Dimensions[0], "yyyyMMdd", CultureInfo.InvariantCulture).ToString("yyyy-MM-dd"),
                 (long)row.Metrics[0], (long)row.Metrics[1], (long)row.Metrics[2]))
             .ToList();
 
-        var totalsRow = Rows(reports[0], "totals").FirstOrDefault();
+        var totalsRow = Rows(ReportAt(0), "totals").FirstOrDefault(row => row.Metrics.Count >= 5);
         var totals = totalsRow is null
             ? new AnalyticsTotalsDto(0, 0, 0, 0, 0)
             : new AnalyticsTotalsDto(
@@ -78,13 +85,13 @@ public sealed class GoogleAnalyticsApi : IGoogleAnalyticsApi
 
         return new AnalyticsOverviewDto(
             new SourceStatus(true, null, Link),
-            ActiveNow: (int)(Rows(now).FirstOrDefault()?.Metrics[0] ?? 0),
+            ActiveNow: (int)(Rows(now).FirstOrDefault(row => row.Metrics.Count > 0)?.Metrics[0] ?? 0),
             Totals: totals,
             Days: days,
-            TopPages: Named(reports[1]),
-            Countries: Named(reports[2]),
-            Devices: Named(reports[3]),
-            Channels: Named(reports[4]));
+            TopPages: Named(ReportAt(1)),
+            Countries: Named(ReportAt(2)),
+            Devices: Named(ReportAt(3)),
+            Channels: Named(ReportAt(4)));
     }
 
     private static JsonObject Report(string[] dimensions, string[] metrics, string? orderByDimension = null, bool totals = false, int limit = 0)
@@ -110,17 +117,23 @@ public sealed class GoogleAnalyticsApi : IGoogleAnalyticsApi
     private sealed record Row(List<string> Dimensions, List<double> Metrics);
 
     private static List<Row> Rows(JsonElement report, string property = "rows") =>
-        report.TryGetProperty(property, out var rows)
+        report.ValueKind == JsonValueKind.Object && report.TryGetProperty(property, out var rows) && rows.ValueKind == JsonValueKind.Array
             ? rows.EnumerateArray().Select(row => new Row(
-                    row.TryGetProperty("dimensionValues", out var d) ? d.EnumerateArray().Select(x => x.GetProperty("value").GetString() ?? "").ToList() : [],
-                    row.GetProperty("metricValues").EnumerateArray()
-                        .Select(x => double.TryParse(x.GetProperty("value").GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0)
-                        .ToList()))
+                    row.TryGetProperty("dimensionValues", out var d) ? d.EnumerateArray().Select(ValueOf).ToList() : [],
+                    row.TryGetProperty("metricValues", out var m)
+                        ? m.EnumerateArray()
+                            .Select(x => double.TryParse(ValueOf(x), NumberStyles.Float, CultureInfo.InvariantCulture, out var v) ? v : 0)
+                            .ToList()
+                        : []))
                 .ToList()
             : [];
 
+    private static string ValueOf(JsonElement cell) =>
+        cell.TryGetProperty("value", out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? "" : "";
+
     private static List<NamedValue> Named(JsonElement report) =>
-        Rows(report).Select(row => new NamedValue(row.Dimensions[0], row.Metrics[0])).ToList();
+        Rows(report).Where(row => row.Dimensions.Count > 0 && row.Metrics.Count > 0)
+            .Select(row => new NamedValue(row.Dimensions[0], row.Metrics[0])).ToList();
 
     private async Task<JsonElement> PostAsync(string method, JsonObject body, CancellationToken cancellationToken)
     {
