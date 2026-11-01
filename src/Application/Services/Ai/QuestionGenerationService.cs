@@ -85,12 +85,13 @@ public class QuestionGenerationService : IQuestionGenerationService
             dto.QuestionType,
             existingTitles);
 
-        var generated = (await _ai.RunAsync(prompt, cancellationToken)).Value
-            .Where(x => !existingTitles.Contains(x.Title, StringComparer.OrdinalIgnoreCase))
-            .ToList();
+        bool IsNew(string title) => !existingTitles.Contains(title, StringComparer.OrdinalIgnoreCase);
 
-        if (generated.Count == 0)
-            throw new AiOutputException("AI could not write questions for this text");
+        var generated = (await _ai.RunAsync(
+                prompt, x => x.Any(q => IsNew(q.Title)), "AI could not write questions for this text", cancellationToken))
+            .Value
+            .Where(x => IsNew(x.Title))
+            .ToList();
 
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Questions, materialId);
 

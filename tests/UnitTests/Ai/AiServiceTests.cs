@@ -39,6 +39,22 @@ public class AiServiceTests
         _usage.Verify(x => x.FailAsync(It.IsAny<Guid>()), Times.Never);
     }
 
+    // "No new words": the model answered, the user got nothing, so the try doesn't count
+    [Fact]
+    public async Task RunAsync_UnusableAnswer_GivesTheQuotaBack()
+    {
+        var completion = FakeAiProvider.Completion("A", "{}");
+        _client.Setup(x => x.CompleteAsync(It.IsAny<IAiPrompt<string>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new AiResult<string>("", completion));
+
+        var error = await Should.ThrowAsync<AiOutputException>(() => _sut.RunAsync(
+            new AiTestPrompt(), x => x.Length > 0, "AI found no new words in this text", TestContext.Current.CancellationToken));
+
+        error.Message.ShouldBe("AI found no new words in this text");
+        _usage.Verify(x => x.RefundAsync(_usageId, completion), Times.Once);
+        _usage.Verify(x => x.CompleteAsync(It.IsAny<Guid>(), It.IsAny<AiCompletion>()), Times.Never);
+    }
+
     [Fact]
     public async Task RunAsync_AllProvidersDown_ReturnsQuotaAndRethrows()
     {

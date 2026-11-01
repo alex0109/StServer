@@ -18,7 +18,9 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
     private readonly string _content;
     private readonly int _count;
     private readonly string _language;
+    // The prompt lists at most 150 existing terms; duplicates are checked against all of them
     private readonly IReadOnlyCollection<string> _existingTerms;
+    private readonly HashSet<string> _known;
     private readonly string _tag = AiContentSanitizer.NewContentTag();
 
     // Language comes from a validated short name, never from free user text
@@ -28,7 +30,12 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
         _count = count;
         _language = language;
         _existingTerms = existingTerms.Select(x => AiContentSanitizer.Clean(x, 100)).Take(150).ToList();
+        _known = new HashSet<string>(existingTerms.Select(x => x.Trim()), StringComparer.OrdinalIgnoreCase);
     }
+
+    // Models often repeat a word that is already there despite being told not to; a few spare
+    // candidates keep the request from ending with nothing new
+    private int Candidates => _known.Count == 0 ? _count : _count + Math.Min(10, _count);
 
     public AiFeature Feature => AiFeature.DictionaryGeneration;
 
@@ -37,7 +44,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
         var existing = _existingTerms.Count == 0 ? "none" : string.Join(", ", _existingTerms);
 
         var userPrompt = $"""
-            Pick up to {_count} words or short terms from the material below that are worth learning,
+            Pick up to {Candidates} words or short terms from the material below that are worth learning,
             and translate each into {_language}.
 
             Requirements:
@@ -76,7 +83,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
     public IReadOnlyList<GeneratedEntry> Parse(string json)
     {
         var answer = AiJson.Read<Answer>(json);
-        var seen = new HashSet<string>(_existingTerms, StringComparer.OrdinalIgnoreCase);
+        var seen = new HashSet<string>(_known, StringComparer.OrdinalIgnoreCase);
         var result = new List<GeneratedEntry>();
 
         foreach (var item in answer.Entries ?? [])

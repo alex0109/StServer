@@ -14,6 +14,8 @@ public class StatisticsService : IStatisticsService
     private readonly TimeProvider _time;
     private readonly IUserReadCache _cache;
 
+    private const int HardestWordsCount = 5;
+
     public StatisticsService(
         IStatisticsRepository repo,
         IUserContext user,
@@ -54,6 +56,13 @@ public class StatisticsService : IStatisticsService
     // "Studied today" turns over at local midnight, so the streak is kept for a minute only
     public Task<StudyStreakDto> GetStudyStreakAsync() =>
         _cache.GetOrCreateAsync(_user.UserId, "statistics:streak", BuildStudyStreakAsync, TimeSpan.FromMinutes(1));
+
+    public Task<FlashcardAnswersDto> GetFlashcardAnswersAsync(int days = 30)
+    {
+        days = Math.Clamp(days, 1, 365);
+
+        return _cache.GetOrCreateAsync(_user.UserId, $"statistics:flashcards:{days}", () => BuildFlashcardAnswersAsync(days));
+    }
 
     private async Task<StatisticsOverviewDto> BuildOverviewAsync()
     {
@@ -190,6 +199,33 @@ public class StatisticsService : IStatisticsService
             _user.UserId,
             await _timeZones.GetAsync(_user.UserId),
             _time.GetUtcNow().UtcDateTime);
+    }
+
+    // Days of the window are the user's own, like the streak: a late evening session belongs to its evening
+    private async Task<FlashcardAnswersDto> BuildFlashcardAnswersAsync(int days)
+    {
+        var timeZone = await _timeZones.GetAsync(_user.UserId);
+        var today = UserTimeZone.LocalDate(_time.GetUtcNow().UtcDateTime, timeZone);
+        var from = UserTimeZone.StartOfLocalDayUtc(today.AddDays(-(days - 1)), timeZone);
+
+        var rows = await _repo.GetFlashcardAnswerRowsAsync(_user.UserId, from);
+        var answers = FlashcardAnswers.Summarize(rows, timeZone, today, days, HardestWordsCount);
+
+        var terms = (await _repo.GetWordTermsAsync(_user.UserId, answers.HardestWords.Select(x => x.EntryId).ToList()))
+            .ToDictionary(x => x.EntryId);
+
+        // A word deleted since its reviews has nothing left to practise
+        answers.HardestWords = answers.HardestWords
+            .Where(x => terms.ContainsKey(x.EntryId))
+            .Select(x =>
+            {
+                x.Term = terms[x.EntryId].Term;
+                x.Translation = terms[x.EntryId].Translation;
+                return x;
+            })
+            .ToList();
+
+        return answers;
     }
 
     // Sample standard deviation of per-attempt scores.

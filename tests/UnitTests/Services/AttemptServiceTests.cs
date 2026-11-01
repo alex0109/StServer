@@ -49,7 +49,7 @@ public class AttemptServiceTests
     }
     
     [Fact]
-    public async Task GetFinishedAttempts_NoAttempts_ReturnsNull()
+    public async Task GetFinishedAttempts_NoAttempts_ReturnsEmpty()
     {
         _repo.Setup(x =>
                 x.GetFinishedAttemptsAsync(It.IsAny<Guid>(), _userId))
@@ -57,7 +57,7 @@ public class AttemptServiceTests
 
         var result = await _sut.GetFinishedAttempts(Guid.NewGuid());
 
-        result.ShouldBeNull();
+        result.ShouldBeEmpty();
     }
     
     [Fact]

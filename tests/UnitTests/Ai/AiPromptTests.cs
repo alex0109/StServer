@@ -135,6 +135,27 @@ public class AiPromptTests
     }
 
     [Fact]
+    public void DictionaryParse_SkipsTermsBeyondThoseListedInThePrompt()
+    {
+        // Only 150 existing terms fit in the prompt; the 200th is still a duplicate
+        var existing = Enumerable.Range(1, 200).Select(i => $"word{i}").ToList();
+        var prompt = new DictionaryGenerationPrompt("content", 2, "Ukrainian", existing);
+        var json = """
+        {"entries":[
+          {"term":"Word200","translation":"слово","transcription":"","partOfSpeech":"noun","example":"","exampleTranslation":""},
+          {"term":"leaf","translation":"листок","transcription":"","partOfSpeech":"noun","example":"","exampleTranslation":""},
+          {"term":"root","translation":"корінь","transcription":"","partOfSpeech":"noun","example":"","exampleTranslation":""},
+          {"term":"stem","translation":"стебло","transcription":"","partOfSpeech":"noun","example":"","exampleTranslation":""}
+        ]}
+        """;
+
+        prompt.Parse(json).Select(x => x.Term).ShouldBe(["leaf", "root"]);
+        // Spare candidates are asked for, the answer still keeps only the requested number
+        prompt.BuildRequest().UserPrompt.ShouldContain("Pick up to 4 words");
+        new DictionaryGenerationPrompt("content", 2, "Ukrainian", []).BuildRequest().UserPrompt.ShouldContain("Pick up to 2 words");
+    }
+
+    [Fact]
     public void GradingParse_ClampsScore()
     {
         var prompt = new AnswerGradingPrompt("q", "a", "b");

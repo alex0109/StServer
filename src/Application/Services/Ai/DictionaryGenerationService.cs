@@ -81,10 +81,8 @@ public class DictionaryGenerationService : IDictionaryGenerationService
         var existingTerms = dictionary.Entries.Select(x => x.Term).ToList();
 
         var prompt = new DictionaryGenerationPrompt(content, Math.Min(dto.Count, free), language, existingTerms);
-        var generated = (await _ai.RunAsync(prompt, cancellationToken)).Value;
-
-        if (generated.Count == 0)
-            throw new AiOutputException("AI found no new words in this text");
+        var generated = (await _ai.RunAsync(
+            prompt, x => x.Count > 0, "AI found no new words in this text", cancellationToken)).Value;
 
         // The lock also keeps positions unique when words are added in parallel
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.DictionaryEntries, dictionaryId);

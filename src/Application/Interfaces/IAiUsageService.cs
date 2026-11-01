@@ -11,6 +11,8 @@ public interface IAiUsageService
     Task CompleteAsync(Guid usageId, AiCompletion completion);
     // Gives the request back to the quota
     Task FailAsync(Guid usageId);
+    // The AI answered with nothing usable: its tokens are kept for the cost report, the quota place is given back
+    Task RefundAsync(Guid usageId, AiCompletion completion);
     Task<AiUsageResponseDto> GetUsageAsync(Guid userId);
     Task<int> FailStaleAsync();
 }

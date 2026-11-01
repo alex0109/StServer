@@ -7,7 +7,8 @@ namespace Application.Interfaces;
 
 public interface IAttemptService
 {
-    Task<List<AttemptResponseDto>?> GetFinishedAttempts(Guid materialId);
+    // Empty when nothing is finished yet: no attempts is a normal state, not a missing resource
+    Task<List<AttemptResponseDto>> GetFinishedAttempts(Guid materialId);
     Task<AttemptResponseDto?> GetAttempt(Guid id);
     Task<Guid?> StartAttempt(Guid assessmentId);
     Task<AnswerEvaluationResult> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto);
