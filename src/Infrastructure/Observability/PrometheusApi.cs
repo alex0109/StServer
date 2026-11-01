@@ -103,7 +103,8 @@ internal static class ObservabilityEnv
 {
     public static string? Value(string name)
     {
-        var value = Environment.GetEnvironmentVariable(name)?.Trim();
+        // Quotes pasted into the hosting settings would become part of the key
+        var value = Environment.GetEnvironmentVariable(name)?.Trim().Trim('"', '\'').Trim();
         return string.IsNullOrEmpty(value) ? null : value;
     }
 
