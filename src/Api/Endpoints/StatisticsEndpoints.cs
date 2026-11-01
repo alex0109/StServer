@@ -16,6 +16,7 @@ public static class StatisticsEndpoints
         statisticsGroup.MapGet("/confidence", GetConfidenceCalibration);
         statisticsGroup.MapGet("/tags", GetTagPerformance);
         statisticsGroup.MapGet("/streak", GetStudyStreak);
+        statisticsGroup.MapGet("/flashcards", GetFlashcardAnswers);
 
         static async Task<IResult> GetOverview(IStatisticsService service)
         {
@@ -48,6 +49,13 @@ public static class StatisticsEndpoints
         static async Task<IResult> GetTagPerformance(IStatisticsService service)
         {
             var result = await service.GetTagPerformanceAsync();
+
+            return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> GetFlashcardAnswers(IStatisticsService service, int days = 30)
+        {
+            var result = await service.GetFlashcardAnswersAsync(days);
 
             return TypedResults.Ok(result);
         }

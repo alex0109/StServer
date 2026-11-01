@@ -32,6 +32,12 @@ public interface IStatisticsRepository
 
     Task<int> GetReviewsCountAsync(Guid userId, DateTime from, DateTime to);
 
+    // Every flashcard review of the user since the given moment, without the FSRS fields
+    Task<List<FlashcardAnswerRow>> GetFlashcardAnswerRowsAsync(Guid userId, DateTime from);
+
+    // Term and translation of the user's words; ids of deleted or foreign words are skipped
+    Task<List<WordTerm>> GetWordTermsAsync(Guid userId, IReadOnlyCollection<Guid> entryIds);
+
     // Every review of a word or a question (attempt answers included), in UTC: the unit of the daily goal
     Task<List<DateTime>> GetReviewTimesAsync(Guid userId, DateTime? from = null);
 

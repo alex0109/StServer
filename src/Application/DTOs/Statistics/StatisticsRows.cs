@@ -1,5 +1,6 @@
 using Domain.Utility.Question;
 using Domain.Utility.Result;
+using Domain.Utility.Review;
 
 namespace Application.DTOs.Statistics;
 
@@ -12,3 +13,8 @@ public record AnswerStatRow(
 
 // Answers grouped by the tags of their material, counted by the database
 public record TagAnswerStat(Guid TagId, string TagName, int Answers, int Correct);
+
+// One flashcard review: which word, which button, when (UTC)
+public record FlashcardAnswerRow(Guid EntryId, ReviewRating Rating, DateTime ReviewedAt);
+
+public record WordTerm(Guid EntryId, string Term, string Translation);

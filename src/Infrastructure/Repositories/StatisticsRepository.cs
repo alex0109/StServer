@@ -172,6 +172,22 @@ public class StatisticsRepository : IStatisticsRepository
             .CountAsync(r => r.UserId == userId && r.ReviewedAt >= from && r.ReviewedAt < to);
     }
 
+    public async Task<List<FlashcardAnswerRow>> GetFlashcardAnswerRowsAsync(Guid userId, DateTime from)
+    {
+        return await _db.FlashcardReviews
+            .Where(r => r.UserId == userId && r.ReviewedAt >= from)
+            .Select(r => new FlashcardAnswerRow(r.EntryId, r.Rating, r.ReviewedAt))
+            .ToListAsync();
+    }
+
+    public async Task<List<WordTerm>> GetWordTermsAsync(Guid userId, IReadOnlyCollection<Guid> entryIds)
+    {
+        return await _db.DictionaryEntries
+            .Where(e => entryIds.Contains(e.Id) && e.Dictionary.UserId == userId)
+            .Select(e => new WordTerm(e.Id, e.Term, e.Translation))
+            .ToListAsync();
+    }
+
     public async Task<List<DateTime>> GetReviewTimesAsync(Guid userId, DateTime? from = null)
     {
         var words = _db.FlashcardReviews

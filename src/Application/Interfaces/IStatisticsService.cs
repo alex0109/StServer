@@ -10,4 +10,5 @@ public interface IStatisticsService
     Task<List<ConfidenceCalibrationDto>> GetConfidenceCalibrationAsync();
     Task<List<TagPerformanceDto>> GetTagPerformanceAsync();
     Task<StudyStreakDto> GetStudyStreakAsync();
+    Task<FlashcardAnswersDto> GetFlashcardAnswersAsync(int days = 30);
 }

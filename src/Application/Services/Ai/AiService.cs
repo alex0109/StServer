@@ -19,7 +19,14 @@ public class AiService : IAiService
         _user = user;
     }
 
-    public async Task<AiResult<T>> RunAsync<T>(IAiPrompt<T> prompt, CancellationToken cancellationToken = default)
+    public Task<AiResult<T>> RunAsync<T>(IAiPrompt<T> prompt, CancellationToken cancellationToken = default) =>
+        RunAsync(prompt, _ => true, string.Empty, cancellationToken);
+
+    public async Task<AiResult<T>> RunAsync<T>(
+        IAiPrompt<T> prompt,
+        Func<T, bool> isUsable,
+        string emptyMessage,
+        CancellationToken cancellationToken = default)
     {
         var usageId = await _usage.ReserveAsync(_user.UserId, prompt.Feature);
 
@@ -34,6 +41,15 @@ public class AiService : IAiService
             await _usage.FailAsync(usageId);
             AppMetrics.AiRequest(prompt.Feature.ToString(), "none", "failed");
             throw;
+        }
+
+        // The model answered, but with nothing the user gets: it doesn't take a place in the quota
+        if (!isUsable(result.Value))
+        {
+            await _usage.RefundAsync(usageId, result.Completion);
+            AppMetrics.AiRequest(prompt.Feature.ToString(), result.Completion.Provider, "empty");
+            AppMetrics.AiTokensUsed(prompt.Feature.ToString(), result.Completion.Provider, result.Completion.InputTokens, result.Completion.OutputTokens);
+            throw new AiOutputException(emptyMessage);
         }
 
         await _usage.CompleteAsync(usageId, result.Completion);

@@ -35,13 +35,7 @@ public static class AttemptEndpoints
 
         static async Task<IResult> GetFinishedAttempts(Guid materialId, IAttemptService service)
         {
-            var result = await service.GetFinishedAttempts(materialId);
-            
-            if (result is null){
-                return TypedResults.NotFound();
-            }
-            
-            return TypedResults.Ok(result);
+            return TypedResults.Ok(await service.GetFinishedAttempts(materialId));
         }
         
         static async Task<IResult> GetAttempt(Guid attemptId, IAttemptService service)

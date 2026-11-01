@@ -75,10 +75,8 @@ public class SummaryGenerationService : ISummaryGenerationService
             throw new BadRequestException("Not enough content to summarize, add text to the material or notes first");
 
         var prompt = new SummaryPrompt(material.Title, materialText, notes, dictionaries);
-        var sections = (await _ai.RunAsync(prompt, cancellationToken)).Value;
-
-        if (sections.Count == 0)
-            throw new AiOutputException("AI could not write a summary for this material");
+        var sections = (await _ai.RunAsync(
+            prompt, x => x.Count > 0, "AI could not write a summary for this material", cancellationToken)).Value;
 
         // Stored in the same shape as notes saved from the editor
         summary.TextContent = JsonSerializer.SerializeToDocument(RichTextConverter.FromSections(sections));

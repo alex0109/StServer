@@ -43,12 +43,12 @@ public class AttemptService : IAttemptService
         _questionReviews = questionReviews;
     }
     
-    public async Task<List<AttemptResponseDto>?> GetFinishedAttempts(Guid materialId)
+    public async Task<List<AttemptResponseDto>> GetFinishedAttempts(Guid materialId)
     {
         var attempts = await _repo.GetFinishedAttemptsAsync(materialId, _user.UserId);
 
         if (attempts is null || attempts.Count == 0)
-            return null;
+            return [];
         
         var results = attempts.Select(x => AttemptMapper.ToDto(x)).ToList();
 

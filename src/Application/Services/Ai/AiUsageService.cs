@@ -80,6 +80,21 @@ public class AiUsageService : IAiUsageService
         await _repo.SaveChangesAsync();
     }
 
+    public async Task RefundAsync(Guid usageId, AiCompletion completion)
+    {
+        var usage = await _repo.GetByIdAsync(usageId);
+        if (usage is null) return;
+
+        usage.Status = AiUsageStatus.Failed;
+        usage.Provider = Truncate(completion.Provider, 40);
+        usage.Model = Truncate(completion.Model, 100);
+        usage.InputTokens = completion.InputTokens;
+        usage.OutputTokens = completion.OutputTokens;
+        usage.CompletedAt = _time.GetUtcNow().UtcDateTime;
+
+        await _repo.SaveChangesAsync();
+    }
+
     public async Task FailAsync(Guid usageId)
     {
         var usage = await _repo.GetByIdAsync(usageId);
