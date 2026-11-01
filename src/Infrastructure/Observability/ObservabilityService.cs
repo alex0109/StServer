@@ -167,7 +167,7 @@ public class ObservabilityService : IObservabilityService
 
     private static bool IsOutsideFailure(Exception exception) =>
         exception is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException
-            or InvalidOperationException or FormatException;
+            or InvalidOperationException or FormatException or KeyNotFoundException;
 
     // Status codes and timeouts only: answers of outside APIs may echo tokens or queries
     private static string Describe(Exception exception) => exception switch

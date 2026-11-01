@@ -36,15 +36,15 @@ public sealed class GrafanaApi : IGrafanaApi
 
         var dashboards = (await search).EnumerateArray()
             .Select(x => new GrafanaDashboardDto(
-                x.GetProperty("title").GetString() ?? "",
-                new Uri(_baseUrl!, (x.GetProperty("url").GetString() ?? "").TrimStart('/')).ToString(),
+                x.TryGetProperty("title", out var title) ? title.GetString() ?? "" : "",
+                new Uri(_baseUrl!, (x.TryGetProperty("url", out var url) ? url.GetString() ?? "" : "").TrimStart('/')).ToString(),
                 x.TryGetProperty("tags", out var tags) ? tags.EnumerateArray().Select(t => t.GetString() ?? "").ToList() : []))
             .ToList();
 
-        var alertList = (await alerts).GetProperty("data").GetProperty("alerts").EnumerateArray()
+        var alertList = AlertsOf(await alerts)
             .Select(x => new GrafanaAlertDto(
-                x.GetProperty("labels").TryGetProperty("alertname", out var name) ? name.GetString() ?? "alert" : "alert",
-                x.GetProperty("state").GetString() ?? "unknown",
+                x.TryGetProperty("labels", out var labels) && labels.TryGetProperty("alertname", out var name) ? name.GetString() ?? "alert" : "alert",
+                x.TryGetProperty("state", out var state) ? state.GetString() ?? "unknown" : "unknown",
                 x.TryGetProperty("activeAt", out var activeAt) && activeAt.TryGetDateTime(out var at) && at.Year > 1 ? at.ToUniversalTime() : null,
                 x.TryGetProperty("annotations", out var notes) && notes.TryGetProperty("summary", out var summary) ? summary.GetString() : null))
             // Firing first, then pending
@@ -65,5 +65,16 @@ public sealed class GrafanaApi : IGrafanaApi
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
         return document.RootElement.Clone();
+    }
+
+    // Grafana versions differ: {"data":{"alerts":[...]}}, a bare list, or nothing without alert rules
+    private static IEnumerable<JsonElement> AlertsOf(JsonElement answer)
+    {
+        if (answer.ValueKind == JsonValueKind.Array) return answer.EnumerateArray();
+        if (answer.ValueKind == JsonValueKind.Object
+            && answer.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object
+            && data.TryGetProperty("alerts", out var list) && list.ValueKind == JsonValueKind.Array)
+            return list.EnumerateArray();
+        return [];
     }
 }
