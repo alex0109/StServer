@@ -52,7 +52,7 @@ public static class AttemptEndpoints
 
         static async Task<IResult> StartAttempt(StartAttemptDto attemptDto, IAttemptService service)
         {
-            var result = await service.StartAttempt(attemptDto.AssessmentId);
+            var result = await service.StartAttempt(attemptDto.AssessmentId, attemptDto.UseTimer);
 
             if (result is null)
             {

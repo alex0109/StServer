@@ -11,7 +11,7 @@ public interface ILibraryRepository
     Task<Material?> GetMaterialForSnapshotAsync(Guid materialId, Guid userId);
 
     Task<(List<LibraryItemSummaryDto> Items, int Total)> ListPublishedAsync(
-        Guid userId, string? search, MaterialType? type, int skip, int take);
+        Guid? userId, string? search, MaterialType? type, int skip, int take);
 
     Task<LibraryItem?> GetItemAsync(Guid itemId);
 

@@ -32,6 +32,22 @@ public static class StudyCalendar
         return (current, longest);
     }
 
+    // The dates of the running streak, walking back from today; freezes keep it going
+    public static List<DateOnly> CurrentStreakDays(
+        IReadOnlySet<DateOnly> days, IReadOnlySet<DateOnly> frozen, DateOnly today)
+    {
+        var cursor = days.Contains(today) ? today : today.AddDays(-1);
+        var streak = new List<DateOnly>();
+
+        while (days.Contains(cursor) || frozen.Contains(cursor))
+        {
+            streak.Add(cursor);
+            cursor = cursor.AddDays(-1);
+        }
+
+        return streak;
+    }
+
     public sealed record FrozenStreak(int Current, int Longest, IReadOnlySet<DateOnly> Frozen, int FreezesLeftThisMonth);
 
     // Missed days inside the current streak are covered by freezes, a limited number per calendar

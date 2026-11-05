@@ -50,6 +50,38 @@ public class StudyActivityService : IStudyActivityService
         };
     }
 
+    public async Task<StudyCalendarDto> GetCalendarAsync(
+        Guid userId, TimeZoneInfo timeZone, DateTime utcNow, DateOnly from, DateOnly to)
+    {
+        var settings = _learning is null ? null : await _learning.GetAsync(userId);
+        var goal = settings?.DailyGoal;
+        var today = UserTimeZone.LocalDate(utcNow, timeZone);
+
+        // Any study paints a day, but only days that count for the streak (the goal, when set) make it
+        var studied = StudyCalendar.ToLocalDays(await _repo.GetActivityTimesAsync(userId), timeZone);
+        var streakDays = goal is int target
+            ? StudyCalendar.DaysWithGoal(await _repo.GetReviewTimesAsync(userId), timeZone, target)
+            : studied;
+        var streak = StudyCalendar.Streak(streakDays, today, settings?.StreakFreezesPerMonth ?? 0);
+
+        var deadlines = await _repo.GetDeadlineMaterialsAsync(userId);
+
+        return new StudyCalendarDto
+        {
+            Today = today,
+            StudyDays = studied.Where(x => x >= from && x <= to).Order().ToList(),
+            StreakDays = StudyCalendar.CurrentStreakDays(streakDays, streak.Frozen, today)
+                .Where(x => x >= from && x <= to)
+                .Order()
+                .ToList(),
+            Deadlines = deadlines
+                .Where(x => x.Deadline >= from && x.Deadline <= to)
+                .OrderBy(x => x.Deadline)
+                .Select(x => new CalendarDeadlineDto { Date = x.Deadline, MaterialId = x.MaterialId, Title = x.Title })
+                .ToList(),
+        };
+    }
+
     public async Task<TodayDto> GetTodayAsync(Guid userId, TimeZoneInfo timeZone, DateTime utcNow)
     {
         var local = UserTimeZone.ToLocal(utcNow, timeZone);

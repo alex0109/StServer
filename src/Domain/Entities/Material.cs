@@ -31,6 +31,8 @@ public class Material
     // Set when the material is a copy of a library material, no FK: it may leave the library
     public Guid? ImportedFromLibraryItemId { get; set; }
     public DateTime? ImportedAt { get; set; }
+    // Optional date the user wants to be ready by, in their own calendar
+    public DateOnly? Deadline { get; set; }
     
     public void AddTag(Guid tagId)
     {

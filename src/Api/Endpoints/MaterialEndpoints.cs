@@ -19,6 +19,8 @@ public static class MaterialEndpoints
         materialGroup.MapPost("/import-url", ImportFromUrl)
             .RequireRateLimiting("import");
         materialGroup.MapPatch("/{materialId:guid}", UpdateMaterial);
+        materialGroup.MapPut("/{materialId:guid}/deadline", SetDeadline);
+        materialGroup.MapGet("/{materialId:guid}/deadline-plan", GetDeadlinePlan);
         materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);
         materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
         materialGroup.MapDelete("/{materialId:guid}", DeleteMaterial);
@@ -42,6 +44,13 @@ public static class MaterialEndpoints
             
             return TypedResults.Ok(result);
         };
+
+        static async Task<IResult> SetDeadline(Guid materialId, MaterialDeadlineDto dto, IDeadlineService service) =>
+            await service.SetAsync(materialId, dto.Deadline) ? TypedResults.NoContent() : TypedResults.NotFound();
+
+        // Ok with null for a material without a deadline: that is an answer, not an error
+        static async Task<IResult> GetDeadlinePlan(Guid materialId, IDeadlineService service) =>
+            TypedResults.Ok(await service.GetPlanAsync(materialId));
 
         static async Task<IResult> ImportFromUrl(
             MaterialImportDto dto,

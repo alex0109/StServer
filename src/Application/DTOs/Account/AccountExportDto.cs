@@ -54,6 +54,7 @@ public record ExportMaterial(
     List<ExportFile> Files,
     Guid? ImportedFromMaterialId,
     Guid? ImportedFromLibraryItemId,
+    DateOnly? Deadline,
     DateTime CreatedAt,
     DateTime UpdatedAt,
     DateTime? DeletedAt);

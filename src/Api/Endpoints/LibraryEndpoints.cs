@@ -15,8 +15,9 @@ public static class LibraryEndpoints
             .RequireAuthorization()
             .RequireRateLimiting("api");
 
-        library.MapGet("/", List);
-        library.MapGet("/{itemId:guid}", Get);
+        // Reading is open to everyone; adding a material and sending requests need an account
+        library.MapGet("/", List).AllowAnonymous();
+        library.MapGet("/{itemId:guid}", Get).AllowAnonymous();
         library.MapPost("/{itemId:guid}/import", Import);
         library.MapGet("/requests", MyRequests);
         library.MapPost("/requests", CreateRequest);

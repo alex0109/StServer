@@ -4,4 +4,5 @@ public class AssessmentResponseDto
 {
     public Guid Id { get; set; }
     public Guid MaterialId { get; set; }
+    public int? TimerMinutes { get; set; }
 }

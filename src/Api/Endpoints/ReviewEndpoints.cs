@@ -15,10 +15,14 @@ public static class ReviewEndpoints
             .RequireRateLimiting("api");
 
         reviewGroup.MapGet("/today", GetToday);
+        reviewGroup.MapGet("/deadlines", GetDeadlines);
         reviewGroup.MapPost("/today/words", StartWords);
         reviewGroup.MapPost("/today/questions", StartQuestions);
         reviewGroup.MapPost("/sessions/{sessionId:guid}/answer", Answer);
         reviewGroup.MapPost("/sessions/{sessionId:guid}/finish", Finish);
+
+        static async Task<IResult> GetDeadlines(IDeadlineService service) =>
+            TypedResults.Ok(await service.GetAllAsync());
 
         static async Task<IResult> GetToday(IReviewService service) =>
             TypedResults.Ok(await service.GetTodayAsync());

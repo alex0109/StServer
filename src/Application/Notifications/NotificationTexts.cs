@@ -49,7 +49,7 @@ public static class NotificationTexts
         };
     }
 
-    private const string TodayPath = "/today";
+    private const string TodayPath = "/app";
 
     private static string? UkWords(int n) => n > 0 ? $"{n} {Uk(n, "слово", "слова", "слів")}" : null;
     private static string? UkQuestions(int n) => n > 0 ? $"{n} {Uk(n, "питання", "питання", "питань")}" : null;

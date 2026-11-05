@@ -180,6 +180,50 @@ public class StatisticsRepository : IStatisticsRepository
             .ToListAsync();
     }
 
+    public async Task<List<DeadlineMaterialRow>> GetDeadlineMaterialsAsync(Guid userId, Guid? materialId = null)
+    {
+        return await _db.Materials
+            .Where(m => m.UserId == userId
+                        && m.Deadline != null
+                        && m.DeletedAt == null
+                        && (materialId == null || m.Id == materialId))
+            .Select(m => new DeadlineMaterialRow(
+                m.Id,
+                m.Title,
+                m.Deadline!.Value,
+                m.Assessments.SelectMany(a => a.Attempts).Max(a => a.FinishedAt)))
+            .ToListAsync();
+    }
+
+    public async Task<List<DeadlineItemRow>> GetDeadlineItemsAsync(Guid userId, IReadOnlyCollection<Guid> materialIds)
+    {
+        var words = await _db.DictionaryEntries
+            .Where(e => !e.IsArchived && e.Dictionary.UserId == userId && materialIds.Contains(e.Dictionary.MaterialId))
+            .Select(e => new DeadlineItemRow(
+                e.Dictionary.MaterialId,
+                DeadlineItemKind.Word,
+                e.Progress != null ? e.Progress.State : FlashcardState.New,
+                e.Progress != null ? e.Progress.Due : null,
+                e.Progress != null ? e.Progress.Lapses : 0))
+            .ToListAsync();
+
+        var questions = await _db.Questions
+            .Where(q => q.UserId == userId
+                        && q.IsActive
+                        && q.DeletedAt == null
+                        && q.DictionaryEntryId == null
+                        && materialIds.Contains(q.MaterialId))
+            .Select(q => new DeadlineItemRow(
+                q.MaterialId,
+                DeadlineItemKind.Question,
+                q.Progress != null ? q.Progress.State : FlashcardState.New,
+                q.Progress != null ? q.Progress.Due : null,
+                q.Progress != null ? q.Progress.Lapses : 0))
+            .ToListAsync();
+
+        return [.. words, .. questions];
+    }
+
     public async Task<List<WordTerm>> GetWordTermsAsync(Guid userId, IReadOnlyCollection<Guid> entryIds)
     {
         return await _db.DictionaryEntries

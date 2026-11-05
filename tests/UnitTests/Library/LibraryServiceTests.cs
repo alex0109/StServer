@@ -36,6 +36,7 @@ public class LibraryServiceTests
     private LibraryService AsUser(Guid userId)
     {
         _user.Setup(x => x.UserId).Returns(userId);
+        _user.Setup(x => x.CurrentUserId).Returns(userId);
         return new LibraryService(_library, _materials.Object, _user.Object, _lock.Object, TimeProvider.System);
     }
 
@@ -63,6 +64,23 @@ public class LibraryServiceTests
         await AsAdmin().ApproveAsync(request.Id);
 
         return _library.Items.Single();
+    }
+
+    [Fact]
+    public async Task Guest_ReadsPublishedItems_WithoutBeingAuthorOrOwner()
+    {
+        var item = await PublishedItemAsync();
+        var guest = new Mock<IUserContext>();
+        guest.Setup(x => x.CurrentUserId).Returns((Guid?)null);
+        var sut = new LibraryService(_library, _materials.Object, guest.Object, _lock.Object, TimeProvider.System);
+
+        var page = await sut.ListAsync(null, null, 1, 10);
+        page.Items.ShouldContain(x => x.Id == item.Id);
+
+        var read = await sut.GetAsync(item.Id);
+        read.ShouldNotBeNull();
+        read.IsMine.ShouldBeFalse();
+        read.IsImported.ShouldBeFalse();
     }
 
     [Fact]
@@ -314,7 +332,7 @@ public class LibraryServiceTests
             Task.FromResult(Materials.FirstOrDefault(x => x.Id == materialId && x.UserId == userId));
 
         public Task<(List<LibraryItemSummaryDto> Items, int Total)> ListPublishedAsync(
-            Guid userId, string? search, MaterialType? type, int skip, int take)
+        Guid? userId, string? search, MaterialType? type, int skip, int take)
         {
             var items = Items.Where(x => x.Status == LibraryItemStatus.Published)
                 .Select(x => LibraryRules.ToSummaryDto(x, userId, false)).ToList();

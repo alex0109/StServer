@@ -31,6 +31,8 @@ public class ResultResponseDto
     // Why the right answer is right, written with the question
     public string? QuestionExplanation { get; set; }
     public int? AnswerChangedCount { get; set; }
+    // 0 none, 1 slight, 2 clear, 3 strong; see AnswerHesitation
+    public int HesitationLevel { get; set; }
     public TimeSpan TimeSpent { get; set; }
     public required DateTime AnsweredAt { get; set; }
 }

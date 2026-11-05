@@ -36,6 +36,12 @@ public interface IStatisticsRepository
     Task<List<FlashcardAnswerRow>> GetFlashcardAnswerRowsAsync(Guid userId, DateTime from);
 
     // Term and translation of the user's words; ids of deleted or foreign words are skipped
+    // Materials with a deadline, all of the user's or just one
+    Task<List<DeadlineMaterialRow>> GetDeadlineMaterialsAsync(Guid userId, Guid? materialId = null);
+
+    // Words and questions of these materials: archived words and flashcard questions don't count
+    Task<List<DeadlineItemRow>> GetDeadlineItemsAsync(Guid userId, IReadOnlyCollection<Guid> materialIds);
+
     Task<List<WordTerm>> GetWordTermsAsync(Guid userId, IReadOnlyCollection<Guid> entryIds);
 
     // Every review of a word or a question (attempt answers included), in UTC: the unit of the daily goal
