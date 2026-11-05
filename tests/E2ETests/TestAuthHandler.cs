@@ -10,6 +10,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
 {
     public const string SchemeName = "TestScheme";
     public const string UserIdHeader = "X-Test-User-Id";
+    public const string SecondFactorHeader = "X-Test-Second-Factor";
 
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -21,7 +22,10 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         var header = Request.Headers[UserIdHeader].FirstOrDefault();
         var userId = Guid.TryParse(header, out var id) ? id : Guid.NewGuid();
 
-        var claims = new[] { new Claim(ClaimTypes.NameIdentifier, userId.ToString()) };
+        var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
+        if (Request.Headers.ContainsKey(SecondFactorHeader))
+            claims.Add(new Claim("aal", "aal2"));
+
         var identity = new ClaimsIdentity(claims, SchemeName);
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, SchemeName);

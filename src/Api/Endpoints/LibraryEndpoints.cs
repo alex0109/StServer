@@ -33,6 +33,7 @@ public static class LibraryEndpoints
         admin.MapPost("/requests/{requestId:guid}/approve", Approve);
         admin.MapPost("/requests/{requestId:guid}/reject", Reject);
         admin.MapPost("/items", Publish);
+        admin.MapPost("/items/import", ImportItem);
         admin.MapDelete("/items/{itemId:guid}", Remove);
 
         static async Task<IResult> List(
@@ -83,6 +84,15 @@ public static class LibraryEndpoints
 
             await audit.RecordAsync(AdminAction.PublishItem, item.Id, item.Title);
             return TypedResults.Ok(item);
+        }
+
+        static async Task<IResult> ImportItem(LibraryAdminImportDto dto, ILibraryAdminService service, IAdminAudit audit)
+        {
+            var result = await service.ImportAsync(dto);
+
+            await audit.RecordAsync(
+                AdminAction.PublishItem, result.Item.Id, $"{(result.Created ? "Import" : "Re-import")}: {result.Item.Title}");
+            return TypedResults.Ok(result);
         }
 
         static async Task<IResult> Remove(Guid itemId, ILibraryAdminService service, IAdminAudit audit)

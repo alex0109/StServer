@@ -322,6 +322,99 @@ public class LibraryServiceTests
         _library.Items.Single().Status.ShouldBe(LibraryItemStatus.Published);
     }
 
+    private static LibraryAdminImportDto ImportOf(string title, string questionTitle = "Question") => new()
+    {
+        AuthorNickname = "Studytracker",
+        Snapshot = new LibrarySnapshot
+        {
+            Title = title,
+            Type = MaterialType.practice,
+            Questions =
+            [
+                new LibraryQuestionSnapshot
+                {
+                    Title = questionTitle,
+                    Answer = "Answer",
+                    QuestionType = Domain.Utility.Question.QuestionType.Open,
+                    QuestionDifficulty = Domain.Utility.Question.QuestionDifficulty.Easy,
+                },
+            ],
+        },
+    };
+
+    [Fact]
+    public async Task Import_NewTitle_PublishesAtOnce()
+    {
+        var result = await AsAdmin().ImportAsync(ImportOf("German A1"));
+
+        result.Created.ShouldBeTrue();
+        result.Item.QuestionsCount.ShouldBe(1);
+
+        var item = _library.Items.Single();
+        item.Status.ShouldBe(LibraryItemStatus.Published);
+        item.AuthorUserId.ShouldBe(_admin);
+        item.AuthorNickname.ShouldBe("Studytracker");
+        item.SourceMaterialId.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task Import_SameTitle_UpdatesTheSameItem()
+    {
+        var first = await AsAdmin().ImportAsync(ImportOf("German A1", "Old"));
+        _library.Items.Single().ImportsCount = 7;
+
+        var second = await AsAdmin().ImportAsync(ImportOf("German A1", "New"));
+
+        second.Created.ShouldBeFalse();
+        second.Item.Id.ShouldBe(first.Item.Id);
+
+        var item = _library.Items.Single();
+        item.Version.ShouldBe(2);
+        item.ImportsCount.ShouldBe(7);
+        item.Snapshot.RootElement.GetRawText().ShouldContain("New");
+    }
+
+    [Fact]
+    public async Task Import_ATitleOfAnotherAuthor_IsNotTouched()
+    {
+        var item = await PublishedItemAsync();
+
+        var result = await AsAdmin().ImportAsync(ImportOf(item.Title));
+
+        result.Created.ShouldBeTrue();
+        _library.Items.Count.ShouldBe(2);
+        item.Version.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Import_ARemovedTitle_PublishesAgainAsNew()
+    {
+        var first = await AsAdmin().ImportAsync(ImportOf("German A1"));
+        await AsAdmin().RemoveItemAsync(first.Item.Id);
+
+        var second = await AsAdmin().ImportAsync(ImportOf("German A1"));
+
+        second.Created.ShouldBeTrue();
+        second.Item.Id.ShouldNotBe(first.Item.Id);
+    }
+
+    [Fact]
+    public async Task Import_BrokenMaterial_PublishesNothing()
+    {
+        await Should.ThrowAsync<BadRequestException>(() => AsAdmin().ImportAsync(ImportOf(new string('a', 71))));
+
+        _library.Items.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Import_BadNickname_IsRefused()
+    {
+        var dto = ImportOf("German A1");
+        dto.AuthorNickname = "http://spam";
+
+        await Should.ThrowAsync<BadRequestException>(() => AsAdmin().ImportAsync(dto));
+    }
+
     private sealed class FakeLibraryRepository : ILibraryRepository
     {
         public List<Material> Materials { get; } = [];
@@ -340,6 +433,10 @@ public class LibraryServiceTests
         }
 
         public Task<LibraryItem?> GetItemAsync(Guid itemId) => Task.FromResult(Items.FirstOrDefault(x => x.Id == itemId));
+
+        public Task<LibraryItem?> GetPublishedItemAsync(Guid authorUserId, string title) =>
+            Task.FromResult(Items.FirstOrDefault(x =>
+                x.AuthorUserId == authorUserId && x.Title == title && x.Status == LibraryItemStatus.Published));
 
         public Task<bool> HasImportedAsync(Guid itemId, Guid userId) => Task.FromResult(false);
 

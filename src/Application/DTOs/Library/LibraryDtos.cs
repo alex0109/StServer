@@ -85,3 +85,17 @@ public class LibraryAdminPublishDto
     public Guid MaterialId { get; set; }
     public string? AuthorNickname { get; set; }
 }
+
+// A ready material from a file, with no material in anyone's account behind it
+public class LibraryAdminImportDto
+{
+    public required LibrarySnapshot Snapshot { get; set; }
+    public string? AuthorNickname { get; set; }
+}
+
+public class LibraryAdminImportResultDto
+{
+    public required LibraryItemSummaryDto Item { get; set; }
+    // False when a material with this title was already there and got updated
+    public bool Created { get; set; }
+}
