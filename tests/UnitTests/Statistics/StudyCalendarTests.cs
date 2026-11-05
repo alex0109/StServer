@@ -33,6 +33,24 @@ public class StudyCalendarTests
     }
 
     [Fact]
+    public void CurrentStreakDays_WalksBackThroughStudyAndFrozenDays()
+    {
+        var days = new HashSet<DateOnly> { Today, Today.AddDays(-2), Today.AddDays(-5) };
+        var frozen = new HashSet<DateOnly> { Today.AddDays(-1) };
+
+        StudyCalendar.CurrentStreakDays(days, frozen, Today)
+            .ShouldBe([Today, Today.AddDays(-1), Today.AddDays(-2)]);
+    }
+
+    [Fact]
+    public void CurrentStreakDays_NotStudiedToday_StartsFromYesterday()
+    {
+        var days = new HashSet<DateOnly> { Today.AddDays(-1) };
+
+        StudyCalendar.CurrentStreakDays(days, new HashSet<DateOnly>(), Today).ShouldBe([Today.AddDays(-1)]);
+    }
+
+    [Fact]
     public void RecentDays_LastItemIsToday()
     {
         var days = new HashSet<DateOnly> { Today, Today.AddDays(-2) };

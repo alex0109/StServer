@@ -15,4 +15,5 @@ public class AttemptResponseDto
     public List<ResultResponseDto> Results { get; set; } = [];
     public required DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
+    public int? TimeLimitMinutes { get; set; }
 }

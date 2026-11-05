@@ -8,6 +8,7 @@ using Application.Mappers;
 using Domain.Entities;
 using Domain.Utility.Attempt;
 using Domain.Utility.Question;
+using Domain.Utility.Review;
 using Application.Observability;
 
 namespace Application.Services;
@@ -74,12 +75,13 @@ public class AttemptService : IAttemptService
         return result;
     }
 
-    public async Task<Guid?> StartAttempt(Guid assessmentId)
+    public async Task<Guid?> StartAttempt(Guid assessmentId, bool useTimer = false)
     {
         var assessment = await _assessmentRepo.GetAssessmentByMaterialIdAsync(assessmentId, _user.UserId);
         if (assessment is null) return null;
         
-        var attemptEntity = AttemptMapper.ToEntity(assessmentId, _user.UserId);
+        var attemptEntity = AttemptMapper.ToEntity(
+            assessmentId, _user.UserId, useTimer ? assessment.TimerMinutes : null);
         await _repo.AddAttemptAsync(attemptEntity);
         await _repo.SaveChangesAsync();
 
@@ -127,10 +129,14 @@ public class AttemptService : IAttemptService
             );
         }
 
-        var rating = _reviewRatingResolver.Resolve(result.IsCorrect, resultRequestDto.ConfidenceLevel);
-
         var now = DateTime.UtcNow;
         var existing = attempt.Results.FirstOrDefault(r => r.QuestionId == questionId);
+
+        // Only a choice can be changed click by click; rewording an open answer is not doubt
+        var answerChanges = question.QuestionType is QuestionType.Options or QuestionType.TrueFalse
+            ? (existing?.AnswerChangedCount ?? 0) + (resultRequestDto.AnswerChanges ?? 0)
+            : 0;
+        var rating = _reviewRatingResolver.Resolve(result.IsCorrect, resultRequestDto.ConfidenceLevel, answerChanges);
 
         if (existing is null)
         {
@@ -188,6 +194,9 @@ public class AttemptService : IAttemptService
         attempt.AttemptStatus = AttemptStatus.Finished;
         attempt.FinishedAt = DateTime.UtcNow;
 
+        if (attempt.TimeLimitMinutes is not null)
+            await AddUnansweredAsync(attempt);
+
         // Every answered question becomes one spaced repetition review, saved with the attempt
         if (_questionReviews is not null)
             await _questionReviews.ScheduleFinishedAttemptAsync(attempt);
@@ -198,6 +207,36 @@ public class AttemptService : IAttemptService
         return true;
     }
     
+    // A timed attempt can end with questions left. They count as wrong and come back for review,
+    // otherwise running out of time would only raise the score
+    private async Task AddUnansweredAsync(Attempt attempt)
+    {
+        var full = await _repo.GetFullAttemptByIdAsync(attempt.Id, _user.UserId);
+        if (full is null) return;
+
+        var answered = attempt.Results.Select(r => r.QuestionId).ToHashSet();
+        var questions = await _questionRepo.GetActiveQuestionsAsync(full.Assessment.MaterialId, _user.UserId);
+        var now = DateTime.UtcNow;
+
+        foreach (var question in questions.Where(q => !answered.Contains(q.Id)))
+        {
+            await _repo.AddResultAsync(new Result
+            {
+                Id = Guid.NewGuid(),
+                AttemptId = attempt.Id,
+                UserId = _user.UserId,
+                QuestionId = question.Id,
+                IsCorrect = false,
+                Score = 0,
+                Weight = (int)question.QuestionDifficulty,
+                Rating = ReviewRating.Again,
+                Method = EvaluationMethod.None,
+                AnsweredAt = now,
+                LastModifiedAt = now,
+            });
+        }
+    }
+
     public async Task MarkAbandonedAttempts()
     {
         var attempts = await _repo.GetAbandonedAttemptsAsync();

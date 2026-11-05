@@ -7,4 +7,6 @@ public class Assessment
     public ICollection<Attempt> Attempts { get; set; } = new List<Attempt>();
     public Guid MaterialId { get; set; }
     public Material Material { get; set; } = null!;
+    // Optional time limit for an attempt on the whole material
+    public int? TimerMinutes { get; set; }
 }

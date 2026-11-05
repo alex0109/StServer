@@ -1,3 +1,4 @@
+using Application.Statistics;
 using Domain.Utility.Result;
 using Domain.Entities;
 using Application.DTOs.Result;
@@ -17,6 +18,7 @@ public class ResultMapper
     {
         return new Result
         {
+            AnswerChangedCount = dto.AnswerChanges ?? 0,
             Id = Guid.NewGuid(),
             QuestionId = dto.QuestionId,
             AttemptId = attemptId,
@@ -57,6 +59,7 @@ public class ResultMapper
             CorrectAnswer = entity.Question?.QuestionType == QuestionType.Open ? entity.Question.Answer : null,
             QuestionExplanation = entity.Question?.Explanation,
             AnswerChangedCount = entity.AnswerChangedCount,
+            HesitationLevel = AnswerHesitation.Level(entity.AnswerChangedCount),
             TimeSpent = entity.TimeSpent,
             AnsweredAt = entity.AnsweredAt,
         };
@@ -64,15 +67,20 @@ public class ResultMapper
     
     public static void ApplyUpdate(Result entity, ResultRequestDto dto, bool isCorrect, double score)
     {
+        var newOptionIds = dto.UserAnswerOptionIds?.Distinct().ToList() ?? [];
+        // Saving the same answer again (say, with another confidence) is not a change of mind
+        var isSameAnswer = entity.UserAnswer == dto.UserAnswer
+                           && entity.UserAnswerOptionIds.ToHashSet().SetEquals(newOptionIds);
+
         entity.UserAnswer = dto.UserAnswer ?? null;
-        entity.UserAnswerOptionIds = dto.UserAnswerOptionIds?.Distinct().ToList() ?? [];
+        entity.UserAnswerOptionIds = newOptionIds;
         entity.IsCorrect = isCorrect;
         entity.Score = score;
         entity.ConfidenceLevel = dto.ConfidenceLevel;
         // An explanation of the previous answer would be wrong for the new one
         entity.AiExplanation = null;
         entity.AiExplanationLanguage = null;
-        entity.AnswerChangedCount++;
+        entity.AnswerChangedCount += Math.Max(isSameAnswer ? 0 : 1, dto.AnswerChanges ?? 0);
     }
 
     // Only open answers judged by similarity or AI can be wrong in a way the user can see

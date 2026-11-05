@@ -30,7 +30,7 @@ public class LibraryRepository : ILibraryRepository
 
     // The list never loads snapshots: only the columns cards show
     public async Task<(List<LibraryItemSummaryDto> Items, int Total)> ListPublishedAsync(
-        Guid userId, string? search, MaterialType? type, int skip, int take)
+        Guid? userId, string? search, MaterialType? type, int skip, int take)
     {
         var query = _db.LibraryItems.Where(x => x.Status == LibraryItemStatus.Published);
 

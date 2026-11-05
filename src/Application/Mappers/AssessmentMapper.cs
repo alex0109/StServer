@@ -20,7 +20,8 @@ public class AssessmentMapper
         return new AssessmentResponseDto
         {
             Id = entity.Id,
-            MaterialId = entity.MaterialId
+            MaterialId = entity.MaterialId,
+            TimerMinutes = entity.TimerMinutes
         };
     }
 }

@@ -50,7 +50,7 @@ public class LibraryService : ILibraryService
         search = string.IsNullOrWhiteSpace(search) ? null : search.Trim()[..Math.Min(search.Trim().Length, 100)];
 
         var (items, total) = await _library.ListPublishedAsync(
-            _user.UserId, search, type, (page - 1) * pageSize, pageSize);
+            _user.CurrentUserId, search, type, (page - 1) * pageSize, pageSize);
 
         return new LibraryPageDto { Items = items, Total = total, Page = page, PageSize = pageSize };
     }
@@ -60,8 +60,9 @@ public class LibraryService : ILibraryService
         var item = await _library.GetItemAsync(itemId);
         if (item is null || item.Status != LibraryItemStatus.Published) return null;
 
-        var userId = _user.UserId;
-        var summary = LibraryRules.ToSummaryDto(item, userId, await _library.HasImportedAsync(item.Id, userId));
+        var userId = _user.CurrentUserId;
+        var isImported = userId is { } id && await _library.HasImportedAsync(item.Id, id);
+        var summary = LibraryRules.ToSummaryDto(item, userId, isImported);
 
         return new LibraryItemDto
         {

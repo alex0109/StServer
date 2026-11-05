@@ -5,5 +5,6 @@ namespace Application.Interfaces;
 
 public interface IReviewRatingResolver
 {
-    ReviewRating Resolve(bool isCorrect, ConfidenceLevel? confidenceLevel);
+    // answerChanges: how often the choice changed before it was saved, a sign of doubt
+    ReviewRating Resolve(bool isCorrect, ConfidenceLevel? confidenceLevel, int answerChanges = 0);
 }

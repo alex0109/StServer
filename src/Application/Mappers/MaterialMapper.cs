@@ -31,6 +31,7 @@ public static class MaterialMapper
         {
             Id = entity.Id,
             AssessmentId = entity.Assessments.FirstOrDefault()?.Id,
+            Deadline = entity.Deadline,
             Title = entity.Title,
             Type = entity.Type,
             MaterialTags = entity.MaterialTags

@@ -10,7 +10,7 @@ public interface IAttemptService
     // Empty when nothing is finished yet: no attempts is a normal state, not a missing resource
     Task<List<AttemptResponseDto>> GetFinishedAttempts(Guid materialId);
     Task<AttemptResponseDto?> GetAttempt(Guid id);
-    Task<Guid?> StartAttempt(Guid assessmentId);
+    Task<Guid?> StartAttempt(Guid assessmentId, bool useTimer = false);
     Task<AnswerEvaluationResult> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto);
     Task<bool> FinishAttempt(Guid id);
     Task MarkAbandonedAttempts();

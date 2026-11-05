@@ -75,7 +75,7 @@ public static partial class LibraryRules
         ReviewedAt = request.ReviewedAt,
     };
 
-    public static LibraryItemSummaryDto ToSummaryDto(LibraryItem item, Guid userId, bool isImported) => new()
+    public static LibraryItemSummaryDto ToSummaryDto(LibraryItem item, Guid? userId, bool isImported) => new()
     {
         Id = item.Id,
         Title = item.Title,

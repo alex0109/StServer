@@ -7,7 +7,7 @@ namespace Application.Mappers;
 
 public class AttemptMapper
 {
-    public static Attempt ToEntity(Guid assessmentId, Guid userId)
+    public static Attempt ToEntity(Guid assessmentId, Guid userId, int? timeLimitMinutes = null)
     {
         return new Attempt
         {
@@ -15,7 +15,8 @@ public class AttemptMapper
             AssessmentId = assessmentId,
             UserId = userId,
             AttemptStatus = AttemptStatus.InProgress,
-            StartedAt = DateTime.UtcNow
+            StartedAt = DateTime.UtcNow,
+            TimeLimitMinutes = timeLimitMinutes
         };
     }
 
@@ -39,7 +40,8 @@ public class AttemptMapper
                 .Select(ResultMapper.ToDto)
                 .ToList(),
             StartedAt = entity.StartedAt,
-            FinishedAt = entity.FinishedAt
+            FinishedAt = entity.FinishedAt,
+            TimeLimitMinutes = entity.TimeLimitMinutes
         };
     }
 }

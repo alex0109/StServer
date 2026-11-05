@@ -69,6 +69,7 @@ public static class DependencyInjection
 
         services.AddSingleton(notificationOptions ?? new NotificationOptions());
         services.AddScoped<IStudyActivityService, StudyActivityService>();
+        services.AddScoped<IDeadlineService, DeadlineService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<INotificationGenerator, NotificationGenerator>();
         services.AddScoped<IFlashcardProgressRebuilder, FlashcardProgressRebuilder>();

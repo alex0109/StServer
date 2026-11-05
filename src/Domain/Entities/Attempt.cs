@@ -12,4 +12,6 @@ public class Attempt
     public AttemptStatus AttemptStatus  { get; set; }
     public required DateTime StartedAt { get; set; }
     public DateTime? FinishedAt { get; set; }
+    // The limit at the start: changing the settings later doesn't touch a running attempt
+    public int? TimeLimitMinutes { get; set; }
 }

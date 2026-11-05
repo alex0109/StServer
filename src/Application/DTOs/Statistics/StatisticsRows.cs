@@ -1,3 +1,4 @@
+using Domain.Utility.Flashcard;
 using Domain.Utility.Question;
 using Domain.Utility.Result;
 using Domain.Utility.Review;
@@ -18,3 +19,14 @@ public record TagAnswerStat(Guid TagId, string TagName, int Answers, int Correct
 public record FlashcardAnswerRow(Guid EntryId, ReviewRating Rating, DateTime ReviewedAt);
 
 public record WordTerm(Guid EntryId, string Term, string Translation);
+
+public record DeadlineMaterialRow(Guid MaterialId, string Title, DateOnly Deadline, DateTime? LastAttemptAt);
+
+public enum DeadlineItemKind
+{
+    Word,
+    Question
+}
+
+// One word or question of a material with a deadline: what it takes to plan the days before it
+public record DeadlineItemRow(Guid MaterialId, DeadlineItemKind Kind, FlashcardState State, DateTime? Due, int Lapses);

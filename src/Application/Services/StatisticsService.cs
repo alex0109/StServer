@@ -1,4 +1,5 @@
 using Application.DTOs.Statistics;
+using Application.Exceptions;
 using Application.Interfaces;
 using Application.Statistics;
 using Domain.Utility.Result;
@@ -15,6 +16,7 @@ public class StatisticsService : IStatisticsService
     private readonly IUserReadCache _cache;
 
     private const int HardestWordsCount = 5;
+    private const int MaxCalendarDays = 400;
 
     public StatisticsService(
         IStatisticsRepository repo,
@@ -56,6 +58,24 @@ public class StatisticsService : IStatisticsService
     // "Studied today" turns over at local midnight, so the streak is kept for a minute only
     public Task<StudyStreakDto> GetStudyStreakAsync() =>
         _cache.GetOrCreateAsync(_user.UserId, "statistics:streak", BuildStudyStreakAsync, TimeSpan.FromMinutes(1));
+
+    // Today turns over at local midnight, so like the streak it is kept for a minute only
+    public async Task<StudyCalendarDto> GetCalendarAsync(DateOnly from, DateOnly to)
+    {
+        if (from > to || to.DayNumber - from.DayNumber > MaxCalendarDays)
+            throw new BadRequestException($"The calendar shows up to {MaxCalendarDays} days at a time");
+
+        return await _cache.GetOrCreateAsync(
+            _user.UserId,
+            $"statistics:calendar:{from:yyyy-MM-dd}:{to:yyyy-MM-dd}",
+            async () => await _activity.GetCalendarAsync(
+                _user.UserId,
+                await _timeZones.GetAsync(_user.UserId),
+                _time.GetUtcNow().UtcDateTime,
+                from,
+                to),
+            TimeSpan.FromMinutes(1));
+    }
 
     public Task<FlashcardAnswersDto> GetFlashcardAnswersAsync(int days = 30)
     {

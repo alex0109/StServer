@@ -30,7 +30,7 @@ public class AccountRepository : IAccountRepository
                 m.Id, m.Title, m.Type, m.Status, m.Link, m.Content, m.IsActive,
                 m.MaterialTags.Select(t => t.TagId).ToList(),
                 m.MaterialFiles.Select(f => new ExportFile(f.Id, f.OriginalFileName, f.ContentType, f.FileSize, f.CreatedAt)).ToList(),
-                m.ImportedFromMaterialId, m.ImportedFromLibraryItemId, m.CreatedAt, m.UpdatedAt, m.DeletedAt))
+                m.ImportedFromMaterialId, m.ImportedFromLibraryItemId, m.Deadline, m.CreatedAt, m.UpdatedAt, m.DeletedAt))
             .ToListAsync();
 
         var tags = await _db.Tags.AsNoTracking()

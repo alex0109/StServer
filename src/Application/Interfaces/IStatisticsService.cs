@@ -11,4 +11,5 @@ public interface IStatisticsService
     Task<List<TagPerformanceDto>> GetTagPerformanceAsync();
     Task<StudyStreakDto> GetStudyStreakAsync();
     Task<FlashcardAnswersDto> GetFlashcardAnswersAsync(int days = 30);
+    Task<StudyCalendarDto> GetCalendarAsync(DateOnly from, DateOnly to);
 }

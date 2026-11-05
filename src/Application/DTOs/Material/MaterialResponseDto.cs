@@ -25,4 +25,5 @@ public class MaterialResponseDto
     // Imported from the global library (not from a share link)
     public bool IsFromLibrary { get; set; }
     public DateTime? ImportedAt { get; set; }
+    public DateOnly? Deadline { get; set; }
 }

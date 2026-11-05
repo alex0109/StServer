@@ -7,6 +7,7 @@ namespace Application.Interfaces;
 public interface IStudyActivityService
 {
     Task<StudyStreakDto> GetStreakAsync(Guid userId, TimeZoneInfo timeZone, DateTime utcNow);
+    Task<StudyCalendarDto> GetCalendarAsync(Guid userId, TimeZoneInfo timeZone, DateTime utcNow, DateOnly from, DateOnly to);
     Task<TodayDto> GetTodayAsync(Guid userId, TimeZoneInfo timeZone, DateTime utcNow);
     // The seven local days before weekEnd
     Task<WeeklyDigestData> GetWeekAsync(Guid userId, TimeZoneInfo timeZone, DateOnly weekEnd, DateTime utcNow);
