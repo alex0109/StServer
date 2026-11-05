@@ -12,6 +12,9 @@ namespace E2ETests;
 
 public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    // In ADMIN_USER_IDS for every test host
+    public static readonly Guid AdminUserId = Guid.Parse("a11ce000-0000-4000-8000-000000000001");
+
     private readonly PostgreSqlContainer _db = new PostgreSqlBuilder("postgres:16-alpine")
         .Build();
 
@@ -41,6 +44,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         return client;
     }
     
+    public HttpClient CreateAdminClient(bool secondFactor = true)
+    {
+        var client = CreateAuthenticatedClient(AdminUserId);
+        if (secondFactor)
+            client.DefaultRequestHeaders.Add(TestAuthHandler.SecondFactorHeader, "1");
+        return client;
+    }
+
     public HttpClient CreateClientWithoutAuth()
     {
         return WithWebHostBuilder(builder =>
@@ -67,6 +78,7 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         
         Environment.SetEnvironmentVariable("DATABASE_URL", _db.GetConnectionString());
         Environment.SetEnvironmentVariable("SUPABASE_URL", "https://adpkgbqqwpzafwijluwx.supabase.co/auth/v1");
+        Environment.SetEnvironmentVariable("ADMIN_USER_IDS", AdminUserId.ToString());
 
         using var scope = Services.CreateScope();
         var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();

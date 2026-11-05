@@ -34,5 +34,8 @@ public interface ILibraryAdminService
     // The owner's own material goes to the library at once
     Task<LibraryItemSummaryDto?> PublishAsync(LibraryAdminPublishDto dto);
 
+    // A ready material from a file goes to the library at once; the same title updates it
+    Task<LibraryAdminImportResultDto> ImportAsync(LibraryAdminImportDto dto);
+
     Task<bool> RemoveItemAsync(Guid itemId);
 }

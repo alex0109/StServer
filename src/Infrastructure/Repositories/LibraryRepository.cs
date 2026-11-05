@@ -75,6 +75,10 @@ public class LibraryRepository : ILibraryRepository
     public Task<LibraryItem?> GetItemAsync(Guid itemId) =>
         _db.LibraryItems.FirstOrDefaultAsync(x => x.Id == itemId);
 
+    public Task<LibraryItem?> GetPublishedItemAsync(Guid authorUserId, string title) =>
+        _db.LibraryItems.FirstOrDefaultAsync(x =>
+            x.AuthorUserId == authorUserId && x.Title == title && x.Status == LibraryItemStatus.Published);
+
     public Task<bool> HasImportedAsync(Guid itemId, Guid userId) =>
         _db.Materials.AnyAsync(m => m.UserId == userId && m.ImportedFromLibraryItemId == itemId);
 

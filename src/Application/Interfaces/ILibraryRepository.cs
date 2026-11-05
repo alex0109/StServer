@@ -15,6 +15,8 @@ public interface ILibraryRepository
 
     Task<LibraryItem?> GetItemAsync(Guid itemId);
 
+    Task<LibraryItem?> GetPublishedItemAsync(Guid authorUserId, string title);
+
     Task<bool> HasImportedAsync(Guid itemId, Guid userId);
 
     Task AddItemAsync(LibraryItem item);

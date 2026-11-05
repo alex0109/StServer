@@ -134,6 +134,45 @@ public class LibraryAdminService : ILibraryAdminService
         return LibraryRules.ToSummaryDto(item, userId, isImported: false);
     }
 
+    public async Task<LibraryAdminImportResultDto> ImportAsync(LibraryAdminImportDto dto)
+    {
+        var userId = _user.UserId;
+        var nickname = LibraryRules.NormalizeNickname(dto.AuthorNickname);
+
+        LibrarySnapshotValidator.EnsureValid(dto.Snapshot);
+
+        var document = LibraryRules.ToCheckedDocument(dto.Snapshot);
+        var now = _time.GetUtcNow().UtcDateTime;
+
+        // The same title from the same owner is the same material: importing a corrected file keeps
+        // its address, its place in search and its counters instead of making a twin
+        var item = await _library.GetPublishedItemAsync(userId, dto.Snapshot.Title);
+        var created = item is null;
+
+        if (item is null)
+        {
+            item = NewItem(document, nickname, userId, materialId: null, now);
+            await _library.AddItemAsync(item);
+        }
+        else
+        {
+            var snapshot = LibrarySnapshotJson.FromDocument(document);
+
+            LibraryRules.Apply(item, snapshot, LibrarySnapshotJson.ToDocument(snapshot));
+            item.AuthorNickname = nickname;
+            item.UpdatedAt = now;
+            item.Version++;
+        }
+
+        await _library.SaveChangesAsync();
+
+        return new LibraryAdminImportResultDto
+        {
+            Item = LibraryRules.ToSummaryDto(item, userId, isImported: false),
+            Created = created,
+        };
+    }
+
     public async Task<bool> RemoveItemAsync(Guid itemId)
     {
         var item = await _library.GetItemAsync(itemId);
