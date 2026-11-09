@@ -34,7 +34,7 @@ public class StripeBillingProviderTests
         {
             [(BillingPlan.Plus, BillingInterval.Month)] = "price_plus_month",
             [(BillingPlan.Plus, BillingInterval.Year)] = "price_plus_year",
-            [(BillingPlan.Pro, BillingInterval.Month)] = "price_pro_month",
+            [(BillingPlan.Duo, BillingInterval.Month)] = "price_duo_month",
         },
         tax,
         trialDays,
@@ -170,7 +170,7 @@ public class StripeBillingProviderTests
         provider.ParseEvent(SubscriptionEvent(cancelAt: Now.AddDays(29)))!.CancelAtPeriodEnd.ShouldBeTrue();
         // Still paid for until then
         provider.ParseEvent(SubscriptionEvent(cancelAt: Now.AddDays(29)))!.Status.ShouldBe(SubscriptionStatus.Active);
-        provider.ParseEvent(SubscriptionEvent(price: "price_pro_month"))!.Tier.ShouldBe(SubscriptionTier.Pro);
+        provider.ParseEvent(SubscriptionEvent(price: "price_duo_month"))!.Tier.ShouldBe(SubscriptionTier.Duo);
     }
 
     [Fact]
@@ -223,7 +223,7 @@ public class StripeBillingProviderTests
         _handler.Answers.Enqueue("""{"url":"https://checkout.stripe.com/c/pay/cs_test_2"}""");
 
         await Provider(Settings(StripeTaxMode.Automatic, trialDays: 7)).CreateCheckoutUrlAsync(
-            new BillingCheckout(UserId, "reader@example.com", BillingPlan.Pro, BillingInterval.Month, "cus_1", "uk"),
+            new BillingCheckout(UserId, "reader@example.com", BillingPlan.Duo, BillingInterval.Month, "cus_1", "uk"),
             TestContext.Current.CancellationToken);
 
         var form = _handler.Forms.Single();
@@ -256,7 +256,7 @@ public class StripeBillingProviderTests
     public async Task Checkout_ForAPlanWithoutAPrice_IsUnavailable()
     {
         await Should.ThrowAsync<BillingUnavailableException>(() => Provider().CreateCheckoutUrlAsync(
-            new BillingCheckout(UserId, null, BillingPlan.Pro, BillingInterval.Year, null, null),
+            new BillingCheckout(UserId, null, BillingPlan.Duo, BillingInterval.Year, null, null),
             TestContext.Current.CancellationToken));
 
         _handler.Requests.ShouldBeEmpty();
@@ -311,16 +311,30 @@ public class StripeBillingProviderTests
             "/v1/prices/price_plus_month" => """{"id":"price_plus_month","active":true,"currency":"nok","unit_amount":9900,"recurring":{"interval":"month"}}""",
             // Configured as yearly, but it is a monthly price
             "/v1/prices/price_plus_year" => """{"id":"price_plus_year","active":true,"currency":"nok","unit_amount":99000,"recurring":{"interval":"month"}}""",
-            "/v1/prices/price_pro_month" => """{"id":"price_pro_month","active":false,"currency":"nok","unit_amount":19900,"recurring":{"interval":"month"}}""",
+            "/v1/prices/price_duo_month" => """{"id":"price_duo_month","active":false,"currency":"nok","unit_amount":19900,"recurring":{"interval":"month"}}""",
             _ => "{}",
         };
         var provider = Provider();
 
         var prices = await provider.GetPricesAsync(TestContext.Current.CancellationToken);
 
-        prices.ShouldHaveSingleItem().ShouldBe(new BillingPrice(BillingPlan.Plus, BillingInterval.Month, 9900, "nok"));
+        var price = prices.ShouldHaveSingleItem();
+        (price.Plan, price.Interval, price.Amount, price.Currency).ShouldBe((BillingPlan.Plus, BillingInterval.Month, 9900L, "nok"));
         (await provider.GetPricesAsync(TestContext.Current.CancellationToken)).ShouldBeSameAs(prices);
         _handler.Requests.Count.ShouldBe(3);
+    }
+
+    [Fact]
+    public async Task Prices_BringTheirOtherCurrencies()
+    {
+        _handler.Respond = path => path == "/v1/prices/price_plus_month"
+            ? """{"id":"price_plus_month","active":true,"currency":"nok","unit_amount":7000,"tax_behavior":"inclusive","recurring":{"interval":"month"},"currency_options":{"nok":{"unit_amount":7000},"usd":{"unit_amount":700},"eur":{"tiers_mode":"graduated"}}}"""
+            : "{}";
+
+        var prices = await Provider().GetPricesAsync(TestContext.Current.CancellationToken);
+
+        prices.ShouldHaveSingleItem().CurrencyAmounts.ShouldBe(new Dictionary<string, long> { ["nok"] = 7000, ["usd"] = 700 });
+        _handler.Requests.ShouldAllBe(x => x.RequestUri!.Query.Contains("currency_options"));
     }
 
     [Fact]
@@ -365,7 +379,7 @@ public class StripeSettingsTests : IDisposable
     private static readonly string[] Variables =
     [
         "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "STRIPE_TAX_MODE", "STRIPE_TRIAL_DAYS",
-        "STRIPE_PRICE_PLUS_MONTHLY", "STRIPE_PRICE_PLUS_YEARLY", "STRIPE_PRICE_PRO_MONTHLY", "STRIPE_PRICE_PRO_YEARLY",
+        "STRIPE_PRICE_PLUS_MONTHLY", "STRIPE_PRICE_PLUS_YEARLY", "STRIPE_PRICE_DUO_MONTHLY", "STRIPE_PRICE_DUO_YEARLY",
     ];
 
     public StripeSettingsTests() => Dispose();
@@ -388,7 +402,7 @@ public class StripeSettingsTests : IDisposable
         Environment.SetEnvironmentVariable("STRIPE_WEBHOOK_SECRET", "whsec_abc");
         Environment.SetEnvironmentVariable("STRIPE_PRICE_PLUS_MONTHLY", "price_1");
         // Not a price id: ignored
-        Environment.SetEnvironmentVariable("STRIPE_PRICE_PRO_MONTHLY", "prod_1");
+        Environment.SetEnvironmentVariable("STRIPE_PRICE_DUO_MONTHLY", "prod_1");
         Environment.SetEnvironmentVariable("STRIPE_TAX_MODE", "Managed");
         Environment.SetEnvironmentVariable("STRIPE_TRIAL_DAYS", "400");
 

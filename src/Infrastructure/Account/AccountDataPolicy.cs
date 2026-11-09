@@ -49,6 +49,17 @@ public static class AccountDataPolicy
         DeleteByUser<UserProfile>(),
         DeleteByUser<UserSubscription>(),
 
+        new(typeof(DuoMembership), AccountDataAction.Delete,
+            "A payer's Duo goes with them; a member leaves the payer's Duo, which stays",
+            async (db, userId, _) =>
+                await db.DuoMemberships.Where(x => x.UserId == userId).ExecuteDeleteAsync()
+                + await db.DuoMemberships
+                    .Where(x => x.MemberUserId == userId)
+                    .ExecuteUpdateAsync(s => s
+                        .SetProperty(x => x.MemberUserId, (Guid?)null)
+                        .SetProperty(x => x.MemberEmail, (string?)null)
+                        .SetProperty(x => x.JoinedAt, (DateTime?)null))),
+
         new(typeof(FeedbackSubmission), AccountDataAction.Delete,
             "Only a counter for the monthly limit, the key holds the user id",
             (db, userId, _) => db.FeedbackSubmissions

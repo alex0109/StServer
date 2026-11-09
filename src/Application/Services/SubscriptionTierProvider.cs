@@ -25,6 +25,8 @@ public class SubscriptionTierProvider : ISubscriptionTierProvider
         var now = _time.GetUtcNow().UtcDateTime;
 
         var tier = SubscriptionRules.EffectiveTier(subscription, now);
+        if (tier == SubscriptionTier.Free)
+            tier = SubscriptionRules.EffectiveTier(subscription, await _subscriptions.GetDuoPayerSubscriptionAsync(userId), now);
 
         _cache[userId] = tier;
         return tier;

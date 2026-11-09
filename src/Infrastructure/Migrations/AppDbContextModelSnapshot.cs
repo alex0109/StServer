@@ -369,6 +369,52 @@ namespace StServer.Migrations
                     b.ToTable("DictionaryEntryProgresses");
                 });
 
+            modelBuilder.Entity("Domain.Entities.DuoMembership", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("InviteExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InviteTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MemberEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<Guid?>("MemberUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OwnerEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("InviteTokenHash")
+                        .IsUnique()
+                        .HasFilter("\"InviteTokenHash\" IS NOT NULL");
+
+                    b.HasIndex("MemberUserId")
+                        .IsUnique()
+                        .HasFilter("\"MemberUserId\" IS NOT NULL");
+
+                    b.ToTable("DuoMemberships");
+                });
+
             modelBuilder.Entity("Domain.Entities.FeedbackSubmission", b =>
                 {
                     b.Property<Guid>("Id")

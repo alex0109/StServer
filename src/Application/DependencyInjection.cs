@@ -63,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IBillingService, BillingService>();
         services.AddScoped<IBillingCatalog, BillingCatalog>();
+        services.AddScoped<IDuoService, DuoService>();
         services.AddScoped<IMaterialImportService, MaterialImportService>();
         services.AddScoped<ISubscriptionAdminService, SubscriptionAdminService>();
         services.AddScoped<ILearningSettingsProvider, LearningSettingsProvider>();

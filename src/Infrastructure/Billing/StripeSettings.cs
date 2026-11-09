@@ -33,8 +33,8 @@ public sealed record StripeSettings(
     {
         [(BillingPlan.Plus, BillingInterval.Month)] = "STRIPE_PRICE_PLUS_MONTHLY",
         [(BillingPlan.Plus, BillingInterval.Year)] = "STRIPE_PRICE_PLUS_YEARLY",
-        [(BillingPlan.Pro, BillingInterval.Month)] = "STRIPE_PRICE_PRO_MONTHLY",
-        [(BillingPlan.Pro, BillingInterval.Year)] = "STRIPE_PRICE_PRO_YEARLY",
+        [(BillingPlan.Duo, BillingInterval.Month)] = "STRIPE_PRICE_DUO_MONTHLY",
+        [(BillingPlan.Duo, BillingInterval.Year)] = "STRIPE_PRICE_DUO_YEARLY",
     };
 
     public bool IsComplete => SecretKey is not null && WebhookSecret is not null && SiteUrl is not null && Prices.Count > 0;

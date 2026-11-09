@@ -20,6 +20,14 @@ public class AiUsageRepository : IAiUsageRepository
         return await _db.UserSubscriptions.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == userId);
     }
 
+    public async Task<UserSubscription?> GetDuoPayerSubscriptionAsync(Guid memberUserId)
+    {
+        return await _db.DuoMemberships.AsNoTracking()
+            .Where(x => x.MemberUserId == memberUserId)
+            .Join(_db.UserSubscriptions.AsNoTracking(), duo => duo.UserId, subscription => subscription.UserId, (_, subscription) => subscription)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<int> CountAsync(Guid userId, AiFeature feature, DateTime since)
     {
         return await _db.AiUsages.CountAsync(x =>

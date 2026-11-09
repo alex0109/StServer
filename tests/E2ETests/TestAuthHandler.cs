@@ -11,6 +11,7 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
     public const string SchemeName = "TestScheme";
     public const string UserIdHeader = "X-Test-User-Id";
     public const string SecondFactorHeader = "X-Test-Second-Factor";
+    public const string EmailHeader = "X-Test-Email";
 
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -25,6 +26,8 @@ public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions
         var claims = new List<Claim> { new(ClaimTypes.NameIdentifier, userId.ToString()) };
         if (Request.Headers.ContainsKey(SecondFactorHeader))
             claims.Add(new Claim("aal", "aal2"));
+        if (Request.Headers[EmailHeader].FirstOrDefault() is { Length: > 0 } email)
+            claims.Add(new Claim("email", email));
 
         var identity = new ClaimsIdentity(claims, SchemeName);
         var principal = new ClaimsPrincipal(identity);

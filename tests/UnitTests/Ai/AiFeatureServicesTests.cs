@@ -234,7 +234,7 @@ public class AiFeatureServicesTests
         var materials = new Mock<IMaterialRepository>();
         materials.Setup(x => x.GetByIdAsync(material.Id, _userId)).ReturnsAsync(material);
         var questions = new Mock<IQuestionRepository>();
-        questions.Setup(x => x.CountActiveByMaterialIdAsync(material.Id)).ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
+        questions.Setup(x => x.CountActiveByMaterialIdAsync(material.Id)).ReturnsAsync(ContentLimitDefaults.Everyone.QuestionsPerMaterial!.Value);
 
         var sut = new QuestionGenerationService(
             questions.Object, materials.Object, Mock.Of<INoteRepository>(), Mock.Of<IOptionService>(),

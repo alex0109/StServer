@@ -38,6 +38,20 @@ public class BillingRepository : IBillingRepository
             .Take(take)
             .ToListAsync();
 
+    public Task<DuoMembership?> GetDuoAsync(Guid payerUserId) =>
+        _db.DuoMemberships.FirstOrDefaultAsync(x => x.UserId == payerUserId);
+
+    public Task<DuoMembership?> FindDuoByMemberAsync(Guid memberUserId) =>
+        _db.DuoMemberships.FirstOrDefaultAsync(x => x.MemberUserId == memberUserId);
+
+    public Task<DuoMembership?> FindDuoByInviteAsync(string tokenHash) =>
+        _db.DuoMemberships.FirstOrDefaultAsync(x => x.InviteTokenHash == tokenHash);
+
+    public async Task AddDuoAsync(DuoMembership duo)
+    {
+        await _db.DuoMemberships.AddAsync(duo);
+    }
+
     public async Task<bool> TryAddEventAsync(SubscriptionEvent subscriptionEvent)
     {
         // The unique index on the provider's event id is the guard: two parallel deliveries

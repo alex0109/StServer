@@ -29,13 +29,13 @@ public class BillingEndpointsTests : IClassFixture<ApiFactory>
 
         root.GetProperty("checkoutAvailable").GetBoolean().ShouldBeFalse();
         var plans = root.GetProperty("plans").EnumerateArray().ToList();
-        plans.Select(x => x.GetProperty("tier").GetString()).ShouldBe(["Free", "Plus", "Pro"]);
+        plans.Select(x => x.GetProperty("tier").GetString()).ShouldBe(["Free", "Plus", "Duo"]);
         plans.ShouldAllBe(x => x.GetProperty("prices").GetArrayLength() == 0);
 
-        plans[1].GetProperty("limits").GetProperty("materials").GetInt32().ShouldBe(300);
-        // Pro has no limit on materials
-        plans[2].GetProperty("limits").GetProperty("materials").ValueKind.ShouldBe(JsonValueKind.Null);
+        // Content isn't sold: every plan has the same room
+        plans.ShouldAllBe(x => x.GetProperty("limits").GetProperty("materials").GetInt32() == 1000);
         plans[1].GetProperty("aiPerMonth").GetProperty("QuestionGeneration").GetInt32().ShouldBe(100);
+        plans[2].GetProperty("aiPerMonth").GetProperty("QuestionGeneration").GetInt32().ShouldBe(100);
     }
 
     [Fact]

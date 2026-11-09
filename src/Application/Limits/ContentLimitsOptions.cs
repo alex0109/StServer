@@ -52,18 +52,12 @@ public class ContentLimitsOptions
     }
 }
 
-// Rows in Postgres cost almost nothing, so the free plan is generous: tight limits hurt learning,
-// not costs. AI is what costs money, and it has its own quotas
+// Content isn't what a plan sells: everyone has the same room, so nothing is locked when a
+// subscription ends. The caps are far above real use and only keep scripts from filling the
+// database. AI is what costs money, and its quotas are what the plans change
 public static class ContentLimitDefaults
 {
-    public static readonly TierLimits Free = new(40, 50, 50, 30, 3, 500, 30);
-    public static readonly TierLimits Plus = new(300, 200, 200, 100, 5, 3000, 300);
-    public static readonly TierLimits Pro = new(null, null, null, null, null, null, null);
+    public static readonly TierLimits Everyone = new(1000, 300, 500, 300, 20, 5000, 300);
 
-    public static TierLimits For(SubscriptionTier tier) => tier switch
-    {
-        SubscriptionTier.Plus => Plus,
-        SubscriptionTier.Pro => Pro,
-        _ => Free,
-    };
+    public static TierLimits For(SubscriptionTier tier) => Everyone;
 }

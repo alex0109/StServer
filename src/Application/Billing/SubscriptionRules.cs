@@ -27,4 +27,14 @@ public static class SubscriptionRules
 
         return inForce ? subscription.Tier : SubscriptionTier.Free;
     }
+
+    // With the payer's subscription for a member of someone's Duo: a plan of their own counts first,
+    // otherwise they have Duo exactly while the payer's Duo is in force
+    public static SubscriptionTier EffectiveTier(UserSubscription? own, UserSubscription? duoPayer, DateTime now)
+    {
+        var tier = EffectiveTier(own, now);
+        if (tier != SubscriptionTier.Free || duoPayer is null) return tier;
+
+        return EffectiveTier(duoPayer, now) == SubscriptionTier.Duo ? SubscriptionTier.Duo : SubscriptionTier.Free;
+    }
 }

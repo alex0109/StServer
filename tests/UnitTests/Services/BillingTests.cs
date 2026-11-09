@@ -173,7 +173,23 @@ public class BillingWebhookTests
     {
         await Deliver(Event("evt_1", SubscriptionStatus.Active, Now));
 
-        await Should.ThrowAsync<ConflictException>(() => _sut.CreateCheckoutAsync(BillingPlan.Pro, BillingInterval.Year, "uk"));
+        await Should.ThrowAsync<ConflictException>(() => _sut.CreateCheckoutAsync(BillingPlan.Duo, BillingInterval.Year, "uk"));
+        _provider.Checkouts.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task OnSomeonesDuo_TheMemberHasIt_AndBuysNothing()
+    {
+        var payer = Guid.NewGuid();
+        _repo.Subscriptions.Add(new UserSubscription
+        {
+            UserId = payer, Tier = SubscriptionTier.Duo, Provider = SubscriptionProvider.Stripe,
+            CurrentPeriodEnd = Now.AddDays(10), CreatedAt = Now,
+        });
+        _repo.Duos.Add(new DuoMembership { UserId = payer, MemberUserId = _userId, CreatedAt = Now });
+
+        (await _sut.GetStatusAsync()).Tier.ShouldBe(SubscriptionTier.Duo);
+        await Should.ThrowAsync<ConflictException>(() => _sut.CreateCheckoutAsync(BillingPlan.Plus, BillingInterval.Month, "uk"));
         _provider.Checkouts.ShouldBeEmpty();
     }
 
@@ -182,9 +198,9 @@ public class BillingWebhookTests
     {
         await Deliver(Event("evt_1", SubscriptionStatus.Expired, Now));
 
-        var url = await _sut.CreateCheckoutAsync(BillingPlan.Pro, BillingInterval.Year, "nb");
+        var url = await _sut.CreateCheckoutAsync(BillingPlan.Duo, BillingInterval.Year, "nb");
 
-        url.ShouldBe("https://checkout.example/Pro/Year");
+        url.ShouldBe("https://checkout.example/Duo/Year");
         var checkout = _provider.Checkouts.ShouldHaveSingleItem();
         checkout.UserId.ShouldBe(_userId);
         checkout.CustomerId.ShouldBe("ctm_1");
@@ -348,6 +364,21 @@ internal sealed class FakeBillingRepository : IBillingRepository
 {
     public List<UserSubscription> Subscriptions { get; } = [];
     public List<SubscriptionEvent> Events { get; } = [];
+    public List<DuoMembership> Duos { get; } = [];
+
+    public Task<DuoMembership?> GetDuoAsync(Guid payerUserId) => Task.FromResult(Duos.FirstOrDefault(x => x.UserId == payerUserId));
+
+    public Task<DuoMembership?> FindDuoByMemberAsync(Guid memberUserId) =>
+        Task.FromResult(Duos.FirstOrDefault(x => x.MemberUserId == memberUserId));
+
+    public Task<DuoMembership?> FindDuoByInviteAsync(string tokenHash) =>
+        Task.FromResult(Duos.FirstOrDefault(x => x.InviteTokenHash == tokenHash));
+
+    public Task AddDuoAsync(DuoMembership duo)
+    {
+        Duos.Add(duo);
+        return Task.CompletedTask;
+    }
 
     public Task<UserSubscription?> GetSubscriptionAsync(Guid userId) =>
         Task.FromResult(Subscriptions.FirstOrDefault(x => x.UserId == userId));

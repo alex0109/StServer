@@ -304,7 +304,7 @@ public class LibraryServiceTests
     {
         var item = await PublishedItemAsync();
         // Library copies have their own limit, apart from the user's own materials
-        _materials.Setup(x => x.CountLibraryCopiesAsync(_reader)).ReturnsAsync(ContentLimitDefaults.Free.LibraryImports!.Value);
+        _materials.Setup(x => x.CountLibraryCopiesAsync(_reader)).ReturnsAsync(ContentLimitDefaults.Everyone.LibraryImports!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() => AsUser(_reader).ImportAsync(item.Id));
         item.ImportsCount.ShouldBe(0);

@@ -19,6 +19,19 @@ public static class BillingEndpoints
         billingGroup.MapPost("/checkout", Checkout);
         billingGroup.MapPost("/portal", Portal);
 
+        // The token travels in the body, so it never lands in access logs
+        var duoGroup = app.MapGroup("api/billing/duo")
+            .RequireAuthorization()
+            .RequireRateLimiting("api");
+
+        duoGroup.MapGet("/", GetDuo);
+        duoGroup.MapPost("/invite", CreateDuoInvite);
+        duoGroup.MapDelete("/invite", CancelDuoInvite);
+        duoGroup.MapDelete("/member", RemoveDuoMember);
+        duoGroup.MapPost("/preview", PreviewDuoInvite);
+        duoGroup.MapPost("/join", JoinDuo);
+        duoGroup.MapPost("/leave", LeaveDuo);
+
         // The plan cards are shown before signing in too: prices and limits only, nothing personal
         app.MapGet("api/billing/plans", Plans)
             .AllowAnonymous()
@@ -42,6 +55,37 @@ public static class BillingEndpoints
         static async Task<IResult> Portal(PortalCreateDto? dto, IBillingService service)
         {
             return TypedResults.Ok(new CheckoutDto(await service.CreatePortalAsync(dto?.Language)));
+        }
+
+        static async Task<IResult> GetDuo(IDuoService duo) => TypedResults.Ok(await duo.GetAsync());
+
+        static async Task<IResult> CreateDuoInvite(IDuoService duo) => TypedResults.Ok(await duo.CreateInviteAsync());
+
+        static async Task<IResult> CancelDuoInvite(IDuoService duo)
+        {
+            await duo.CancelInviteAsync();
+            return TypedResults.NoContent();
+        }
+
+        static async Task<IResult> RemoveDuoMember(IDuoService duo)
+        {
+            await duo.RemoveMemberAsync();
+            return TypedResults.NoContent();
+        }
+
+        static async Task<IResult> PreviewDuoInvite(DuoTokenDto dto, IDuoService duo) =>
+            TypedResults.Ok(await duo.PreviewAsync(dto.Token));
+
+        static async Task<IResult> JoinDuo(DuoTokenDto dto, IDuoService duo)
+        {
+            await duo.JoinAsync(dto.Token);
+            return TypedResults.NoContent();
+        }
+
+        static async Task<IResult> LeaveDuo(IDuoService duo)
+        {
+            await duo.LeaveAsync();
+            return TypedResults.NoContent();
         }
 
         static async Task<IResult> Plans(IBillingCatalog catalog, CancellationToken cancellationToken)

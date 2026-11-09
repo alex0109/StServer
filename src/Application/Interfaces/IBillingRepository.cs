@@ -11,6 +11,12 @@ public interface IBillingRepository
     void RemoveSubscription(UserSubscription subscription);
     Task<List<UserSubscription>> ListSubscriptionsAsync(int take);
 
+    // The Duo a payer invites to, the one a user is a member of, the one an invite link opens
+    Task<DuoMembership?> GetDuoAsync(Guid payerUserId);
+    Task<DuoMembership?> FindDuoByMemberAsync(Guid memberUserId);
+    Task<DuoMembership?> FindDuoByInviteAsync(string tokenHash);
+    Task AddDuoAsync(DuoMembership duo);
+
     // False when the same provider event is already stored
     Task<bool> TryAddEventAsync(SubscriptionEvent subscriptionEvent);
     Task<SubscriptionEvent?> GetEventAsync(Guid eventId);

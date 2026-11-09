@@ -21,7 +21,7 @@ namespace UnitTests.Services;
 public class AccountDataPolicyTests
 {
     // Properties that tie a row to a person
-    private static readonly string[] UserLinks = ["UserId", "AuthorUserId", "AdminUserId", "SenderKey"];
+    private static readonly string[] UserLinks = ["UserId", "AuthorUserId", "AdminUserId", "SenderKey", "MemberUserId"];
 
     private static AppDbContext Context() =>
         new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql("Host=localhost;Database=model-only").Options);

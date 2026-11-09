@@ -4,10 +4,11 @@ using Domain.Utility.Subscription;
 
 namespace Application.Billing;
 
+// What can be bought; the values are the tiers' values
 public enum BillingPlan
 {
     Plus = 1,
-    Pro = 2,
+    Duo = 3,
 }
 
 public enum BillingInterval
@@ -26,8 +27,14 @@ public record BillingCheckout(
     string? CustomerId,
     string? Language);
 
-// A price as the provider has it; Amount is in the smallest unit of the currency (øre, cents)
-public record BillingPrice(BillingPlan Plan, BillingInterval Interval, long Amount, string Currency);
+// A price as the provider has it; Amount is in the smallest unit of the currency (øre, cents).
+// CurrencyAmounts holds the price's own amount in every currency set on it, its main one included
+public record BillingPrice(
+    BillingPlan Plan,
+    BillingInterval Interval,
+    long Amount,
+    string Currency,
+    IReadOnlyDictionary<string, long>? CurrencyAmounts = null);
 
 // The provider's customer of a deleted account, closed after the data is gone
 public record BillingCustomerRef(SubscriptionProvider Provider, string CustomerId);
