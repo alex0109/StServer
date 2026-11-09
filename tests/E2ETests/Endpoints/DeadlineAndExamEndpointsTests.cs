@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Application.DTOs.Assessment;
 using Application.DTOs.Attempt;
+using Application.DTOs.Question;
 using Application.DTOs.Statistics;
 using Domain.Entities;
 using Domain.Utility.Material;
@@ -160,9 +161,9 @@ public class DeadlineAndExamEndpointsTests : IClassFixture<ApiFactory>
         var settings = await client.GetFromJsonAsync<AssessmentResponseDto>($"/api/assessments/{assessment}", JsonOptions, Ct);
         settings!.TimerMinutes.ShouldBe(30);
 
-        var start = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseTimer = true }, Ct);
+        var start = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseExamSettings = true }, Ct);
         var timed = await start.Content.ReadFromJsonAsync<Guid>(JsonOptions, Ct);
-        var fromNote = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseTimer = false }, Ct);
+        var fromNote = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseExamSettings = false }, Ct);
         var untimed = await fromNote.Content.ReadFromJsonAsync<Guid>(JsonOptions, Ct);
 
         using (var scope = _factory.Services.CreateScope())
@@ -181,6 +182,137 @@ public class DeadlineAndExamEndpointsTests : IClassFixture<ApiFactory>
             results.Count.ShouldBe(2);
             results.ShouldAllBe(x => !x.IsCorrect);
         }
+    }
+
+    [Fact]
+    public async Task ExamSettings_DrawChosenLevelsAndCount_AndTheTimerCountsOnlyThem()
+    {
+        var userId = Guid.NewGuid();
+        var client = _factory.CreateAuthenticatedClient(userId);
+        var (materialId, assessment) = await SeedMaterialAsync(userId, "Selection", questions: 3);
+        var hardIds = await AddQuestionsAsync(userId, materialId, QuestionDifficulty.Hard, 2);
+
+        (await client.PutAsJsonAsync($"/api/assessments/{assessment}/settings", new AssessmentSettingsDto { QuestionCount = 0 }, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        var saved = await client.PutAsJsonAsync($"/api/assessments/{assessment}/settings", new AssessmentSettingsDto
+        {
+            TimerMinutes = 20,
+            Difficulties = [QuestionDifficulty.Hard],
+            QuestionCount = 1,
+        }, JsonOptions, Ct);
+        saved.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var settings = await client.GetFromJsonAsync<AssessmentResponseDto>($"/api/assessments/{assessment}", JsonOptions, Ct);
+        settings!.Difficulties.ShouldBe([QuestionDifficulty.Hard]);
+        settings.QuestionCount.ShouldBe(1);
+
+        var start = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseExamSettings = true }, Ct);
+        start.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var attempt = await start.Content.ReadFromJsonAsync<Guid>(JsonOptions, Ct);
+
+        var questions = await client.GetFromJsonAsync<List<QuestionReducedDto>>($"/api/attempts/{attempt}/questions", JsonOptions, Ct);
+        questions!.Count.ShouldBe(1);
+        hardIds.ShouldContain(questions[0].Id);
+
+        // A note's attempt keeps every question
+        var fromNote = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseExamSettings = false }, Ct);
+        var untimed = await fromNote.Content.ReadFromJsonAsync<Guid>(JsonOptions, Ct);
+        (await client.GetFromJsonAsync<List<QuestionReducedDto>>($"/api/attempts/{untimed}/questions", JsonOptions, Ct))!
+            .Count.ShouldBe(5);
+
+        (await client.PostAsync($"/api/attempts/{attempt}/finish", null, Ct)).IsSuccessStatusCode.ShouldBeTrue();
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var results = db.Results.Where(x => x.AttemptId == attempt).ToList();
+        results.Count.ShouldBe(1);
+        results[0].QuestionId.ShouldBe(questions[0].Id);
+    }
+
+    [Fact]
+    public async Task ExamSettings_NoQuestionOfTheChosenLevel_StartIsRejected()
+    {
+        var userId = Guid.NewGuid();
+        var client = _factory.CreateAuthenticatedClient(userId);
+        var (_, assessment) = await SeedMaterialAsync(userId, "Only easy");
+
+        (await client.PutAsJsonAsync($"/api/assessments/{assessment}/settings", new AssessmentSettingsDto
+        {
+            Difficulties = [QuestionDifficulty.Hard],
+        }, JsonOptions, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var start = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseExamSettings = true }, Ct);
+
+        start.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task AttemptQuestions_ChoicesOfAnAttempt_KeepTheirOrderAndHideTheAnswer()
+    {
+        var userId = Guid.NewGuid();
+        var client = _factory.CreateAuthenticatedClient(userId);
+        var (materialId, assessment) = await SeedMaterialAsync(userId, "Choices", questions: 0);
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var question = new Question
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                MaterialId = materialId,
+                Title = "Pick one",
+                QuestionType = QuestionType.Options,
+                QuestionDifficulty = QuestionDifficulty.Medium,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+            };
+            for (var i = 0; i < 4; i++)
+                question.Options.Add(new Option { Id = Guid.NewGuid(), Name = $"Option {i}", Position = i, IsCorrect = i == 0 });
+            db.Questions.Add(question);
+            await db.SaveChangesAsync(Ct);
+        }
+
+        var start = await client.PostAsJsonAsync("/api/attempts/start", new StartAttemptDto { AssessmentId = assessment, UseExamSettings = true }, Ct);
+        var attempt = await start.Content.ReadFromJsonAsync<Guid>(JsonOptions, Ct);
+
+        var first = (await client.GetFromJsonAsync<List<QuestionReducedDto>>($"/api/attempts/{attempt}/questions", JsonOptions, Ct))!
+            .Single().Options!;
+        var again = (await client.GetFromJsonAsync<List<QuestionReducedDto>>($"/api/attempts/{attempt}/questions", JsonOptions, Ct))!
+            .Single().Options!;
+
+        first.Count.ShouldBe(4);
+        first.ShouldAllBe(o => !o.IsCorrect);
+        again.Select(o => o.Id).ShouldBe(first.Select(o => o.Id));
+    }
+
+    private async Task<List<Guid>> AddQuestionsAsync(Guid userId, Guid materialId, QuestionDifficulty difficulty, int count)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var ids = new List<Guid>();
+
+        for (var i = 0; i < count; i++)
+        {
+            var question = new Question
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                MaterialId = materialId,
+                Title = $"{difficulty} {i}",
+                Answer = "answer",
+                QuestionType = QuestionType.Open,
+                QuestionDifficulty = difficulty,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+            };
+            db.Questions.Add(question);
+            ids.Add(question.Id);
+        }
+
+        await db.SaveChangesAsync(Ct);
+        return ids;
     }
 
     [Fact]

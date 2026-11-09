@@ -78,7 +78,7 @@ public class AccountRepository : IAccountRepository
             .Select(d => new ExportDictionary(
                 d.Id, d.MaterialId, d.Title, d.Description,
                 d.Entries.OrderBy(e => e.Position).Select(e => new ExportWord(
-                    e.Id, e.Term, e.Translation, e.Transcription, e.PartOfSpeech, e.GrammarInfo, e.Example,
+                    e.Id, e.Term, e.Translation, e.Transcription, e.PartOfSpeech, e.Article, e.GrammarInfo, e.Example,
                     e.ExampleTranslation, e.Note, e.Synonyms, e.IsArchived,
                     e.Progress == null
                         ? null

@@ -23,6 +23,7 @@ public static class LibrarySnapshotValidator
     private const int MaxTerm = 200;
     private const int MaxTranslation = 200;
     private const int MaxTranscription = 200;
+    private const int MaxArticle = 20;
     private const int MaxGrammarInfo = 300;
     private const int MaxExample = 500;
     private const int MaxEntryNote = 1000;
@@ -95,6 +96,7 @@ public static class LibrarySnapshotValidator
                 Required(entry.Term, MaxTerm, $"{word} term", problems);
                 Required(entry.Translation, MaxTranslation, $"{word} translation", problems);
                 Optional(entry.Transcription, MaxTranscription, $"{word} transcription", problems);
+                Optional(entry.Article, MaxArticle, $"{word} article", problems);
                 Optional(entry.GrammarInfo, MaxGrammarInfo, $"{word} grammar", problems);
                 Optional(entry.Example, MaxExample, $"{word} example", problems);
                 Optional(entry.ExampleTranslation, MaxExample, $"{word} example translation", problems);

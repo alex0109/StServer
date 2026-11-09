@@ -186,7 +186,7 @@ public class QuestionServiceTests
     {
         _repo.Setup(x =>
                 x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
+            .ReturnsAsync(ContentLimitDefaults.Everyone.QuestionsPerMaterial!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(
             () =>
@@ -418,7 +418,7 @@ public class QuestionServiceTests
     {
         _repo.Setup(x =>
                 x.CountActiveByMaterialIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
+            .ReturnsAsync(ContentLimitDefaults.Everyone.QuestionsPerMaterial!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateTrueFalseQuestionAsync(
@@ -519,7 +519,7 @@ public class QuestionServiceTests
     public async Task CreateOpenQuestionAsync_CountsUnderMaterialLockAndCommits()
     {
         var materialId = Guid.NewGuid();
-        _repo.Setup(x => x.CountActiveByMaterialIdAsync(materialId)).ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value - 1);
+        _repo.Setup(x => x.CountActiveByMaterialIdAsync(materialId)).ReturnsAsync(ContentLimitDefaults.Everyone.QuestionsPerMaterial!.Value - 1);
 
         var result = await _sut.CreateOpenQuestionAsync(materialId,
             new OpenQuestionCreateDto { Title = "Q", Answer = "A" });
@@ -532,7 +532,7 @@ public class QuestionServiceTests
     [Fact]
     public async Task CreateTrueFalseQuestionAsync_LimitReached_DoesNotCommit()
     {
-        _repo.Setup(x => x.CountActiveByMaterialIdAsync(It.IsAny<Guid>())).ReturnsAsync(ContentLimitDefaults.Free.QuestionsPerMaterial!.Value);
+        _repo.Setup(x => x.CountActiveByMaterialIdAsync(It.IsAny<Guid>())).ReturnsAsync(ContentLimitDefaults.Everyone.QuestionsPerMaterial!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateTrueFalseQuestionAsync(Guid.NewGuid(),

@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Application.Constants;
 using Application.Limits;
+using Domain.Entities;
+using Infrastructure.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Mvc;
 using Xunit;
 
@@ -102,11 +105,24 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
     [Fact]
     public async Task CreateMaterial_WhenLimitExceeded_ReturnsConflictWithProblemDetails()
     {
-        // створити MaxMaterials матеріалів
-        for (int i = 0; i < ContentLimitDefaults.Free.Materials!.Value; i++)
-            await CreateMaterial();
+        // The cap is far above real use, so the materials go straight into the database
+        var userId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.Materials.AddRange(Enumerable.Range(0, ContentLimitDefaults.Everyone.Materials!.Value).Select(i => new Material
+            {
+                UserId = userId,
+                Title = $"Material {i}",
+                Type = MaterialType.article,
+                Status = MaterialStatus.tolearn,
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+            }));
+            await db.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
 
-        var response = await _client.PostAsJsonAsync("/api/materials", new MaterialCreateDto
+        var response = await _factory.CreateAuthenticatedClient(userId).PostAsJsonAsync("/api/materials", new MaterialCreateDto
         {
             Title = "One too many",
             Type = MaterialType.article,

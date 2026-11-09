@@ -83,6 +83,7 @@ public static class MaterialCopyMapper
                     Translation = entry.Translation,
                     Transcription = entry.Transcription,
                     PartOfSpeech = entry.PartOfSpeech,
+                    Article = entry.Article,
                     GrammarInfo = entry.GrammarInfo,
                     Example = entry.Example,
                     ExampleTranslation = entry.ExampleTranslation,

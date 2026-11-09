@@ -6,6 +6,7 @@ using Application.DTOs.Review;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Profile;
+using Application.Questions;
 using Application.Review;
 using Application.Statistics;
 using Domain.Entities;
@@ -132,7 +133,7 @@ public class ReviewService : IReviewService
         {
             Id = session.Id,
             StartedAt = session.StartedAt,
-            Questions = questions.Select(ToReviewQuestion).ToList(),
+            Questions = questions.Select(q => ToReviewQuestion(session.Id, q)).ToList(),
         };
     }
 
@@ -224,15 +225,15 @@ public class ReviewService : IReviewService
             UserTimeZone.EndOfLocalDayUtc(today, timeZone));
     }
 
-    private static ReviewQuestionDto ToReviewQuestion(Question question) => new()
+    // Choices in the session's own order, so the right one isn't always where it was written
+    private static ReviewQuestionDto ToReviewQuestion(Guid sessionId, Question question) => new()
     {
         Id = question.Id,
         MaterialId = question.MaterialId,
         MaterialTitle = question.Material.Title,
         Title = question.Title,
         QuestionType = question.QuestionType,
-        Options = question.Options
-            .OrderBy(o => o.Position)
+        Options = OptionOrder.For(sessionId, question)
             .Select(o => new OptionResponseDto { Id = o.Id, Name = o.Name })
             .ToList(),
     };

@@ -158,6 +158,12 @@ public class BillingService : IBillingService
             throw new ConflictException("There is a paid plan already, manage it instead");
         }
 
+        // On someone's Duo the plan is already there; buying one means leaving it first
+        if (await DuoPayerAsync() is { } payer && SubscriptionRules.EffectiveTier(payer, now) == SubscriptionTier.Duo)
+        {
+            throw new ConflictException("You are on someone's Duo, leave it before buying a plan");
+        }
+
         var customerId = subscription?.Provider == billing.Provider ? subscription.ProviderCustomerId : null;
 
         return await billing.CreateCheckoutUrlAsync(
@@ -184,7 +190,7 @@ public class BillingService : IBillingService
         var now = _time.GetUtcNow().UtcDateTime;
 
         return new BillingStatusDto(
-            SubscriptionRules.EffectiveTier(subscription, now),
+            SubscriptionRules.EffectiveTier(subscription, await DuoPayerAsync(), now),
             subscription?.Tier,
             subscription?.Status,
             subscription?.Provider,
@@ -194,6 +200,9 @@ public class BillingService : IBillingService
             _providers.Any(x => x.IsConfigured),
             subscription?.ProviderCustomerId is not null && Configured(subscription.Provider) is not null);
     }
+
+    private async Task<UserSubscription?> DuoPayerAsync() =>
+        await _repo.FindDuoByMemberAsync(_user.UserId) is { } duo ? await _repo.GetSubscriptionAsync(duo.UserId) : null;
 
     private IBillingProvider? Configured(SubscriptionProvider provider) =>
         _providers.FirstOrDefault(x => x.IsConfigured && x.Provider == provider);

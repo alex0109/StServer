@@ -10,6 +10,8 @@ using Domain.Utility.Attempt;
 using Domain.Utility.Question;
 using Domain.Utility.Review;
 using Application.Observability;
+using Application.Attempts;
+using Application.Questions;
 
 namespace Application.Services;
 
@@ -75,17 +77,37 @@ public class AttemptService : IAttemptService
         return result;
     }
 
-    public async Task<Guid?> StartAttempt(Guid assessmentId, bool useTimer = false)
+    public async Task<Guid?> StartAttempt(Guid assessmentId, bool useExamSettings = false)
     {
         var assessment = await _assessmentRepo.GetAssessmentByMaterialIdAsync(assessmentId, _user.UserId);
         if (assessment is null) return null;
-        
+
+        var activeQuestions = await _questionRepo.GetActiveQuestionsAsync(assessment.MaterialId, _user.UserId);
+        var questionIds = useExamSettings
+            ? AttemptQuestions.Draw(activeQuestions, assessment.Difficulties, assessment.QuestionCount, Random.Shared)
+            : AttemptQuestions.Draw(activeQuestions, [], null, Random.Shared);
+
+        if (questionIds.Count == 0)
+            throw new BadRequestException("No active questions match the settings of the attempt");
+
         var attemptEntity = AttemptMapper.ToEntity(
-            assessmentId, _user.UserId, useTimer ? assessment.TimerMinutes : null);
+            assessmentId, _user.UserId, questionIds, useExamSettings ? assessment.TimerMinutes : null);
         await _repo.AddAttemptAsync(attemptEntity);
         await _repo.SaveChangesAsync();
 
         return attemptEntity.Id;
+    }
+
+    public async Task<List<QuestionReducedDto>?> GetQuestions(Guid attemptId)
+    {
+        var attempt = await _repo.GetAttemptWithAssessmentByIdAsync(attemptId, _user.UserId);
+        if (attempt is null) return null;
+
+        var activeQuestions = await _questionRepo.GetActiveQuestionsAsync(attempt.Assessment.MaterialId, _user.UserId);
+
+        return AttemptQuestions.Of(attempt, activeQuestions)
+            .Select(q => QuestionMapper.ToReducedDto(q, OptionOrder.For(attempt.Id, q)))
+            .ToList();
     }
 
     public async Task<AnswerEvaluationResult> AnswerQuestion(Guid id, ResultRequestDto resultRequestDto)
@@ -103,6 +125,10 @@ public class AttemptService : IAttemptService
             return result;
 
         var questionId = resultRequestDto.QuestionId;
+        // A question the attempt didn't draw is not part of it
+        if (attempt.QuestionIds.Count > 0 && !attempt.QuestionIds.Contains(questionId))
+            return result;
+
         var question = await _questionRepo.GetByIdQuestionAsync(attempt.Assessment.MaterialId, questionId, _user.UserId);
 
         if (question is null)
@@ -215,10 +241,10 @@ public class AttemptService : IAttemptService
         if (full is null) return;
 
         var answered = attempt.Results.Select(r => r.QuestionId).ToHashSet();
-        var questions = await _questionRepo.GetActiveQuestionsAsync(full.Assessment.MaterialId, _user.UserId);
+        var activeQuestions = await _questionRepo.GetActiveQuestionsAsync(full.Assessment.MaterialId, _user.UserId);
         var now = DateTime.UtcNow;
 
-        foreach (var question in questions.Where(q => !answered.Contains(q.Id)))
+        foreach (var question in AttemptQuestions.Of(attempt, activeQuestions).Where(q => !answered.Contains(q.Id)))
         {
             await _repo.AddResultAsync(new Result
             {

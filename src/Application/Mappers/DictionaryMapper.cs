@@ -58,6 +58,7 @@ public static class DictionaryMapper
             Translation = dto.Translation,
             Transcription = dto.Transcription,
             PartOfSpeech = dto.PartOfSpeech,
+            Article = ArticleOf(dto.PartOfSpeech, dto.Article),
             GrammarInfo = dto.GrammarInfo,
             Example = dto.Example,
             ExampleTranslation = dto.ExampleTranslation,
@@ -80,6 +81,7 @@ public static class DictionaryMapper
             Translation = entity.Translation,
             Transcription = entity.Transcription,
             PartOfSpeech = entity.PartOfSpeech,
+            Article = entity.Article,
             GrammarInfo = entity.GrammarInfo,
             Example = entity.Example,
             ExampleTranslation = entity.ExampleTranslation,
@@ -106,6 +108,9 @@ public static class DictionaryMapper
 
         if (dto.PartOfSpeech is PartOfSpeech partOfSpeech)
             entity.PartOfSpeech = partOfSpeech;
+
+        // An empty article clears it, and a word that is no longer a noun loses it
+        entity.Article = ArticleOf(entity.PartOfSpeech, dto.Article ?? entity.Article);
 
         if (dto.GrammarInfo is not null)
             entity.GrammarInfo = dto.GrammarInfo;
@@ -137,5 +142,13 @@ public static class DictionaryMapper
             .Select(s => s.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    // Only a noun has an article; a blank one is none
+    public static string? ArticleOf(PartOfSpeech? partOfSpeech, string? article)
+    {
+        if (partOfSpeech != PartOfSpeech.Noun || string.IsNullOrWhiteSpace(article)) return null;
+
+        return article.Trim();
     }
 }

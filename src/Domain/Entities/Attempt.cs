@@ -14,4 +14,7 @@ public class Attempt
     public DateTime? FinishedAt { get; set; }
     // The limit at the start: changing the settings later doesn't touch a running attempt
     public int? TimeLimitMinutes { get; set; }
+    // The questions drawn at the start, in the order they are shown. Empty for attempts from before
+    // the draw existed: those have every active question of the material
+    public List<Guid> QuestionIds { get; set; } = [];
 }

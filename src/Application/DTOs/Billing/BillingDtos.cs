@@ -32,7 +32,9 @@ public class PortalCreateDto
     public string? Language { get; set; }
 }
 
-public record BillingPriceDto(BillingInterval Interval, long Amount, string Currency);
+// Amounts: the same price in every currency set on it, so the page can show the buyer's own.
+// Stripe's checkout decides the currency by where the buyer is
+public record BillingPriceDto(BillingInterval Interval, long Amount, string Currency, IReadOnlyDictionary<string, long> Amounts);
 
 // One tier: its prices (none for Free) and what it allows. Null limits mean no limit
 public record BillingPlanDto(

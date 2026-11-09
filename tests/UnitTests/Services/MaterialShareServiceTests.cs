@@ -191,7 +191,7 @@ public class MaterialShareServiceTests
         var share = CreateShare(CreateMaterial());
 
         _shareRepo.Setup(x => x.GetActiveByTokenAsync(share.Token)).ReturnsAsync(share);
-        _materialRepo.Setup(x => x.CountOwnByUserIdAsync(_recipientId)).ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value);
+        _materialRepo.Setup(x => x.CountOwnByUserIdAsync(_recipientId)).ReturnsAsync(ContentLimitDefaults.Everyone.Materials!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() => _sut.ImportAsync(share.Token));
 

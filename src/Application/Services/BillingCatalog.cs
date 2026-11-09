@@ -33,14 +33,19 @@ public class BillingCatalog : IBillingCatalog
     {
         var prices = await PricesAsync(cancellationToken);
 
-        var plans = new[] { SubscriptionTier.Free, SubscriptionTier.Plus, SubscriptionTier.Pro }
+        // Pro is no longer sold, so it isn't shown; plans granted by hand keep it
+        var plans = new[] { SubscriptionTier.Free, SubscriptionTier.Plus, SubscriptionTier.Duo }
             .Select(tier => new BillingPlanDto(
                 tier,
                 prices
                     // BillingPlan values are the tiers' values
                     .Where(x => (SubscriptionTier)x.Plan == tier)
                     .OrderBy(x => x.Interval)
-                    .Select(x => new BillingPriceDto(x.Interval, x.Amount, x.Currency))
+                    .Select(x => new BillingPriceDto(
+                        x.Interval,
+                        x.Amount,
+                        x.Currency,
+                        x.CurrencyAmounts ?? new Dictionary<string, long> { [x.Currency] = x.Amount }))
                     .ToList(),
                 _limits.For(tier),
                 Enum.GetValues<AiFeature>().ToDictionary(feature => feature, feature => _ai.GetMonthlyQuota(tier, feature))))

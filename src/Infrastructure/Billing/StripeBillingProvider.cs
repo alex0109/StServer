@@ -204,7 +204,9 @@ public sealed class StripeBillingProvider : IBillingProvider
 
         var loaded = await Task.WhenAll(_settings.Prices.Select(async pair =>
         {
-            var price = await SendAsync(HttpMethod.Get, $"v1/prices/{Uri.EscapeDataString(pair.Value)}", null, "price", cancellationToken);
+            // The amounts in other currencies come only when asked for
+            var price = await SendAsync(HttpMethod.Get, $"v1/prices/{Uri.EscapeDataString(pair.Value)}?expand[]=currency_options",
+                null, "price", cancellationToken);
             var interval = price.TryGetProperty("recurring", out var recurring) ? Text(recurring, "interval") : null;
             var expected = pair.Key.Interval == BillingInterval.Year ? "year" : "month";
 
@@ -217,7 +219,16 @@ public sealed class StripeBillingProvider : IBillingProvider
                 return null;
             }
 
-            return new BillingPrice(pair.Key.Plan, pair.Key.Interval, amount.GetInt64(), Text(price, "currency") ?? "eur");
+            // Managed Payments adds VAT on top of an exclusive price, so the buyer would pay more than the card shows
+            if (_settings.TaxMode == StripeTaxMode.Managed && Text(price, "tax_behavior") != "inclusive")
+            {
+                _logger.LogWarning("Stripe price for {Plan} {Interval} doesn't include tax: buyers pay VAT on top of the shown amount",
+                    pair.Key.Plan, pair.Key.Interval);
+            }
+
+            var currency = Text(price, "currency") ?? "eur";
+            return new BillingPrice(pair.Key.Plan, pair.Key.Interval, amount.GetInt64(), currency,
+                CurrencyAmounts(price, currency, amount.GetInt64()));
         }));
 
         var prices = loaded.OfType<BillingPrice>().ToList();
@@ -264,10 +275,25 @@ public sealed class StripeBillingProvider : IBillingProvider
 
         foreach (var (key, value) in _settings.Prices)
         {
-            if (value == priceId) return key.Plan == BillingPlan.Pro ? SubscriptionTier.Pro : SubscriptionTier.Plus;
+            if (value == priceId) return key.Plan == BillingPlan.Duo ? SubscriptionTier.Duo : SubscriptionTier.Plus;
         }
 
         return null;
+    }
+
+    // The price's main amount and every currency option with a plain amount, keys in lower case
+    private static Dictionary<string, long> CurrencyAmounts(JsonElement price, string currency, long amount)
+    {
+        var amounts = new Dictionary<string, long> { [currency] = amount };
+        if (!price.TryGetProperty("currency_options", out var options) || options.ValueKind != JsonValueKind.Object) return amounts;
+
+        foreach (var option in options.EnumerateObject())
+        {
+            if (option.Value.TryGetProperty("unit_amount", out var value) && value.ValueKind == JsonValueKind.Number)
+                amounts[option.Name.ToLowerInvariant()] = value.GetInt64();
+        }
+
+        return amounts;
     }
 
     // Unpaid, incomplete (the first payment isn't through), expired, paused and ended plans give no access

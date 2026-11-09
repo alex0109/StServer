@@ -8,6 +8,7 @@ public record WordLookup(
     string Translation,
     string? Transcription,
     PartOfSpeech? PartOfSpeech,
+    string? Article,
     string? GrammarInfo,
     string? ExampleTranslation);
 
@@ -44,6 +45,7 @@ public class WordLookupPrompt : IAiPrompt<WordLookup>
             - "translation": the meaning in this context, short, in {_language}.
             - "transcription": IPA for the term, empty for phrases longer than three words.
             - "partOfSpeech": one of the allowed values; "phrase" for multi-word expressions.
+            - "article": {AiPartsOfSpeech.ArticleRule}
             - "grammarInfo": very short grammar notes in {_language}: gender and plural for nouns,
               main forms for verbs, comparison for adjectives; empty when there is nothing useful.
             - "exampleTranslation": the sentence translated into {_language}, empty when there is no sentence.
@@ -62,6 +64,7 @@ public class WordLookupPrompt : IAiPrompt<WordLookup>
                 ("translation", AiJson.String()),
                 ("transcription", AiJson.String()),
                 ("partOfSpeech", AiJson.Enum(AiPartsOfSpeech.Values)),
+                ("article", AiJson.String()),
                 ("grammarInfo", AiJson.String()),
                 ("exampleTranslation", AiJson.String()))),
             MaxOutputTokens = 2000,
@@ -75,10 +78,13 @@ public class WordLookupPrompt : IAiPrompt<WordLookup>
         var translation = AiJson.Limit(answer.Translation, 200);
         if (translation.Length == 0) throw new AiOutputException("AI gave no translation");
 
+        var partOfSpeech = AiPartsOfSpeech.Parse(answer.PartOfSpeech);
+
         return new WordLookup(
             translation,
             NullIfEmpty(AiJson.Limit(answer.Transcription, 200)),
-            AiPartsOfSpeech.Parse(answer.PartOfSpeech),
+            partOfSpeech,
+            AiPartsOfSpeech.ArticleOf(partOfSpeech, answer.Article),
             NullIfEmpty(AiJson.Limit(answer.GrammarInfo, 300)),
             _sentence.Length == 0 ? null : NullIfEmpty(AiJson.Limit(answer.ExampleTranslation, 500)));
     }
@@ -89,6 +95,7 @@ public class WordLookupPrompt : IAiPrompt<WordLookup>
         string? Translation,
         string? Transcription,
         string? PartOfSpeech,
+        string? Article,
         string? GrammarInfo,
         string? ExampleTranslation);
 }

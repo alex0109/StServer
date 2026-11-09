@@ -161,8 +161,15 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.PrimitiveCollection<int[]>("Difficulties")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
+
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("QuestionCount")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("TimerMinutes")
                         .HasColumnType("integer");
@@ -192,6 +199,10 @@ namespace StServer.Migrations
 
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<Guid>>("QuestionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
@@ -258,6 +269,10 @@ namespace StServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Article")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -367,6 +382,52 @@ namespace StServer.Migrations
                     b.HasIndex("UserId", "Due");
 
                     b.ToTable("DictionaryEntryProgresses");
+                });
+
+            modelBuilder.Entity("Domain.Entities.DuoMembership", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("InviteExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InviteTokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MemberEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<Guid?>("MemberUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OwnerEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.HasIndex("InviteTokenHash")
+                        .IsUnique()
+                        .HasFilter("\"InviteTokenHash\" IS NOT NULL");
+
+                    b.HasIndex("MemberUserId")
+                        .IsUnique()
+                        .HasFilter("\"MemberUserId\" IS NOT NULL");
+
+                    b.ToTable("DuoMemberships");
                 });
 
             modelBuilder.Entity("Domain.Entities.FeedbackSubmission", b =>

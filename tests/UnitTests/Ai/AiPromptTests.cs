@@ -135,6 +135,24 @@ public class AiPromptTests
     }
 
     [Fact]
+    public void DictionaryParse_ArticleIsKeptForNounsOnly()
+    {
+        var prompt = new DictionaryGenerationPrompt("content", 10, "Ukrainian", []);
+        var json = """
+        {"entries":[
+          {"term":"Hund","translation":"собака","transcription":"","partOfSpeech":"noun","article":"der","example":"","exampleTranslation":""},
+          {"term":"laufen","translation":"бігти","transcription":"","partOfSpeech":"verb","article":"die","example":"","exampleTranslation":""},
+          {"term":"Katze","translation":"кішка","transcription":"","partOfSpeech":"noun","article":"","example":"","exampleTranslation":""}
+        ]}
+        """;
+
+        var entries = prompt.Parse(json);
+
+        entries.Select(x => x.Article).ShouldBe(["der", null, null]);
+        prompt.BuildRequest().UserPrompt.ShouldContain("\"article\"");
+    }
+
+    [Fact]
     public void DictionaryParse_SkipsTermsBeyondThoseListedInThePrompt()
     {
         // Only 150 existing terms fit in the prompt; the 200th is still a duplicate

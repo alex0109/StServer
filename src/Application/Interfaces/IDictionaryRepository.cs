@@ -1,3 +1,4 @@
+using Application.WordQuiz;
 using Domain.Entities;
 
 namespace Application.Interfaces;
@@ -17,6 +18,9 @@ public interface IDictionaryRepository
     Task<int> CountEntriesAsync(Guid dictionaryId);
     // Case-insensitive, so "Hund" and "hund" are one word
     Task<Guid?> FindEntryIdByTermAsync(Guid dictionaryId, string term);
+    // Other words of the user in a random order, up to perSource of them from the word's own dictionary
+    // first, then from the user's other dictionaries
+    Task<List<WordQuizCandidate>> GetQuizCandidatesAsync(Guid entryId, Guid dictionaryId, Guid userId, int perSource);
 
     Task SaveChangesAsync();
 }

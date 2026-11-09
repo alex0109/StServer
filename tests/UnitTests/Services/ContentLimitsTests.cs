@@ -37,17 +37,22 @@ public class ContentLimitsTests
         });
 
     [Fact]
-    public async Task NoSubscription_IsFree()
+    public async Task NoSubscription_HasTheSharedRoom()
     {
-        (await Limits().ForUserAsync(_userId)).ShouldBe(ContentLimitDefaults.Free);
+        (await Limits().ForUserAsync(_userId)).ShouldBe(ContentLimitDefaults.Everyone);
     }
 
-    [Fact]
-    public async Task ExpiredPlus_FallsBackToFree()
+    // Content isn't sold, so a plan that ends locks nothing
+    [Theory]
+    [InlineData(SubscriptionTier.Plus, 10)]
+    [InlineData(SubscriptionTier.Plus, -1)]
+    [InlineData(SubscriptionTier.Duo, 10)]
+    [InlineData(SubscriptionTier.Pro, 10)]
+    public async Task EveryPlan_ActiveOrEnded_HasTheSameRoom(SubscriptionTier tier, int daysLeft)
     {
-        OnPlan(SubscriptionTier.Plus, until: Now.AddDays(-1));
+        OnPlan(tier, until: Now.AddDays(daysLeft));
 
-        (await Limits().ForUserAsync(_userId)).ShouldBe(ContentLimitDefaults.Free);
+        (await Limits().ForUserAsync(_userId)).ShouldBe(ContentLimitDefaults.Everyone);
     }
 
     [Fact]
@@ -63,22 +68,22 @@ public class ContentLimitsTests
 
         limits.Materials.ShouldBe(999);
         limits.Tags.ShouldBeNull();
-        limits.EntriesPerDictionary.ShouldBe(ContentLimitDefaults.Plus.EntriesPerDictionary);
+        limits.EntriesPerDictionary.ShouldBe(ContentLimitDefaults.Everyone.EntriesPerDictionary);
     }
 
     [Fact]
-    public async Task Pro_HasNoMaterialLimit()
+    public async Task AtTheCap_APaidPlanGivesNoMore()
     {
-        OnPlan(SubscriptionTier.Pro);
-        _materials.Setup(x => x.CountOwnByUserIdAsync(_userId)).ReturnsAsync(100_000);
+        OnPlan(SubscriptionTier.Duo);
+        _materials.Setup(x => x.CountOwnByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Everyone.Materials!.Value);
 
-        await Should.NotThrowAsync(() => Limits().EnsureMaterialPlaceAsync(_userId, libraryCopy: false));
+        await Should.ThrowAsync<LimitExceededException>(() => Limits().EnsureMaterialPlaceAsync(_userId, libraryCopy: false));
     }
 
     [Fact]
     public async Task LibraryCopies_DoNotTakeOwnPlaces_ByDefault()
     {
-        _materials.Setup(x => x.CountOwnByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value);
+        _materials.Setup(x => x.CountOwnByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Everyone.Materials!.Value);
         _materials.Setup(x => x.CountLibraryCopiesAsync(_userId)).ReturnsAsync(0);
 
         await Should.NotThrowAsync(() => Limits().EnsureMaterialPlaceAsync(_userId, libraryCopy: true));
@@ -88,7 +93,7 @@ public class ContentLimitsTests
     [Fact]
     public async Task LibraryCopies_ShareTheMaterialLimit_WhenConfigured()
     {
-        _materials.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Free.Materials!.Value);
+        _materials.Setup(x => x.CountByUserIdAsync(_userId)).ReturnsAsync(ContentLimitDefaults.Everyone.Materials!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             Limits(new ContentLimitsOptions { CountLibraryImports = true }).EnsureMaterialPlaceAsync(_userId, libraryCopy: true));

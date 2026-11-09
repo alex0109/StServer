@@ -97,6 +97,7 @@ public class LibrarySnapshotMapperTests
         restored.Notes.Count.ShouldBe(2);
         restored.Questions[1].Options.Single(x => x.IsCorrect).Name.ShouldBe("Oxygen");
         restored.Dictionaries[0].Entries[1].Synonyms.ShouldBe(["matrix"]);
+        restored.Dictionaries[0].Entries[0].Article.ShouldBe("das");
         restored.Notes[0].TextContent!.Value.GetRawText().ShouldContain("ATP");
     }
 
@@ -121,6 +122,7 @@ public class LibrarySnapshotMapperTests
         copy.Questions.Single(x => x.Title == "What does it make?").NoteId.ShouldBe(textNote.Id);
 
         var word = copy.Dictionaries.Single().Entries.Single(x => x.Term == "chlorophyll");
+        word.Article.ShouldBe("das");
         copy.Questions.Single(x => x.Title == "chlorophyll").DictionaryEntryId.ShouldBe(word.Id);
         copy.Questions.Single(x => x.Title == "Products?").Options.Count.ShouldBe(2);
     }

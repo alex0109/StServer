@@ -41,6 +41,17 @@ public class AiOptions
 
 public static class AiQuotaDefaults
 {
+    // Each person on a Duo has these for themselves
+    private static readonly Dictionary<AiFeature, int> PlusQuotas = new()
+    {
+        [AiFeature.QuestionGeneration] = 100,
+        [AiFeature.DictionaryGeneration] = 50,
+        [AiFeature.AnswerGrading] = 300,
+        [AiFeature.SummaryGeneration] = 30,
+        [AiFeature.MistakeExplanation] = 50,
+        [AiFeature.WordLookup] = 1000,
+    };
+
     private static readonly Dictionary<SubscriptionTier, Dictionary<AiFeature, int>> Values = new()
     {
         [SubscriptionTier.Free] = new()
@@ -52,15 +63,8 @@ public static class AiQuotaDefaults
             [AiFeature.MistakeExplanation] = 5,
             [AiFeature.WordLookup] = 100,
         },
-        [SubscriptionTier.Plus] = new()
-        {
-            [AiFeature.QuestionGeneration] = 100,
-            [AiFeature.DictionaryGeneration] = 50,
-            [AiFeature.AnswerGrading] = 300,
-            [AiFeature.SummaryGeneration] = 30,
-            [AiFeature.MistakeExplanation] = 50,
-            [AiFeature.WordLookup] = 1000,
-        },
+        [SubscriptionTier.Plus] = PlusQuotas,
+        [SubscriptionTier.Duo] = PlusQuotas,
         [SubscriptionTier.Pro] = new()
         {
             [AiFeature.QuestionGeneration] = 500,

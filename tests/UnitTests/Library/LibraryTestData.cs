@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Domain.Entities;
+using Domain.Utility.Dictionary;
 using Domain.Utility.Material;
 using Domain.Utility.Note;
 using Domain.Utility.Question;
@@ -34,7 +35,7 @@ internal static class LibraryTestData
         };
 
         var dictionary = new Dictionary { Id = Guid.NewGuid(), UserId = userId, MaterialId = materialId, Title = "Terms", CreatedAt = now };
-        var first = new DictionaryEntry { Id = Guid.NewGuid(), DictionaryId = dictionary.Id, Term = "chlorophyll", Translation = "хлорофіл", Position = 0, CreatedAt = now };
+        var first = new DictionaryEntry { Id = Guid.NewGuid(), DictionaryId = dictionary.Id, Term = "chlorophyll", Translation = "хлорофіл", PartOfSpeech = PartOfSpeech.Noun, Article = "das", Position = 0, CreatedAt = now };
         var second = new DictionaryEntry { Id = Guid.NewGuid(), DictionaryId = dictionary.Id, Term = "stroma", Translation = "строма", Position = 1, CreatedAt = now, Synonyms = ["matrix"] };
         dictionary.Entries.Add(first);
         dictionary.Entries.Add(second);

@@ -102,6 +102,7 @@ public class DictionaryGenerationService : IDictionaryGenerationService
                 Translation = item.Translation,
                 Transcription = item.Transcription,
                 PartOfSpeech = item.PartOfSpeech,
+                Article = item.Article,
                 Example = item.Example,
                 ExampleTranslation = item.ExampleTranslation,
             }, dictionaryId, ++position);

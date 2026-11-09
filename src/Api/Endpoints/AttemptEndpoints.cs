@@ -17,6 +17,7 @@ public static class AttemptEndpoints
         assessmentGroup.MapPost("/start", StartAttempt);
         assessmentGroup.MapPost("/{attemptId:guid}/answer", AnswerQuestion);
         assessmentGroup.MapPost("/{attemptId:guid}/finish", FinishAttempt);
+        assessmentGroup.MapGet("/{attemptId:guid}/questions", GetQuestions);
         assessmentGroup.MapGet("/{attemptId:guid}/results", GetResults);
         assessmentGroup.MapPost("/{attemptId:guid}/results/{resultId:guid}/accept", AcceptAnswer);
         assessmentGroup.MapDelete("/{attemptId:guid}/results/{resultId:guid}/accept", UndoAccept);
@@ -52,7 +53,7 @@ public static class AttemptEndpoints
 
         static async Task<IResult> StartAttempt(StartAttemptDto attemptDto, IAttemptService service)
         {
-            var result = await service.StartAttempt(attemptDto.AssessmentId, attemptDto.UseTimer);
+            var result = await service.StartAttempt(attemptDto.AssessmentId, attemptDto.UseExamSettings);
 
             if (result is null)
             {
@@ -79,6 +80,13 @@ public static class AttemptEndpoints
             }
 
             return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> GetQuestions(Guid attemptId, IAttemptService service)
+        {
+            var result = await service.GetQuestions(attemptId);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
         }
 
         static async Task<IResult> GetResults(Guid attemptId, IAttemptService service)

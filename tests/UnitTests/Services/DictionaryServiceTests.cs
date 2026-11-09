@@ -62,7 +62,7 @@ public class DictionaryServiceTests
     public async Task CreateAsync_UnderLimit_CountsUnderMaterialLockAndCommits()
     {
         _dictionaryRepo.Setup(x => x.CountByMaterialIdAsync(_material.Id, _userId))
-            .ReturnsAsync(ContentLimitDefaults.Free.DictionariesPerMaterial!.Value - 1);
+            .ReturnsAsync(ContentLimitDefaults.Everyone.DictionariesPerMaterial!.Value - 1);
 
         var result = await _sut.CreateAsync(_material.Id, new DictionaryCreateDto { Title = "Second" });
 
@@ -75,7 +75,7 @@ public class DictionaryServiceTests
     public async Task CreateAsync_LimitReached_Throws()
     {
         _dictionaryRepo.Setup(x => x.CountByMaterialIdAsync(_material.Id, _userId))
-            .ReturnsAsync(ContentLimitDefaults.Free.DictionariesPerMaterial!.Value);
+            .ReturnsAsync(ContentLimitDefaults.Everyone.DictionariesPerMaterial!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateAsync(_material.Id, new DictionaryCreateDto { Title = "Third" }));
@@ -88,7 +88,7 @@ public class DictionaryServiceTests
     public async Task CreateEntryAsync_UnderLimit_TakesNextPositionAndCommits()
     {
         _dictionaryRepo.Setup(x => x.CountEntriesAsync(_dictionary.Id))
-            .ReturnsAsync(ContentLimitDefaults.Free.EntriesPerDictionary!.Value - 1);
+            .ReturnsAsync(ContentLimitDefaults.Everyone.EntriesPerDictionary!.Value - 1);
         _dictionaryRepo.Setup(x => x.GetMaxEntryPositionAsync(_dictionary.Id)).ReturnsAsync(98);
 
         var result = await _sut.CreateEntryAsync(_dictionary.Id,
@@ -104,7 +104,7 @@ public class DictionaryServiceTests
     public async Task CreateEntryAsync_LimitReached_Throws()
     {
         _dictionaryRepo.Setup(x => x.CountEntriesAsync(_dictionary.Id))
-            .ReturnsAsync(ContentLimitDefaults.Free.EntriesPerDictionary!.Value);
+            .ReturnsAsync(ContentLimitDefaults.Everyone.EntriesPerDictionary!.Value);
 
         await Should.ThrowAsync<LimitExceededException>(() =>
             _sut.CreateEntryAsync(_dictionary.Id,

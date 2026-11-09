@@ -51,7 +51,7 @@ public class MaterialCopyMapperTests
         var entry = new DictionaryEntry
         {
             Id = Guid.NewGuid(), DictionaryId = dictionary.Id, Term = "chlorophyll", Translation = "хлорофіл",
-            PartOfSpeech = PartOfSpeech.Noun, Synonyms = ["pigment"], Position = 0, IsArchived = true,
+            PartOfSpeech = PartOfSpeech.Noun, Article = "das", Synonyms = ["pigment"], Position = 0, IsArchived = true,
             CreatedAt = _now,
             Progress = new DictionaryEntryProgress { UserId = _ownerId, CreatedAt = _now }
         };
@@ -135,6 +135,7 @@ public class MaterialCopyMapperTests
         var entry = dictionary.Entries.Single();
         entry.DictionaryId.ShouldBe(dictionary.Id);
         entry.Term.ShouldBe("chlorophyll");
+        entry.Article.ShouldBe("das");
         entry.Synonyms.ShouldBe(["pigment"]);
         entry.IsArchived.ShouldBeFalse();
         entry.Progress.ShouldBeNull();

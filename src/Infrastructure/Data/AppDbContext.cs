@@ -32,6 +32,7 @@ public class AppDbContext : DbContext
     public DbSet<MaterialShare> MaterialShares => Set<MaterialShare>();
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
     public DbSet<SubscriptionEvent> SubscriptionEvents => Set<SubscriptionEvent>();
+    public DbSet<DuoMembership> DuoMemberships => Set<DuoMembership>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<AiUsageMonthly> AiUsageMonthly => Set<AiUsageMonthly>();
     public DbSet<UserNotificationSettings> UserNotificationSettings => Set<UserNotificationSettings>();
@@ -356,6 +357,19 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => new { x.Provider, x.ProviderCustomerId })
                 .IsUnique()
                 .HasFilter("\"ProviderCustomerId\" IS NOT NULL");
+        });
+
+        modelBuilder.Entity<DuoMembership>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+
+            // A person is on one Duo at most, and a link opens exactly one
+            entity.HasIndex(x => x.MemberUserId)
+                .IsUnique()
+                .HasFilter("\"MemberUserId\" IS NOT NULL");
+            entity.HasIndex(x => x.InviteTokenHash)
+                .IsUnique()
+                .HasFilter("\"InviteTokenHash\" IS NOT NULL");
         });
 
         modelBuilder.Entity<SubscriptionEvent>(entity =>

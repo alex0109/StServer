@@ -144,6 +144,7 @@ public record ExportWord(
     string Translation,
     string? Transcription,
     PartOfSpeech? PartOfSpeech,
+    string? Article,
     string? GrammarInfo,
     string? Example,
     string? ExampleTranslation,

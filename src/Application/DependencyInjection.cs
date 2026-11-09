@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewRatingResolver, ConfidenceReviewRatingResolver>();
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IDictionaryService, DictionaryService>();
+        services.AddScoped<IWordQuizService, WordQuizService>();
         services.AddScoped<IFlashcardService, FlashcardService>();
         services.AddScoped<IMaterialShareService, MaterialShareService>();
         services.AddScoped<ILimitsService, LimitsService>();
@@ -63,6 +64,7 @@ public static class DependencyInjection
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IBillingService, BillingService>();
         services.AddScoped<IBillingCatalog, BillingCatalog>();
+        services.AddScoped<IDuoService, DuoService>();
         services.AddScoped<IMaterialImportService, MaterialImportService>();
         services.AddScoped<ISubscriptionAdminService, SubscriptionAdminService>();
         services.AddScoped<ILearningSettingsProvider, LearningSettingsProvider>();

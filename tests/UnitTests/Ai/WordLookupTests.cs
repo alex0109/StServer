@@ -48,7 +48,7 @@ public class WordLookupTests
     [Fact]
     public async Task Lookup_SuggestsAndCreatesNothing()
     {
-        AiAnswers(new WordLookup("собака", "hʊn", PartOfSpeech.Noun, "en hund, hunden", "У мене є собака."));
+        AiAnswers(new WordLookup("собака", "hʊn", PartOfSpeech.Noun, "en", "en hund, hunden", "У мене є собака."));
 
         var result = await Service().LookupAsync(_dictionary.Id, new WordLookupRequestDto
         {
@@ -60,6 +60,7 @@ public class WordLookupTests
         result!.Term.ShouldBe("hund");
         result.Translation.ShouldBe("собака");
         result.Example.ShouldBe("Jeg har en hund.");
+        result.Article.ShouldBe("en");
         result.ExistingEntryId.ShouldBeNull();
         _dictionaries.Verify(x => x.AddEntryAsync(It.IsAny<DictionaryEntry>()), Times.Never);
         _dictionaries.Verify(x => x.SaveChangesAsync(), Times.Never);
@@ -70,7 +71,7 @@ public class WordLookupTests
     {
         var existing = Guid.NewGuid();
         _dictionaries.Setup(x => x.FindEntryIdByTermAsync(_dictionary.Id, "Hund")).ReturnsAsync(existing);
-        AiAnswers(new WordLookup("собака", null, PartOfSpeech.Noun, null, null));
+        AiAnswers(new WordLookup("собака", null, PartOfSpeech.Noun, null, null, null));
 
         var result = await Service().LookupAsync(_dictionary.Id, new WordLookupRequestDto { Term = "Hund", Language = "Ukrainian" }, TestContext.Current.CancellationToken);
 
@@ -133,6 +134,17 @@ public class WordLookupTests
                 x => x.PartOfSpeech.ShouldBe(PartOfSpeech.Phrase),
                 // No sentence was sent, so a translation of one is made up
                 x => x.ExampleTranslation.ShouldBeNull());
+    }
+
+    [Fact]
+    public void Prompt_ArticleIsKeptForANounOnly()
+    {
+        var prompt = new WordLookupPrompt("Hund", null, "Ukrainian");
+
+        prompt.Parse("""{"translation":"собака","partOfSpeech":"noun","article":" der "}""").Article.ShouldBe("der");
+        prompt.Parse("""{"translation":"бігти","partOfSpeech":"verb","article":"der"}""").Article.ShouldBeNull();
+        prompt.Parse("""{"translation":"собака","partOfSpeech":"noun","article":""}""").Article.ShouldBeNull();
+        prompt.BuildRequest().OutputSchema.GetProperty("properties").TryGetProperty("article", out _).ShouldBeTrue();
     }
 
     [Fact]

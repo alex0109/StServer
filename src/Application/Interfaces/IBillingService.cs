@@ -34,6 +34,18 @@ public interface IBillingJobs
     void ProcessEvent(Guid eventId);
 }
 
+// Inviting the second person of a Duo and leaving one; every call is about the signed in user
+public interface IDuoService
+{
+    Task<DuoStatusDto> GetAsync();
+    Task<DuoInviteDto> CreateInviteAsync();
+    Task CancelInviteAsync();
+    Task<DuoInvitePreviewDto> PreviewAsync(string token);
+    Task JoinAsync(string token);
+    Task RemoveMemberAsync();
+    Task LeaveAsync();
+}
+
 public interface ISubscriptionAdminService
 {
     Task<List<AdminSubscriptionDto>> ListAsync(int take);
