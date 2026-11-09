@@ -1,6 +1,7 @@
 using Application.DTOs.Attempt;
 using Application.DTOs.Question;
 using Application.DTOs.Result;
+using Application.Exceptions;
 using Application.Interfaces;
 using Application.Evaluators;
 using Application.Services;
@@ -158,22 +159,12 @@ public class AttemptServiceTests
     [Fact]
     public async Task StartAttempt_AssessmentExists_CreatesAttempt()
     {
-        var assessmentId = Guid.NewGuid();
-
-
-        _assessmentRepo.Setup(x =>
-                x.GetAssessmentByMaterialIdAsync(
-                    assessmentId,
-                    _userId))
-            .ReturnsAsync(new Assessment
-            {
-                Id = assessmentId,
-                UserId = _userId
-            });
+        var assessment = SetupAssessment();
+        var questions = SetupActiveQuestions(assessment.MaterialId, QuestionDifficulty.Easy, QuestionDifficulty.Hard);
 
 
         var result =
-            await _sut.StartAttempt(assessmentId);
+            await _sut.StartAttempt(assessment.Id);
 
 
         result.ShouldNotBe(Guid.Empty);
@@ -182,15 +173,133 @@ public class AttemptServiceTests
         _repo.Verify(x =>
             x.AddAttemptAsync(
                 It.Is<Attempt>(a =>
-                    a.AssessmentId == assessmentId &&
+                    a.AssessmentId == assessment.Id &&
                     a.UserId == _userId &&
-                    a.AttemptStatus == AttemptStatus.InProgress)),
+                    a.AttemptStatus == AttemptStatus.InProgress &&
+                    a.QuestionIds.Count == questions.Count)),
             Times.Once);
 
 
         _repo.Verify(x =>
             x.SaveChangesAsync(),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task StartAttempt_WithExamSettings_DrawsChosenLevelsCountAndTimer()
+    {
+        var assessment = SetupAssessment();
+        assessment.Difficulties = [QuestionDifficulty.Easy, QuestionDifficulty.Medium];
+        assessment.QuestionCount = 2;
+        assessment.TimerMinutes = 15;
+        var questions = SetupActiveQuestions(
+            assessment.MaterialId,
+            QuestionDifficulty.Easy, QuestionDifficulty.Easy, QuestionDifficulty.Medium, QuestionDifficulty.Hard, QuestionDifficulty.Hard);
+        var allowed = questions.Where(q => q.QuestionDifficulty != QuestionDifficulty.Hard).Select(q => q.Id).ToHashSet();
+        Attempt? saved = null;
+        _repo.Setup(x => x.AddAttemptAsync(It.IsAny<Attempt>())).Callback<Attempt>(a => saved = a);
+
+        await _sut.StartAttempt(assessment.Id, useExamSettings: true);
+
+        saved.ShouldNotBeNull();
+        saved.QuestionIds.Count.ShouldBe(2);
+        saved.QuestionIds.ShouldAllBe(id => allowed.Contains(id));
+        saved.TimeLimitMinutes.ShouldBe(15);
+    }
+
+    [Fact]
+    public async Task StartAttempt_FromNote_IgnoresExamSettings()
+    {
+        var assessment = SetupAssessment();
+        assessment.Difficulties = [QuestionDifficulty.Hard];
+        assessment.QuestionCount = 1;
+        assessment.TimerMinutes = 15;
+        var questions = SetupActiveQuestions(assessment.MaterialId, QuestionDifficulty.Easy, QuestionDifficulty.Medium);
+        Attempt? saved = null;
+        _repo.Setup(x => x.AddAttemptAsync(It.IsAny<Attempt>())).Callback<Attempt>(a => saved = a);
+
+        await _sut.StartAttempt(assessment.Id, useExamSettings: false);
+
+        saved.ShouldNotBeNull();
+        saved.QuestionIds.Order().ShouldBe(questions.Select(q => q.Id).Order());
+        saved.TimeLimitMinutes.ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task StartAttempt_NoQuestionMatches_IsRejected()
+    {
+        var assessment = SetupAssessment();
+        assessment.Difficulties = [QuestionDifficulty.Hard];
+        SetupActiveQuestions(assessment.MaterialId, QuestionDifficulty.Easy);
+
+        await Should.ThrowAsync<BadRequestException>(() => _sut.StartAttempt(assessment.Id, useExamSettings: true));
+
+        _repo.Verify(x => x.AddAttemptAsync(It.IsAny<Attempt>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetQuestions_NotFound_ReturnsNull()
+    {
+        (await _sut.GetQuestions(Guid.NewGuid())).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task GetQuestions_ReturnsTheAttemptOrder_WithoutRightAnswers()
+    {
+        var attempt = CreateAttempt();
+        var questions = SetupActiveQuestions(attempt.Assessment.MaterialId, QuestionDifficulty.Easy, QuestionDifficulty.Medium, QuestionDifficulty.Hard);
+        var options = questions[1];
+        options.QuestionType = QuestionType.Options;
+        options.Options = [
+            new Option { Id = Guid.NewGuid(), Name = "A", Position = 0, IsCorrect = true },
+            new Option { Id = Guid.NewGuid(), Name = "B", Position = 1 },
+            new Option { Id = Guid.NewGuid(), Name = "C", Position = 2 },
+        ];
+        attempt.QuestionIds = [questions[2].Id, questions[1].Id];
+        _repo.Setup(x => x.GetAttemptWithAssessmentByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+
+        var result = await _sut.GetQuestions(attempt.Id);
+
+        result.ShouldNotBeNull();
+        result.Select(q => q.Id).ShouldBe([questions[2].Id, questions[1].Id]);
+        result[1].Options!.Select(o => o.Id).Order().ShouldBe(options.Options.Select(o => o.Id).Order());
+        result[1].Options!.ShouldAllBe(o => !o.IsCorrect);
+    }
+
+    [Fact]
+    public async Task AnswerQuestion_QuestionTheAttemptDidNotDraw_IsNotSaved()
+    {
+        var attempt = CreateAttempt();
+        attempt.QuestionIds = [Guid.NewGuid()];
+        _repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+
+        var result = await _sut.AnswerQuestion(attempt.Id, new ResultRequestDto
+        {
+            QuestionId = Guid.NewGuid(),
+            UserAnswer = "answer",
+        });
+
+        result.IsCorrect.ShouldBeFalse();
+        _questionRepo.Verify(x => x.GetByIdQuestionAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<Guid>()), Times.Never);
+        _repo.Verify(x => x.AddResultAsync(It.IsAny<Result>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task FinishAttempt_TimeIsUp_OnlyTheDrawnQuestionsCountAsWrong()
+    {
+        var attempt = CreateAttempt();
+        attempt.TimeLimitMinutes = 10;
+        var questions = SetupActiveQuestions(attempt.Assessment.MaterialId, QuestionDifficulty.Easy, QuestionDifficulty.Easy, QuestionDifficulty.Hard);
+        attempt.QuestionIds = [questions[0].Id, questions[2].Id];
+        _repo.Setup(x => x.GetAttemptWithResultsByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        _repo.Setup(x => x.GetFullAttemptByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+        var added = new List<Result>();
+        _repo.Setup(x => x.AddResultAsync(It.IsAny<Result>())).Callback<Result>(added.Add);
+
+        await _sut.FinishAttempt(attempt.Id);
+
+        added.Select(r => r.QuestionId).Order().ShouldBe(attempt.QuestionIds.Order());
+        added.ShouldAllBe(r => !r.IsCorrect);
     }
     
     [Fact]
@@ -653,6 +762,38 @@ public class AttemptServiceTests
         saved.ShouldNotBeNull();
         saved.UserAnswerOptionIds.ShouldBe([a]);
         saved.Rating.ShouldBe(ReviewRating.Again);
+    }
+
+    private Assessment SetupAssessment()
+    {
+        var assessment = new Assessment { Id = Guid.NewGuid(), MaterialId = Guid.NewGuid(), UserId = _userId };
+
+        _assessmentRepo.Setup(x => x.GetAssessmentByMaterialIdAsync(assessment.Id, _userId))
+            .ReturnsAsync(assessment);
+
+        return assessment;
+    }
+
+    private List<Question> SetupActiveQuestions(Guid materialId, params QuestionDifficulty[] difficulties)
+    {
+        var questions = difficulties
+            .Select(difficulty => new Question
+            {
+                Id = Guid.NewGuid(),
+                MaterialId = materialId,
+                UserId = _userId,
+                Title = "Question",
+                Answer = "answer",
+                QuestionType = QuestionType.Open,
+                QuestionDifficulty = difficulty,
+                CreatedAt = DateTime.UtcNow,
+            })
+            .ToList();
+
+        _questionRepo.Setup(x => x.GetActiveQuestionsAsync(materialId, _userId))
+            .ReturnsAsync(questions);
+
+        return questions;
     }
 
     private Attempt CreateAttempt()

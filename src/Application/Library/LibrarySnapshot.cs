@@ -64,6 +64,7 @@ public class LibraryEntrySnapshot
     public required string Translation { get; set; }
     public string? Transcription { get; set; }
     public PartOfSpeech? PartOfSpeech { get; set; }
+    public string? Article { get; set; }
     public string? GrammarInfo { get; set; }
     public string? Example { get; set; }
     public string? ExampleTranslation { get; set; }

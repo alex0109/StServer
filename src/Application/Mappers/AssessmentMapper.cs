@@ -1,5 +1,6 @@
 using Application.DTOs.Assessment;
 using Domain.Entities;
+using Domain.Utility.Question;
 
 namespace Application.Mappers;
 
@@ -21,7 +22,9 @@ public class AssessmentMapper
         {
             Id = entity.Id,
             MaterialId = entity.MaterialId,
-            TimerMinutes = entity.TimerMinutes
+            TimerMinutes = entity.TimerMinutes,
+            Difficulties = entity.Difficulties.Count == 0 ? [.. Enum.GetValues<QuestionDifficulty>()] : [.. entity.Difficulties],
+            QuestionCount = entity.QuestionCount
         };
     }
 }

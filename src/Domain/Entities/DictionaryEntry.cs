@@ -15,6 +15,9 @@ public class DictionaryEntry
     [MaxLength(200)]
     public string? Transcription { get; set; }
     public PartOfSpeech? PartOfSpeech { get; set; }
+    // Learnt together with a noun (der, la, en); nouns only, other words have none
+    [MaxLength(20)]
+    public string? Article { get; set; }
     [MaxLength(300)]
     public string? GrammarInfo { get; set; }
     [MaxLength(500)]

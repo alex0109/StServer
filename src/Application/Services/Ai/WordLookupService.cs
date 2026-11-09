@@ -64,6 +64,7 @@ public class WordLookupService : IWordLookupService
             Translation = lookup.Translation,
             Transcription = lookup.Transcription,
             PartOfSpeech = lookup.PartOfSpeech,
+            Article = lookup.Article,
             GrammarInfo = lookup.GrammarInfo,
             Example = sentence.Length == 0 ? null : sentence,
             ExampleTranslation = lookup.ExampleTranslation,

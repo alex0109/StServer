@@ -161,8 +161,15 @@ namespace StServer.Migrations
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
+                    b.PrimitiveCollection<int[]>("Difficulties")
+                        .IsRequired()
+                        .HasColumnType("integer[]");
+
                     b.Property<Guid>("MaterialId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("QuestionCount")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("TimerMinutes")
                         .HasColumnType("integer");
@@ -192,6 +199,10 @@ namespace StServer.Migrations
 
                     b.Property<DateTime?>("FinishedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.PrimitiveCollection<List<Guid>>("QuestionIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
@@ -258,6 +269,10 @@ namespace StServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
+
+                    b.Property<string>("Article")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

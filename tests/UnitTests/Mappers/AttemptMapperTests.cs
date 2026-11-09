@@ -12,7 +12,8 @@ public class AttemptMapperTests
     {
         var result = AttemptMapper.ToEntity(
             Guid.NewGuid(),
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            []);
 
         result.Id.ShouldNotBe(Guid.Empty);
     }
@@ -26,7 +27,8 @@ public class AttemptMapperTests
 
         var result = AttemptMapper.ToEntity(
             assessmentId,
-            userId);
+            userId,
+            []);
 
         result.AssessmentId.ShouldBe(assessmentId);
         result.UserId.ShouldBe(userId);
@@ -38,7 +40,8 @@ public class AttemptMapperTests
     {
         var result = AttemptMapper.ToEntity(
             Guid.NewGuid(),
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            []);
 
         result.AttemptStatus.ShouldBe(
             AttemptStatus.InProgress);
@@ -50,7 +53,8 @@ public class AttemptMapperTests
     {
         var result = AttemptMapper.ToEntity(
             Guid.NewGuid(),
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            []);
 
         result.Results.ShouldNotBeNull();
         result.Results.ShouldBeEmpty();
@@ -64,13 +68,30 @@ public class AttemptMapperTests
 
         var result = AttemptMapper.ToEntity(
             Guid.NewGuid(),
-            Guid.NewGuid());
+            Guid.NewGuid(),
+            []);
 
         var after = DateTime.UtcNow;
 
         result.StartedAt.ShouldBeInRange(
             before,
             after);
+    }
+
+
+    [Fact]
+    public void ToEntity_ShouldKeepDrawnQuestionsInOrder()
+    {
+        List<Guid> questionIds = [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()];
+
+        var result = AttemptMapper.ToEntity(
+            Guid.NewGuid(),
+            Guid.NewGuid(),
+            questionIds,
+            timeLimitMinutes: 15);
+
+        result.QuestionIds.ShouldBe(questionIds);
+        result.TimeLimitMinutes.ShouldBe(15);
     }
 
 

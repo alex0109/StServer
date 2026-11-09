@@ -43,7 +43,7 @@ public static class AccountExportArchive
     public static byte[] WordsCsv(AccountExportDto data)
     {
         var csv = new StringBuilder();
-        csv.Append("term,translation,transcription,partOfSpeech,example,exampleTranslation,dictionary\r\n");
+        csv.Append("term,article,translation,transcription,partOfSpeech,example,exampleTranslation,dictionary\r\n");
 
         foreach (var dictionary in data.Dictionaries)
         {
@@ -51,6 +51,7 @@ public static class AccountExportArchive
             {
                 csv.AppendJoin(',',
                     Cell(word.Term),
+                    Cell(word.Article),
                     Cell(word.Translation),
                     Cell(word.Transcription),
                     Cell(word.PartOfSpeech?.ToString()),

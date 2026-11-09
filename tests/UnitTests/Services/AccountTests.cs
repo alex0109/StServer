@@ -7,6 +7,7 @@ using Application.Email;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Services;
+using Domain.Utility.Dictionary;
 using Domain.Utility.Subscription;
 using Infrastructure.Account;
 using Infrastructure.Auth;
@@ -149,8 +150,8 @@ public class AccountExportArchiveTests
         AiUsageMonths = [],
     };
 
-    internal static ExportWord Word(string term, string translation, string? example = null) =>
-        new(Guid.NewGuid(), term, translation, null, null, null, example, null, null, [], false, null, DateTime.UtcNow);
+    internal static ExportWord Word(string term, string translation, string? example = null, string? article = null) =>
+        new(Guid.NewGuid(), term, translation, null, article is null ? null : PartOfSpeech.Noun, article, null, example, null, null, [], false, null, DateTime.UtcNow);
 
     [Fact]
     public void Archive_HasData_Words_AndReadme()
@@ -176,8 +177,17 @@ public class AccountExportArchiveTests
         var csv = Encoding.UTF8.GetString(AccountExportArchive.WordsCsv(Data(Word("say \"hi\"", "привіт, світ", "Line one\nline two"))));
         var lines = csv.TrimStart('﻿').Split("\r\n");
 
-        lines[0].ShouldBe("term,translation,transcription,partOfSpeech,example,exampleTranslation,dictionary");
-        lines[1].ShouldBe("\"say \"\"hi\"\"\",\"привіт, світ\",,,\"Line one\nline two\",,Unit 1");
+        lines[0].ShouldBe("term,article,translation,transcription,partOfSpeech,example,exampleTranslation,dictionary");
+        lines[1].ShouldBe("\"say \"\"hi\"\"\",,\"привіт, світ\",,,\"Line one\nline two\",,Unit 1");
+    }
+
+    [Fact]
+    public void Csv_HasTheArticleNextToTheTerm()
+    {
+        var csv = Encoding.UTF8.GetString(AccountExportArchive.WordsCsv(Data(Word("Hund", "собака", article: "der"))));
+        var lines = csv.TrimStart('\uFEFF').Split("\r\n");
+
+        lines[1].ShouldBe("Hund,der,собака,,Noun,,,Unit 1");
     }
 
     [Theory]

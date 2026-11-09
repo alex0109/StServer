@@ -47,6 +47,7 @@ public static class DependencyInjection
         services.AddScoped<IReviewRatingResolver, ConfidenceReviewRatingResolver>();
         services.AddScoped<INoteService, NoteService>();
         services.AddScoped<IDictionaryService, DictionaryService>();
+        services.AddScoped<IWordQuizService, WordQuizService>();
         services.AddScoped<IFlashcardService, FlashcardService>();
         services.AddScoped<IMaterialShareService, MaterialShareService>();
         services.AddScoped<ILimitsService, LimitsService>();

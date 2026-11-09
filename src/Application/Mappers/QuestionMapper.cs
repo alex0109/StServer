@@ -91,12 +91,18 @@ public static class QuestionMapper
     
     public static QuestionReducedDto ToReducedDto(Question entity)
     {
+        return ToReducedDto(entity, entity.Options.OrderBy(o => o.Position));
+    }
+
+    // Options in the given order, without telling which ones are right
+    public static QuestionReducedDto ToReducedDto(Question entity, IEnumerable<Option> orderedOptions)
+    {
         return new QuestionReducedDto()
         {
             Id = entity.Id,
             Title = entity.Title,
             QuestionType = entity.QuestionType,
-            Options = entity.Options.OrderBy(o => o.Position).Select(o => new OptionResponseDto
+            Options = orderedOptions.Select(o => new OptionResponseDto
             {
                 Id = o.Id,
                 Name = o.Name

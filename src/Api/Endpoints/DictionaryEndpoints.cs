@@ -23,6 +23,8 @@ public static class DictionaryEndpoints
         dictionaryGroup.MapGet("/entries/{entryId:guid}", GetDictionaryEntry);
         dictionaryGroup.MapPut("/entries/{entryId:guid}", UpdateDictionaryEntry);
         dictionaryGroup.MapDelete("/entries/{entryId:guid}", DeleteDictionaryEntry);
+        // A quick check after a forgotten word in flashcards; nothing is saved
+        dictionaryGroup.MapGet("/entries/{entryId:guid}/quiz", GetWordQuiz);
         dictionaryGroup.MapPatch("/{dictionaryId:guid}/entries/reorder", EntriesReorder);
         dictionaryGroup.MapGet("/{dictionaryId:guid}/questions", GetDictionaryQuestions);
 
@@ -33,6 +35,13 @@ public static class DictionaryEndpoints
             CancellationToken cancellationToken)
         {
             var result = await service.LookupAsync(dictionaryId, dto, cancellationToken);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> GetWordQuiz(Guid entryId, IWordQuizService service)
+        {
+            var result = await service.GetQuizAsync(entryId);
 
             return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
         }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.DTOs.RichTextDocument;
+using Application.Mappers;
 using Domain.Entities;
 using Domain.Utility.Material;
 using Domain.Utility.Note;
@@ -57,6 +58,7 @@ public static class LibrarySnapshotMapper
                             Translation = entry.Translation,
                             Transcription = entry.Transcription,
                             PartOfSpeech = entry.PartOfSpeech,
+                            Article = entry.Article,
                             GrammarInfo = entry.GrammarInfo,
                             Example = entry.Example,
                             ExampleTranslation = entry.ExampleTranslation,
@@ -173,6 +175,7 @@ public static class LibrarySnapshotMapper
                     Translation = entry.Translation,
                     Transcription = entry.Transcription,
                     PartOfSpeech = entry.PartOfSpeech,
+                    Article = DictionaryMapper.ArticleOf(entry.PartOfSpeech, entry.Article),
                     GrammarInfo = entry.GrammarInfo,
                     Example = entry.Example,
                     ExampleTranslation = entry.ExampleTranslation,

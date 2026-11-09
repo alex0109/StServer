@@ -8,6 +8,7 @@ public record GeneratedEntry(
     string Translation,
     string? Transcription,
     PartOfSpeech? PartOfSpeech,
+    string? Article,
     string? Example,
     string? ExampleTranslation);
 
@@ -52,6 +53,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
             - "translation": the meaning in {_language}, at most 100 characters.
             - "transcription": IPA in square brackets when the term is not in {_language}, otherwise "".
             - "partOfSpeech": one of the allowed values, "other" when none fits.
+            - "article": {AiPartsOfSpeech.ArticleRule}
             - "example": a short sentence with the term, in the term's language, at most 150 characters.
             - "exampleTranslation": that sentence in {_language}, at most 150 characters.
             - Prefer terms that carry the key ideas. No names of people, no numbers.
@@ -66,6 +68,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
             ("translation", AiJson.String()),
             ("transcription", AiJson.String()),
             ("partOfSpeech", AiJson.Enum(AiPartsOfSpeech.Values)),
+            ("article", AiJson.String()),
             ("example", AiJson.String()),
             ("exampleTranslation", AiJson.String()));
 
@@ -99,6 +102,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
                 translation,
                 NullIfEmpty(AiJson.Limit(item.Transcription, 200)),
                 partOfSpeech,
+                AiPartsOfSpeech.ArticleOf(partOfSpeech, item.Article),
                 NullIfEmpty(AiJson.Limit(item.Example, 500)),
                 NullIfEmpty(AiJson.Limit(item.ExampleTranslation, 500))));
 
@@ -117,6 +121,7 @@ public class DictionaryGenerationPrompt : IAiPrompt<IReadOnlyList<GeneratedEntry
         string? Translation,
         string? Transcription,
         string? PartOfSpeech,
+        string? Article,
         string? Example,
         string? ExampleTranslation);
 }

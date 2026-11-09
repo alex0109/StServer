@@ -7,7 +7,7 @@ namespace Application.Mappers;
 
 public class AttemptMapper
 {
-    public static Attempt ToEntity(Guid assessmentId, Guid userId, int? timeLimitMinutes = null)
+    public static Attempt ToEntity(Guid assessmentId, Guid userId, List<Guid> questionIds, int? timeLimitMinutes = null)
     {
         return new Attempt
         {
@@ -16,13 +16,14 @@ public class AttemptMapper
             UserId = userId,
             AttemptStatus = AttemptStatus.InProgress,
             StartedAt = DateTime.UtcNow,
-            TimeLimitMinutes = timeLimitMinutes
+            TimeLimitMinutes = timeLimitMinutes,
+            QuestionIds = questionIds
         };
     }
 
     public static AttemptResponseDto ToDto(Attempt entity)
     {
-        var results = entity.Results ?? [];;
+        var results = entity.Results ?? [];
 
         var correct = results.Count(x => x.IsCorrect);
         var wrong = results.Count(x => !x.IsCorrect);

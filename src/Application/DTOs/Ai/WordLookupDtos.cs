@@ -18,6 +18,7 @@ public class WordLookupDto
     public required string Translation { get; init; }
     public string? Transcription { get; init; }
     public PartOfSpeech? PartOfSpeech { get; init; }
+    public string? Article { get; init; }
     public string? GrammarInfo { get; init; }
     public string? Example { get; init; }
     public string? ExampleTranslation { get; init; }

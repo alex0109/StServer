@@ -1,4 +1,5 @@
 using Application.Interfaces;
+using Application.WordQuiz;
 using Domain.Entities;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -100,6 +101,27 @@ public class DictionaryRepository : IDictionaryRepository
             .Where(e => e.DictionaryId == dictionaryId && e.Term.ToLower() == lowered)
             .Select(e => (Guid?)e.Id)
             .FirstOrDefaultAsync();
+    }
+
+    public async Task<List<WordQuizCandidate>> GetQuizCandidatesAsync(Guid entryId, Guid dictionaryId, Guid userId, int perSource)
+    {
+        var candidates = await _context.DictionaryEntries
+            .Where(e => e.DictionaryId == dictionaryId && e.Dictionary.UserId == userId && e.Id != entryId)
+            .OrderBy(_ => EF.Functions.Random())
+            .Take(perSource)
+            .Select(e => new WordQuizCandidate(e.Term, e.Translation))
+            .ToListAsync();
+
+        if (candidates.Count >= perSource) return candidates;
+
+        var fromOtherDictionaries = await _context.DictionaryEntries
+            .Where(e => e.Dictionary.UserId == userId && e.DictionaryId != dictionaryId)
+            .OrderBy(_ => EF.Functions.Random())
+            .Take(perSource)
+            .Select(e => new WordQuizCandidate(e.Term, e.Translation))
+            .ToListAsync();
+
+        return [.. candidates, .. fromOtherDictionaries];
     }
 
     public async Task<int> CountEntriesAsync(Guid dictionaryId)

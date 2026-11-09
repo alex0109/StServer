@@ -12,6 +12,9 @@ public class DictionaryEntryUpdateDto
     [MaxLength(200)]
     public string? Transcription { get; set; }
     public PartOfSpeech? PartOfSpeech { get; set; }
+    // Kept only for nouns
+    [MaxLength(20)]
+    public string? Article { get; set; }
     [MaxLength(300)]
     public string? GrammarInfo { get; set; }
     [MaxLength(500)]

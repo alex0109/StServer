@@ -11,6 +11,7 @@ using Application.Schedulers;
 using Application.Services;
 using Domain.Entities;
 using Domain.Utility.Flashcard;
+using Domain.Utility.Material;
 using Domain.Utility.Question;
 using Domain.Utility.Result;
 using Domain.Utility.Review;
@@ -89,6 +90,34 @@ public class ReviewServiceTests
         _repo.Setup(x => x.GetDueQuestionsForSessionAsync(_userId, It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync([]);
 
         await Should.ThrowAsync<ConflictException>(() => _sut.StartQuestionsAsync(new QuestionReviewSessionCreateDto()));
+    }
+
+    [Fact]
+    public async Task QuestionSession_ShufflesChoices_WithoutTellingTheAnswer()
+    {
+        var material = new Material
+        {
+            Id = Guid.NewGuid(), UserId = _userId, Title = "Geography", Type = MaterialType.article,
+            Status = MaterialStatus.tolearn, IsActive = true, CreatedAt = Now,
+        };
+        var questions = Enumerable.Range(0, 20).Select(_ =>
+        {
+            var question = new Question
+            {
+                Id = Guid.NewGuid(), UserId = _userId, Material = material, MaterialId = material.Id,
+                Title = "Capital of Norway?", QuestionType = QuestionType.Options, CreatedAt = Now,
+            };
+            foreach (var (name, position) in new[] { ("Oslo", 0), ("Bergen", 1), ("Trondheim", 2), ("Tromsø", 3) })
+                question.Options.Add(new Option { Id = Guid.NewGuid(), Name = name, Position = position, IsCorrect = position == 0 });
+            return question;
+        }).ToList();
+        _repo.Setup(x => x.GetDueQuestionsForSessionAsync(_userId, It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync(questions);
+
+        var session = await _sut.StartQuestionsAsync(new QuestionReviewSessionCreateDto());
+
+        session.Questions.ShouldAllBe(q => q.Options.Count == 4 && q.Options.All(o => !o.IsCorrect));
+        // Written with the right answer first; across 20 questions it can't stay first every time
+        session.Questions.Select(q => q.Options.FindIndex(o => o.Name == "Oslo")).Distinct().Count().ShouldBeGreaterThan(1);
     }
 
     [Fact]
