@@ -97,6 +97,7 @@ public static class DependencyInjection
         services.AddScoped<IDictionaryGenerationService, DictionaryGenerationService>();
         services.AddScoped<ISummaryGenerationService, SummaryGenerationService>();
         services.AddScoped<IMistakeExplanationService, MistakeExplanationService>();
+        services.AddScoped<IEssayReviewService, EssayReviewService>();
         services.AddScoped<IWordLookupService, WordLookupService>();
 
         return services;

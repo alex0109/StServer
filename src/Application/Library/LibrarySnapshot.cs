@@ -29,6 +29,8 @@ public class LibraryNoteSnapshot
     public NoteType Type { get; set; }
     public JsonElement? TextContent { get; set; }
     public JsonElement? DrawingContent { get; set; }
+    // Essays only, the review is not part of the library
+    public string? EssayTask { get; set; }
 }
 
 public class LibraryQuestionSnapshot

@@ -1,5 +1,6 @@
 using Application.Constants;
 using Application.DTOs.Note;
+using Application.Essays;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
@@ -83,6 +84,9 @@ public class NoteService : INoteService
 
         if (note is null)
             return null;
+
+        if (dto.EssayTask?.Trim().Length > EssayRules.MaxTaskLength)
+            throw new BadRequestException($"The essay task is longer than {EssayRules.MaxTaskLength} characters");
 
         NoteMapper.ApplyUpdate(note, dto);
 

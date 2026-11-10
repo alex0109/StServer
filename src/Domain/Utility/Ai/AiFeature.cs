@@ -9,5 +9,7 @@ public enum AiFeature
     SummaryGeneration = 4,
     MistakeExplanation = 5,
     // One selected word or phrase: translation, transcription and grammar. Short prompt, cheap
-    WordLookup = 6
+    WordLookup = 6,
+    // Scores and corrections for one essay note
+    EssayReview = 7
 }

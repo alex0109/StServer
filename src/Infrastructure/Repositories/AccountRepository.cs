@@ -42,7 +42,7 @@ public class AccountRepository : IAccountRepository
         var notes = await _db.Notes.AsNoTracking()
             .Where(n => n.UserId == userId)
             .OrderBy(n => n.MaterialId).ThenBy(n => n.Order)
-            .Select(n => new ExportNote(n.Id, n.MaterialId, n.Title, n.Type, n.TextContent, n.DrawingContent, n.Order, n.CreatedAt, n.UpdatedAt))
+            .Select(n => new ExportNote(n.Id, n.MaterialId, n.Title, n.Type, n.TextContent, n.DrawingContent, n.EssayTask, n.EssayReview, n.Order, n.CreatedAt, n.UpdatedAt))
             .ToListAsync();
 
         var questions = await _db.Questions.AsNoTracking()

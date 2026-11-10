@@ -11,6 +11,9 @@ public class NoteResponseDto
     public NoteType Type { get; set; }
     public RichTextDocument.RichTextDocument? TextContent { get; set; }
     public JsonDocument? DrawingContent { get; set; }
+    // Essays only
+    public string? EssayTask { get; set; }
+    public EssayReviewDto? EssayReview { get; set; }
     public int Order { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

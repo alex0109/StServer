@@ -6,5 +6,7 @@ public enum NoteType
     drawing,
     pdfAnnotation,
     // Short retelling of the whole material, at most one per material
-    summary
+    summary,
+    // A text note written for a task, which AI can check
+    essay
 }

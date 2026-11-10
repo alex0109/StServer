@@ -49,6 +49,8 @@ public static class MaterialCopyMapper
                 Type = note.Type,
                 TextContent = Clone(note.TextContent),
                 DrawingContent = Clone(note.DrawingContent),
+                // The task travels with the essay; the review was written for the owner and stays
+                EssayTask = note.EssayTask,
                 Order = note.Order,
                 CreatedAt = now,
                 UpdatedAt = now,

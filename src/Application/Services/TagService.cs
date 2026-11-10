@@ -66,7 +66,7 @@ public class TagService : ITagService
 
         if (count >= max)
         {
-            throw new LimitExceededException($"Tag limit reached: {max}");
+            throw new LimitExceededException($"Subject limit reached: {max}");
         }
         
         var entity = TagMapper.ToEntity(dto, _user.UserId);
