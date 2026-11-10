@@ -193,14 +193,27 @@ public class AppDbContext : DbContext
                 .IsUnique()
                 .HasFilter("\"Type\" = 3");
 
-            entity.ToTable(t => t.HasCheckConstraint(
-                "CK_Note_TypeConsistency",
-                """
-                ("Type" = 0 AND "DrawingContent" IS NULL AND "FileId" IS NULL) OR
-                ("Type" = 1 AND "TextContent" IS NULL AND "FileId" IS NULL) OR
-                ("Type" = 3 AND "DrawingContent" IS NULL AND "FileId" IS NULL)
-                """
-            ));
+            entity.Property(x => x.EssayReview)
+                .HasColumnType("jsonb");
+
+            entity.ToTable(t =>
+            {
+                t.HasCheckConstraint(
+                    "CK_Note_TypeConsistency",
+                    """
+                    ("Type" = 0 AND "DrawingContent" IS NULL AND "FileId" IS NULL) OR
+                    ("Type" = 1 AND "TextContent" IS NULL AND "FileId" IS NULL) OR
+                    ("Type" = 3 AND "DrawingContent" IS NULL AND "FileId" IS NULL) OR
+                    ("Type" = 4 AND "DrawingContent" IS NULL AND "FileId" IS NULL)
+                    """);
+
+                // Only an essay has a task and a review
+                t.HasCheckConstraint(
+                    "CK_Note_EssayFields",
+                    """
+                    "Type" = 4 OR ("EssayTask" IS NULL AND "EssayReview" IS NULL)
+                    """);
+            });
         });
         
         modelBuilder.Entity<Dictionary>(entity =>

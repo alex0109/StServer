@@ -9,7 +9,7 @@ namespace Application.Services.Ai;
 // Text the model works from: a text note or the material content, never anything outside the material
 internal static class AiSourceText
 {
-    public static bool HasText(Note note) => note.Type is NoteType.text or NoteType.summary;
+    public static bool HasText(Note note) => note.Type is NoteType.text or NoteType.summary or NoteType.essay;
 
     public static string FromNote(Note note)
     {

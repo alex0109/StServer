@@ -49,7 +49,7 @@ public class SummaryGenerationService : ISummaryGenerationService
             throw new BadRequestException("Only a summary note can be generated");
 
         var notes = (await _noteRepository.GetAllAsync(materialId, userId))
-            .Where(x => x.Id != noteId && x.Type == NoteType.text)
+            .Where(x => x.Id != noteId && x.Type is NoteType.text or NoteType.essay)
             .OrderBy(x => x.CreatedAt)
             .Select(x => new SummarySource(x.Title, RichTextConverter.ToPlainText(x.TextContent)))
             .Where(x => x.Text.Length > 0)

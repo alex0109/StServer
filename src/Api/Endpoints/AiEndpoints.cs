@@ -17,6 +17,7 @@ public static class AiEndpoints
         aiGroup.MapPost("/dictionaries/{dictionaryId:guid}/entries", GenerateEntries);
         aiGroup.MapPost("/materials/{materialId:guid}/notes/{noteId:guid}/summary", GenerateSummary);
         aiGroup.MapPost("/attempts/{attemptId:guid}/explanations", ExplainMistakes);
+        aiGroup.MapPost("/materials/{materialId:guid}/notes/{noteId:guid}/essay-review", ReviewEssay);
 
         static async Task<IResult> GetUsage(IAiUsageService service, IUserContext user)
         {
@@ -68,6 +69,19 @@ public static class AiEndpoints
             CancellationToken cancellationToken)
         {
             var result = await service.ExplainAsync(attemptId, cancellationToken);
+
+            if (result is null) return TypedResults.NotFound();
+
+            return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> ReviewEssay(
+            Guid materialId,
+            Guid noteId,
+            IEssayReviewService service,
+            CancellationToken cancellationToken)
+        {
+            var result = await service.ReviewAsync(materialId, noteId, cancellationToken);
 
             if (result is null) return TypedResults.NotFound();
 

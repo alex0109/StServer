@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.Constants;
+using Application.Essays;
 using Application.DTOs.RichTextDocument;
 using Application.Exceptions;
 using Domain.Utility.Note;
@@ -72,6 +73,7 @@ public static class LibrarySnapshotValidator
             if (note.Type == NoteType.pdfAnnotation) problems.Add($"{label}: PDF notes can't be imported");
 
             CheckText(note.TextContent, label, problems);
+            Optional(note.EssayTask, EssayRules.MaxTaskLength, $"{label} essay task", problems);
         }
 
         return keys;

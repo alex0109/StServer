@@ -852,6 +852,13 @@ namespace StServer.Migrations
                     b.Property<JsonDocument>("DrawingContent")
                         .HasColumnType("jsonb");
 
+                    b.Property<JsonDocument>("EssayReview")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("EssayTask")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<Guid?>("FileId")
                         .HasColumnType("uuid");
 
@@ -893,7 +900,9 @@ namespace StServer.Migrations
 
                     b.ToTable("Notes", t =>
                         {
-                            t.HasCheckConstraint("CK_Note_TypeConsistency", "(\"Type\" = 0 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 1 AND \"TextContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 3 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL)");
+                            t.HasCheckConstraint("CK_Note_EssayFields", "\"Type\" = 4 OR (\"EssayTask\" IS NULL AND \"EssayReview\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_Note_TypeConsistency", "(\"Type\" = 0 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 1 AND \"TextContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 3 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 4 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL)");
                         });
                 });
 

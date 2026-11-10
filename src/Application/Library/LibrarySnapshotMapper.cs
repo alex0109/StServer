@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Application.DTOs.RichTextDocument;
+using Application.Essays;
 using Application.Mappers;
 using Domain.Entities;
 using Domain.Utility.Material;
@@ -34,6 +35,7 @@ public static class LibrarySnapshotMapper
                     // The library shows text in the editor's shape, not in the database one
                     TextContent = note.TextContent is null ? null : RichTextJson.ToClient(note.TextContent.RootElement),
                     DrawingContent = note.DrawingContent?.RootElement.Clone(),
+                    EssayTask = note.Type == NoteType.essay ? note.EssayTask : null,
                 };
             })
             .ToList();
@@ -140,6 +142,8 @@ public static class LibrarySnapshotMapper
                 Type = note.Type,
                 TextContent = ToStoredText(note.TextContent),
                 DrawingContent = ToDocument(note.DrawingContent),
+                // A task on any other note would be refused by the database
+                EssayTask = note.Type == NoteType.essay ? EssayRules.NormalizeTask(note.EssayTask) : null,
                 Order = order++,
                 // A millisecond apart (the database keeps microseconds), so notes keep the library order
                 CreatedAt = now.AddMilliseconds(order),

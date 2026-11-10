@@ -91,7 +91,7 @@ public static class AccountExportArchive
 
         studytracker-data.json  Everything the app stores about your account: materials, notes and drawings
                                 (editor JSON as stored), questions with options, attempts and answers,
-                                dictionaries and words, review history, tags, library requests and
+                                dictionaries and words, review history, subjects ("tags"), library requests and
                                 published materials, reminder settings, plan and AI usage.
         words.csv               All words in one table. In Anki: File > Import, pick this file,
                                 fields are separated by commas, the first line is the header.

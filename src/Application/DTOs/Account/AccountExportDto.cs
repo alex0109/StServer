@@ -71,6 +71,8 @@ public record ExportNote(
     NoteType Type,
     JsonDocument? TextContent,
     JsonDocument? DrawingContent,
+    string? EssayTask,
+    JsonDocument? EssayReview,
     int Order,
     DateTime CreatedAt,
     DateTime UpdatedAt);
