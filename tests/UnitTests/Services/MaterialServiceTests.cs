@@ -557,4 +557,56 @@ public class MaterialServiceTests
         _materialRepo.Verify(x => x.AddAsync(It.IsAny<Material>()), Times.Never);
         _limitLockScope.Verify(x => x.CommitAsync(), Times.Never);
     }
+
+    [Theory]
+    [InlineData(MaterialType.lecture)]
+    [InlineData(MaterialType.book)]
+    [InlineData(MaterialType.course)]
+    [InlineData(MaterialType.podcast)]
+    [InlineData(MaterialType.document)]
+    [InlineData(MaterialType.topic)]
+    public async Task CreateAsync_NewTypes_AreAccepted(MaterialType type)
+    {
+        var result = await _sut.CreateAsync(new MaterialCreateDto { Title = "Lecture 3", Type = type, Status = MaterialStatus.tolearn });
+
+        result.Type.ShouldBe(type);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnknownTypeNumber_IsRefused()
+    {
+        // 2 was the old "summary" type and must never come back
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.CreateAsync(new MaterialCreateDto { Title = "Old", Type = (MaterialType)2, Status = MaterialStatus.tolearn }));
+
+        _materialRepo.Verify(x => x.AddAsync(It.IsAny<Material>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_UnknownTypeNumber_IsRefused()
+    {
+        var material = new Material
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            Title = "Notes",
+            Type = MaterialType.article,
+            Status = MaterialStatus.tolearn,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _materialRepo.Setup(x => x.GetByIdAsync(material.Id, _userId)).ReturnsAsync(material);
+
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.UpdateAsync(material.Id, new MaterialUpdateDto { Type = (MaterialType)99 }));
+
+        material.Type.ShouldBe(MaterialType.article);
+    }
+
+    [Fact]
+    public void MaterialType_NeverReusesTheOldSummaryNumber()
+    {
+        Enum.IsDefined((MaterialType)2).ShouldBeFalse();
+        ((int)MaterialType.topic).ShouldBe(10);
+    }
 }

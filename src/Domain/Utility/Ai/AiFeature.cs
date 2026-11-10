@@ -11,5 +11,7 @@ public enum AiFeature
     // One selected word or phrase: translation, transcription and grammar. Short prompt, cheap
     WordLookup = 6,
     // Scores and corrections for one essay note
-    EssayReview = 7
+    EssayReview = 7,
+    // Everyday examples for one dictionary word; nothing is saved
+    WordExplanation = 8
 }

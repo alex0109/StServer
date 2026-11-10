@@ -27,6 +27,9 @@ public static class AiPartsOfSpeech
             ? parsed
             : null;
 
+    // The name the model reads in a prompt, the same spelling as the values it may answer with
+    public static string Name(PartOfSpeech partOfSpeech) => partOfSpeech.ToString().ToLowerInvariant();
+
     // The model's article, kept only for a noun
     public static string? ArticleOf(PartOfSpeech? partOfSpeech, string? article) =>
         DictionaryMapper.ArticleOf(partOfSpeech, AiJson.Limit(article, MaxArticleLength));
