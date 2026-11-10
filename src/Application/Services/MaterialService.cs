@@ -4,6 +4,7 @@ using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
 using Application.Observability;
+using Domain.Utility.Material;
 
 namespace Application.Services;
 
@@ -53,6 +54,8 @@ public class MaterialService : IMaterialService
 
     public async Task<MaterialResponseDto> CreateAsync(MaterialCreateDto materialCreateDto)
     {
+        EnsureKnownType(materialCreateDto.Type);
+
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Materials, _user.UserId);
 
         await _limits.EnsureMaterialPlaceAsync(_user.UserId, libraryCopy: false);
@@ -78,6 +81,8 @@ public class MaterialService : IMaterialService
 
         if (material is null)
             return null;
+
+        if (materialUpdateDto.Type is { } type) EnsureKnownType(type);
 
         // A link is shown as <a href>, so only web addresses: "javascript:" links would run code on click
         if (!string.IsNullOrEmpty(materialUpdateDto.Link) && !IsWebLink(materialUpdateDto.Link))
@@ -169,4 +174,10 @@ public class MaterialService : IMaterialService
         link.Length <= 2048
         && Uri.TryCreate(link.Trim(), UriKind.Absolute, out var uri)
         && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+
+    // JSON may carry a bare number: 2 belonged to the old "summary" type and others mean nothing
+    private static void EnsureKnownType(MaterialType type)
+    {
+        if (!Enum.IsDefined(type)) throw new BadRequestException("Unknown material type");
+    }
 }

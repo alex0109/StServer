@@ -18,6 +18,8 @@ public static class AiEndpoints
         aiGroup.MapPost("/materials/{materialId:guid}/notes/{noteId:guid}/summary", GenerateSummary);
         aiGroup.MapPost("/attempts/{attemptId:guid}/explanations", ExplainMistakes);
         aiGroup.MapPost("/materials/{materialId:guid}/notes/{noteId:guid}/essay-review", ReviewEssay);
+        // Everyday examples for a dictionary word; nothing is saved
+        aiGroup.MapPost("/dictionaries/entries/{entryId:guid}/explanation", ExplainWord);
 
         static async Task<IResult> GetUsage(IAiUsageService service, IUserContext user)
         {
@@ -86,6 +88,16 @@ public static class AiEndpoints
             if (result is null) return TypedResults.NotFound();
 
             return TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> ExplainWord(
+            Guid entryId,
+            IWordExplanationService service,
+            CancellationToken cancellationToken)
+        {
+            var result = await service.ExplainAsync(entryId, cancellationToken);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
         }
     }
 }

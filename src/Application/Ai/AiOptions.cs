@@ -51,6 +51,7 @@ public static class AiQuotaDefaults
         [AiFeature.MistakeExplanation] = 50,
         [AiFeature.WordLookup] = 1000,
         [AiFeature.EssayReview] = 30,
+        [AiFeature.WordExplanation] = 300,
     };
 
     private static readonly Dictionary<SubscriptionTier, Dictionary<AiFeature, int>> Values = new()
@@ -64,6 +65,7 @@ public static class AiQuotaDefaults
             [AiFeature.MistakeExplanation] = 5,
             [AiFeature.WordLookup] = 100,
             [AiFeature.EssayReview] = 3,
+            [AiFeature.WordExplanation] = 30,
         },
         [SubscriptionTier.Plus] = PlusQuotas,
         [SubscriptionTier.Duo] = PlusQuotas,
@@ -76,6 +78,7 @@ public static class AiQuotaDefaults
             [AiFeature.MistakeExplanation] = 250,
             [AiFeature.WordLookup] = 5000,
             [AiFeature.EssayReview] = 150,
+            [AiFeature.WordExplanation] = 1500,
         },
     };
 

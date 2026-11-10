@@ -137,6 +137,29 @@ public class MaterialEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task CreateMaterial_NewType_IsStoredAndReturnedByName()
+    {
+        var client = _factory.CreateAuthenticatedClient();
+
+        var response = await client.PostAsync("/api/materials", new StringContent(
+            """{"title":"Lecture 3","type":"lecture","status":"tolearn"}""", System.Text.Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Created);
+        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken)).ShouldContain("\"type\":\"lecture\"");
+    }
+
+    [Fact]
+    public async Task CreateMaterial_OldSummaryNumber_IsRefused()
+    {
+        var response = await _factory.CreateAuthenticatedClient().PostAsync("/api/materials", new StringContent(
+            """{"title":"Old","type":2,"status":"tolearn"}""", System.Text.Encoding.UTF8, "application/json"),
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task GetMaterial_WhenNotExists_ReturnsNotFound()
     {
         var response = await _client.GetAsync(

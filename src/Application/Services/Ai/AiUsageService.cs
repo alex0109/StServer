@@ -156,6 +156,7 @@ public class AiUsageService : IAiUsageService
         AiFeature.MistakeExplanation => "mistake explanations",
         AiFeature.WordLookup => "word lookups",
         AiFeature.EssayReview => "essay checks",
+        AiFeature.WordExplanation => "word explanations",
         _ => "requests",
     };
 

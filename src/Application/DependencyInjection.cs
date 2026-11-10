@@ -98,6 +98,7 @@ public static class DependencyInjection
         services.AddScoped<ISummaryGenerationService, SummaryGenerationService>();
         services.AddScoped<IMistakeExplanationService, MistakeExplanationService>();
         services.AddScoped<IEssayReviewService, EssayReviewService>();
+        services.AddScoped<IWordExplanationService, WordExplanationService>();
         services.AddScoped<IWordLookupService, WordLookupService>();
 
         return services;
