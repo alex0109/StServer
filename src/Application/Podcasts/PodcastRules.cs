@@ -1,4 +1,5 @@
 using Application.Profile;
+using Domain.Utility.Podcast;
 
 namespace Application.Podcasts;
 
@@ -14,6 +15,10 @@ public static class PodcastRules
     public static readonly TimeSpan StaleAfter = TimeSpan.FromMinutes(30);
     // How long a link to the audio works; the page asks for a new one when it opens
     public static readonly TimeSpan AudioLinkLifetime = TimeSpan.FromHours(6);
+
+    // A recording that never finished is shown as failed, so it can be started again
+    public static PodcastStatus StatusAt(PodcastStatus status, DateTime updatedAt, DateTime now) =>
+        status == PodcastStatus.Generating && now - updatedAt > StaleAfter ? PodcastStatus.Failed : status;
 
     // Languages a podcast can be spoken in: the ones explanations can be written in
     public static bool IsLanguage(string? code) =>

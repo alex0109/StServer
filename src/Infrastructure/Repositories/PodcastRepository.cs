@@ -28,6 +28,8 @@ public class PodcastRepository : IPodcastRepository
 
     public async Task AddAsync(MaterialPodcast podcast) => await _db.MaterialPodcasts.AddAsync(podcast);
 
+    public async Task AddSpeechUsageAsync(SpeechUsage usage) => await _db.SpeechUsages.AddAsync(usage);
+
     public void Remove(MaterialPodcast podcast) => _db.MaterialPodcasts.Remove(podcast);
 
     public Task SaveChangesAsync() => _db.SaveChangesAsync();

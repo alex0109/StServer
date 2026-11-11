@@ -14,7 +14,9 @@ using Application.Podcasts;
 using Domain.Utility.Material;
 using Domain.Utility.Note;
 using Domain.Utility.Podcast;
+using Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Shouldly;
@@ -107,6 +109,12 @@ public class PodcastEndpointsTests : IClassFixture<ApiFactory>
         using (var scope = host.Services.CreateScope())
         {
             await ActivatorUtilities.CreateInstance<PodcastAudioJob>(scope.ServiceProvider).Run(generating.Id);
+
+            // The voices went into the cost log, every spoken character of the script
+            var usage = await scope.ServiceProvider.GetRequiredService<AppDbContext>().SpeechUsages
+                .SingleAsync(x => x.PodcastId == generating.Id, Ct);
+            usage.Succeeded.ShouldBeTrue();
+            usage.Characters.ShouldBe("Привіт! Сьогодні про фотосинтез.".Length + "Чудово.".Length + "Де вони відбуваються?".Length);
         }
 
         var ready = await client.GetFromJsonAsync<PodcastDto>($"/api/materials/{materialId}/podcast", JsonOptions, Ct);

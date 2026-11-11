@@ -1,6 +1,7 @@
 using Application.Admin;
 using Application.DTOs.Admin;
 using Application.Interfaces;
+using Application.Podcasts;
 using Domain.Utility.Ai;
 
 namespace Application.Services;
@@ -9,6 +10,8 @@ namespace Application.Services;
 public class AdminStatsService : IAdminStatsService
 {
     private const int Window = 30;
+    // Rows in the lists of recent and failed podcasts
+    private const int PodcastListSize = 10;
 
     private readonly IAdminStatsRepository _repo;
     private readonly AiPricingOptions _pricing;
@@ -152,6 +155,88 @@ public class AdminStatsService : IAdminStatsService
 
         return new AdminAiStatsDto(totals, tokens, cost, byFeature, byModel, days, topUsers, now);
     }
+
+    public async Task<AdminPodcastStatsDto> GetPodcastsAsync()
+    {
+        var now = _time.GetUtcNow().UtcDateTime;
+        var today = DateOnly.FromDateTime(now);
+        var firstDay = today.AddDays(-(Window - 1));
+        var monthStart = DateOnly.FromDateTime(new DateTime(now.Year, now.Month, 1));
+        var from = firstDay < monthStart ? firstDay : monthStart;
+
+        var raw = await _repo.GetPodcastsAsync(now - PodcastRules.StaleAfter, PodcastListSize);
+        var speech = await _repo.GetSpeechUsageAsync(StartOf(from));
+        var speechTotals = await _repo.GetSpeechUsageTotalsAsync();
+        // Scripts are written by the AI and logged with its other requests
+        var scripts = (await _repo.GetAiUsageAsync(StartOf(from)))
+            .Where(x => x.Feature == AiFeature.PodcastGeneration && x.Status != AiUsageStatus.Pending)
+            .ToList();
+
+        var window = speech.Where(x => x.Date >= firstDay).ToList();
+        var month = speech.Where(x => x.Date >= monthStart).ToList();
+
+        var recordings = new AdminPodcastRecordingsDto(
+            AllTime: Recordings(speechTotals),
+            Today: Recordings(window.Where(x => x.Date == today)),
+            Last7Days: Recordings(window.Where(x => x.Date >= today.AddDays(-6))),
+            Last30Days: Recordings(window),
+            ThisMonth: Recordings(month),
+            FailedLast30Days: Recordings(window.Where(x => !x.Succeeded)),
+            CharactersLast30Days: window.Sum(x => x.Characters),
+            CharactersThisMonth: month.Sum(x => x.Characters),
+            CharactersAllTime: speechTotals.Sum(x => x.Characters));
+
+        var voices30 = VoiceCost(recordings.CharactersLast30Days);
+        var scripts30 = ScriptCost(scripts.Where(x => x.Date >= firstDay));
+        var succeeded30 = Recordings(window.Where(x => x.Succeeded));
+
+        var cost = new AdminPodcastCostDto(
+            VoicesLast30Days: voices30,
+            VoicesThisMonth: VoiceCost(recordings.CharactersThisMonth),
+            VoicesAllTime: VoiceCost(recordings.CharactersAllTime),
+            ScriptsLast30Days: scripts30,
+            ScriptsThisMonth: ScriptCost(scripts.Where(x => x.Date >= monthStart)),
+            AveragePerPodcast30: voices30 is { } voices && succeeded30 > 0 ? Math.Round((voices + scripts30) / succeeded30, 4) : null,
+            SpeechPerMillionCharacters: _pricing.SpeechPerMillionCharacters);
+
+        var byDay = window.GroupBy(x => x.Date).ToDictionary(g => g.Key, g => g.ToList());
+        var days = Enumerable.Range(0, Window)
+            .Select(i => firstDay.AddDays(i))
+            .Select(day =>
+            {
+                var rows = byDay.GetValueOrDefault(day) ?? [];
+                var characters = rows.Sum(x => x.Characters);
+                return new AdminPodcastDayDto(day, Recordings(rows), Recordings(rows.Where(x => !x.Succeeded)), characters, VoiceCost(characters) ?? 0);
+            })
+            .ToList();
+
+        var library = new AdminPodcastLibraryDto(
+            Total: raw.Ready + raw.Generating + raw.Failed,
+            Ready: raw.Ready,
+            Generating: raw.Generating,
+            Failed: raw.Failed,
+            ReadySeconds: Math.Round(raw.ReadySeconds),
+            AverageSeconds: raw.Ready == 0 ? 0 : Math.Round(raw.ReadySeconds / raw.Ready),
+            StorageBytes: raw.StorageBytes);
+
+        // A hung recording is shown the way its user sees it: failed
+        AdminPodcastItemDto AsSeen(AdminPodcastItemDto item) =>
+            item with { Status = PodcastRules.StatusAt(item.Status, item.UpdatedAt, now) };
+
+        return new AdminPodcastStatsDto(
+            library, recordings, cost, days, raw.Languages,
+            raw.Recent.Select(AsSeen).ToList(),
+            raw.Failures.Select(AsSeen).ToList(),
+            now);
+    }
+
+    private decimal? VoiceCost(long characters) =>
+        _pricing.SpeechCost(characters) is { } cost ? Math.Round(cost, 4) : null;
+
+    private decimal ScriptCost(IEnumerable<AiUsageGroupRow> rows) =>
+        Math.Round(rows.Sum(x => _pricing.Cost(x.Model, x.InputTokens, x.OutputTokens) ?? 0), 4);
+
+    private static int Recordings(IEnumerable<SpeechUsageGroupRow> rows) => rows.Sum(x => x.Recordings);
 
     private sealed record Priced(AiUsageGroupRow Row, decimal? Cost);
 

@@ -1,5 +1,6 @@
 using Application.Interfaces;
 using Application.Podcasts;
+using Domain.Entities;
 using Domain.Utility.Podcast;
 using Microsoft.Extensions.Logging;
 
@@ -42,6 +43,17 @@ public class PodcastAudioJob
         var script = PodcastScript.FromDocument(podcast.Script);
         var previousPath = podcast.AudioPath;
 
+        // Tracked now and saved with the podcast's final state, whichever way the recording ends
+        var usage = new SpeechUsage
+        {
+            Id = Guid.NewGuid(),
+            UserId = podcast.UserId,
+            PodcastId = podcast.Id,
+            Language = podcast.Language,
+            CreatedAt = _time.GetUtcNow().UtcDateTime,
+        };
+        await _podcasts.AddSpeechUsageAsync(usage);
+
         try
         {
             var parts = new List<byte[]>();
@@ -53,6 +65,7 @@ public class PodcastAudioJob
                 foreach (var batch in Batches(chapter.Lines))
                 {
                     var audio = await _speech.SynthesizeAsync(podcast.Language, batch);
+                    usage.Characters += batch.Sum(line => line.Text.Length);
                     chapterSeconds += Mp3Audio.Duration(audio);
                     parts.Add(audio);
                 }
@@ -71,6 +84,7 @@ public class PodcastAudioJob
             podcast.Status = PodcastStatus.Ready;
             podcast.CompletedAt = _time.GetUtcNow().UtcDateTime;
             podcast.UpdatedAt = podcast.CompletedAt.Value;
+            usage.Succeeded = true;
             await _podcasts.SaveChangesAsync();
 
             // The replaced recording goes only once the new one is safely stored
@@ -80,6 +94,7 @@ public class PodcastAudioJob
         catch (Exception exception)
         {
             _logger.LogError(exception, "Podcast {PodcastId} could not be recorded", podcastId);
+            usage.Succeeded = false;
             podcast.Status = PodcastStatus.Failed;
             podcast.Error = exception.Message.Length > 500 ? exception.Message[..500] : exception.Message;
             podcast.UpdatedAt = _time.GetUtcNow().UtcDateTime;

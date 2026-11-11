@@ -83,6 +83,12 @@ public static class AccountDataPolicy
                 .Where(x => x.UserId == userId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, tombstone))),
 
+        new(typeof(SpeechUsage), AccountDataAction.Anonymize,
+            "Podcast voice costs stay in the totals; the rows get an id that belongs to nobody",
+            (db, userId, tombstone) => db.SpeechUsages
+                .Where(x => x.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, tombstone))),
+
         // All months of the user get the same new id, so the unique month key still holds
         new(typeof(AiUsageMonthly), AccountDataAction.Anonymize,
             "Monthly AI totals for cost reports",

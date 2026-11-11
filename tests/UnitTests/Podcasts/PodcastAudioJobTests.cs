@@ -16,6 +16,7 @@ public class PodcastAudioJobTests
     private readonly Mock<IAudioStorage> _storage = new();
     private readonly Mock<TimeProvider> _time = new();
     private readonly MaterialPodcast _podcast;
+    private readonly List<SpeechUsage> _usages = [];
 
     public PodcastAudioJobTests()
     {
@@ -36,6 +37,7 @@ public class PodcastAudioJobTests
             ]).ToDocument(),
         };
         _podcasts.Setup(x => x.GetByIdAsync(_podcast.Id)).ReturnsAsync(_podcast);
+        _podcasts.Setup(x => x.AddSpeechUsageAsync(It.IsAny<SpeechUsage>())).Callback((SpeechUsage usage) => _usages.Add(usage));
     }
 
     private PodcastAudioJob Job() => new(_podcasts.Object, _speech.Object, _storage.Object, _time.Object, NullLogger<PodcastAudioJob>.Instance);
@@ -73,7 +75,43 @@ public class PodcastAudioJobTests
         _podcast.Status.ShouldBe(PodcastStatus.Failed);
         _podcast.Error.ShouldBe("Speech is down");
         _podcast.AudioPath.ShouldBe("podcasts/old.mp3");
+        _usages.ShouldHaveSingleItem().ShouldSatisfyAllConditions(
+            usage => usage.Succeeded.ShouldBeFalse(),
+            usage => usage.Characters.ShouldBe(0));
         _storage.Verify(x => x.UploadAsync(It.IsAny<string>(), It.IsAny<byte[]>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Run_LogsTheSpokenCharacters_ForTheCosts()
+    {
+        _speech.Setup(x => x.SynthesizeAsync("uk", It.IsAny<IReadOnlyList<PodcastLine>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mp3Fixtures.Speech(50));
+
+        await Job().Run(_podcast.Id);
+
+        var usage = _usages.ShouldHaveSingleItem();
+        usage.Succeeded.ShouldBeTrue();
+        usage.Characters.ShouldBe("Привіт".Length * 2 + "Далі".Length);
+        usage.PodcastId.ShouldBe(_podcast.Id);
+        usage.UserId.ShouldBe(_podcast.UserId);
+        usage.Language.ShouldBe("uk");
+        _podcasts.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task Run_FailureHalfway_LogsThePartAlreadyVoiced()
+    {
+        // The first chapter is voiced and billed, the second one fails
+        _speech.SetupSequence(x => x.SynthesizeAsync("uk", It.IsAny<IReadOnlyList<PodcastLine>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Mp3Fixtures.Speech(50))
+            .ThrowsAsync(new HttpRequestException("Speech is down"));
+
+        await Job().Run(_podcast.Id);
+
+        _podcast.Status.ShouldBe(PodcastStatus.Failed);
+        var usage = _usages.ShouldHaveSingleItem();
+        usage.Succeeded.ShouldBeFalse();
+        usage.Characters.ShouldBe("Привіт".Length * 2);
     }
 
     [Fact]
@@ -84,6 +122,7 @@ public class PodcastAudioJobTests
         await Job().Run(_podcast.Id);
 
         _speech.VerifyNoOtherCalls();
+        _usages.ShouldBeEmpty();
     }
 
     [Fact]

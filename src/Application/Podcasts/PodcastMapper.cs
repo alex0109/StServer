@@ -44,9 +44,6 @@ public static class PodcastMapper
         };
     }
 
-    // A recording that never finished is shown as failed, so it can be started again
     public static PodcastStatus StatusAt(MaterialPodcast podcast, DateTime now) =>
-        podcast.Status == PodcastStatus.Generating && now - podcast.UpdatedAt > PodcastRules.StaleAfter
-            ? PodcastStatus.Failed
-            : podcast.Status;
+        PodcastRules.StatusAt(podcast.Status, podcast.UpdatedAt, now);
 }
