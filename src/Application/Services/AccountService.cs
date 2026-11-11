@@ -77,6 +77,7 @@ public class AccountService : IAccountService
 
         // Postgres is done; the sign in account goes next, with retries if Supabase is down
         _jobs.DeleteAuthUser(userId);
+        _jobs.DeletePodcastAudio(userId);
 
         // A paid plan would keep charging: its customer at the provider is closed too
         if (summary.BillingCustomer is { } customer)

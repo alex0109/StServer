@@ -1,4 +1,5 @@
 using Application.DTOs.Ai;
+using Application.DTOs.Podcast;
 using Application.Interfaces;
 
 namespace Api.Endpoints;
@@ -20,6 +21,9 @@ public static class AiEndpoints
         aiGroup.MapPost("/materials/{materialId:guid}/notes/{noteId:guid}/essay-review", ReviewEssay);
         // Everyday examples for a dictionary word; nothing is saved
         aiGroup.MapPost("/dictionaries/entries/{entryId:guid}/explanation", ExplainWord);
+        // A podcast of a material: the script is written now, the voices are recorded in the background
+        aiGroup.MapPost("/materials/{materialId:guid}/podcast", GeneratePodcast);
+        aiGroup.MapPost("/materials/{materialId:guid}/podcast/retry", RetryPodcast);
 
         static async Task<IResult> GetUsage(IAiUsageService service, IUserContext user)
         {
@@ -96,6 +100,24 @@ public static class AiEndpoints
             CancellationToken cancellationToken)
         {
             var result = await service.ExplainAsync(entryId, cancellationToken);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> GeneratePodcast(
+            Guid materialId,
+            PodcastGenerateDto dto,
+            IPodcastService service,
+            CancellationToken cancellationToken)
+        {
+            var result = await service.GenerateAsync(materialId, dto, cancellationToken);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> RetryPodcast(Guid materialId, IPodcastService service)
+        {
+            var result = await service.RetryAsync(materialId);
 
             return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
         }

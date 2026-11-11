@@ -13,5 +13,7 @@ public enum AiFeature
     // Scores and corrections for one essay note
     EssayReview = 7,
     // Everyday examples for one dictionary word; nothing is saved
-    WordExplanation = 8
+    WordExplanation = 8,
+    // The script of an audio podcast of a material; the voices are paid separately
+    PodcastGeneration = 9
 }

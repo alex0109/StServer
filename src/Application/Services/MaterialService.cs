@@ -15,18 +15,24 @@ public class MaterialService : IMaterialService
     private readonly IAssessmentRepository _assessmentRepo;
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
+    private readonly IPodcastRepository? _podcasts;
+    private readonly IAudioStorage? _audio;
 
     public MaterialService(
         IMaterialRepository repo,
         IAssessmentRepository assessmentRepo,
         IUserContext user,
         ILimitLock limitLock,
-        IContentLimits? limits = null)
+        IContentLimits? limits = null,
+        IPodcastRepository? podcasts = null,
+        IAudioStorage? audio = null)
     {
         _repo = repo;
         _assessmentRepo = assessmentRepo;
         _user = user;
         _limitLock = limitLock;
+        _podcasts = podcasts;
+        _audio = audio;
         _limits = limits ?? ContentLimits.Free(repo);
     }
 
@@ -143,9 +149,24 @@ public class MaterialService : IMaterialService
 
     public async Task<bool> DeleteAsync(Guid materialId)
     {
+        // The podcast row goes with the material; its file lives outside the database
+        var podcast = _podcasts is null ? null : await _podcasts.GetByMaterialAsync(materialId, _user.UserId);
+
         var result = await _repo.DeleteAsync(materialId, _user.UserId);
         
         await _repo.SaveChangesAsync();
+
+        if (result && podcast?.AudioPath is { } path && _audio is { IsConfigured: true })
+        {
+            try
+            {
+                await _audio.DeleteAsync(path);
+            }
+            catch
+            {
+                // The material is gone either way; a leftover file is only storage
+            }
+        }
 
         return result;
     }

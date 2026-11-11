@@ -11,6 +11,7 @@ using Infrastructure.Observability;
 using Application.Email;
 using Infrastructure.Email;
 using Infrastructure.Locks;
+using Infrastructure.Podcasts;
 using Infrastructure.Repositories;
 
 namespace Infrastructure;
@@ -41,6 +42,13 @@ public static class DependencyInjection
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IBillingRepository, BillingRepository>();
+        services.AddScoped<IPodcastRepository, PodcastRepository>();
+
+        // Podcasts: voices from Azure AI Speech, audio in Azure Blob Storage; both off without keys
+        services.AddSingleton(AzureSpeechSettings.FromEnvironment());
+        services.AddHttpClient(AzureSpeechSynthesizer.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(3));
+        services.AddSingleton<ISpeechSynthesizer, AzureSpeechSynthesizer>();
+        services.AddSingleton<IAudioStorage>(_ => AzureBlobAudioStorage.FromEnvironment());
 
         // Stripe stays off until its keys and prices are in the environment
         services.AddHttpClient(StripeBillingProvider.HttpClientName, client =>

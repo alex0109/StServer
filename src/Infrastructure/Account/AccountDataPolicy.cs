@@ -41,6 +41,8 @@ public static class AccountDataPolicy
         DeleteByUser<Note>(),
         DeleteByUser<Dictionary>(),
         DeleteByUser<MaterialShare>(),
+        // The audio files are removed from storage by a background job after the rows
+        DeleteByUser<MaterialPodcast>(),
         DeleteByUser<Material>(),
         DeleteByUser<Tag>(),
         DeleteByUser<LibraryRequest>(),

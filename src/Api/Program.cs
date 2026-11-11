@@ -121,11 +121,13 @@ if (builder.Environment.IsEnvironment("Testing"))
 {
     builder.Services.AddSingleton<IAccountJobs, NoAccountJobs>();
     builder.Services.AddSingleton<IBillingJobs, NoBillingJobs>();
+    builder.Services.AddSingleton<IPodcastJobs, NoPodcastJobs>();
 }
 else
 {
     builder.Services.AddScoped<IAccountJobs, HangfireAccountJobs>();
     builder.Services.AddScoped<IBillingJobs, HangfireBillingJobs>();
+    builder.Services.AddScoped<IPodcastJobs, HangfirePodcastJobs>();
 }
 
 builder.Services.AddInfrastructure();

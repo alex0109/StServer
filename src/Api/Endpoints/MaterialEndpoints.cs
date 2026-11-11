@@ -22,6 +22,8 @@ public static class MaterialEndpoints
         materialGroup.MapPut("/{materialId:guid}/deadline", SetDeadline);
         materialGroup.MapGet("/{materialId:guid}/deadline-plan", GetDeadlinePlan);
         materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);
+        // The material's podcast, with a fresh link to its audio; 204 when there is none yet
+        materialGroup.MapGet("/{materialId:guid}/podcast", GetPodcast);
         materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
         materialGroup.MapDelete("/{materialId:guid}", DeleteMaterial);
         
@@ -78,6 +80,13 @@ public static class MaterialEndpoints
             return TypedResults.Ok(result);
         }
         
+        static async Task<IResult> GetPodcast(Guid materialId, IPodcastService service)
+        {
+            var result = await service.GetAsync(materialId);
+
+            return result is null ? TypedResults.NoContent() : TypedResults.Ok(result);
+        }
+
         static async Task<IResult> AddTagToMaterial(Guid materialId, Guid tagId, IMaterialService service)
         {
             var result = await service.AddTagToMaterialAsync(materialId, tagId);
