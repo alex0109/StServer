@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<MaterialTag> MaterialTags => Set<MaterialTag>();
     public DbSet<Option> Options => Set<Option>();
     public DbSet<Note> Notes => Set<Note>();
+    public DbSet<MaterialPodcast> MaterialPodcasts => Set<MaterialPodcast>();
+    public DbSet<SpeechUsage> SpeechUsages => Set<SpeechUsage>();
     public DbSet<Dictionary> Dictionaries => Set<Dictionary>();
     public DbSet<DictionaryEntry> DictionaryEntries => Set<DictionaryEntry>();
     public DbSet<DictionaryEntryProgress> DictionaryEntryProgresses => Set<DictionaryEntryProgress>();
@@ -472,6 +474,34 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => new { x.UserId, x.Status });
             entity.HasIndex(x => new { x.LibraryItemId, x.Status });
             entity.HasIndex(x => new { x.MaterialId, x.Status });
+        });
+
+        modelBuilder.Entity<MaterialPodcast>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(x => x.Script)
+                .HasColumnType("jsonb");
+
+            entity.HasOne(x => x.Material)
+                .WithMany()
+                .HasForeignKey(x => x.MaterialId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One podcast per material: a new one replaces it
+            entity.HasIndex(x => x.MaterialId).IsUnique();
+            entity.HasIndex(x => x.UserId);
+        });
+
+        modelBuilder.Entity<SpeechUsage>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            // Costs are read by day
+            entity.HasIndex(x => x.CreatedAt);
+            entity.HasIndex(x => x.UserId);
         });
 
         // "Already imported" for library cards

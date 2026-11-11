@@ -787,6 +787,66 @@ namespace StServer.Migrations
                     b.ToTable("MaterialFiles");
                 });
 
+            modelBuilder.Entity("Domain.Entities.MaterialPodcast", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AudioPath")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<long>("AudioSize")
+                        .HasColumnType("bigint");
+
+                    b.PrimitiveCollection<double[]>("ChapterDurations")
+                        .IsRequired()
+                        .HasColumnType("double precision[]");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double>("DurationSeconds")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<JsonDocument>("Script")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MaterialPodcasts");
+                });
+
             modelBuilder.Entity("Domain.Entities.MaterialShare", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1236,6 +1296,40 @@ namespace StServer.Migrations
                     b.ToTable("Results");
                 });
 
+            modelBuilder.Entity("Domain.Entities.SpeechUsage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Characters")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid>("PodcastId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Succeeded")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SpeechUsages");
+                });
+
             modelBuilder.Entity("Domain.Entities.SubscriptionEvent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1602,6 +1696,17 @@ namespace StServer.Migrations
                 {
                     b.HasOne("Domain.Entities.Material", "Material")
                         .WithMany("MaterialFiles")
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
+                });
+
+            modelBuilder.Entity("Domain.Entities.MaterialPodcast", b =>
+                {
+                    b.HasOne("Domain.Entities.Material", "Material")
+                        .WithMany()
                         .HasForeignKey("MaterialId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();

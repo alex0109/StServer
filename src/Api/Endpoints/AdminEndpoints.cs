@@ -27,6 +27,7 @@ public static class AdminEndpoints
         admin.MapGet("/me", Me);
         admin.MapGet("/stats/overview", Overview);
         admin.MapGet("/stats/ai", Ai);
+        admin.MapGet("/stats/podcasts", Podcasts);
         admin.MapGet("/health", Health);
         admin.MapGet("/audit", Audit);
         // Prometheus, Grafana and Sentry in one answer; Google Analytics separately (it is slower)
@@ -69,6 +70,9 @@ public static class AdminEndpoints
 
         static async Task<IResult> Ai(IAdminStatsService stats) =>
             TypedResults.Ok(await stats.GetAiAsync());
+
+        static async Task<IResult> Podcasts(IAdminStatsService stats) =>
+            TypedResults.Ok(await stats.GetPodcastsAsync());
 
         static async Task<IResult> Audit(IAdminAudit audit, int take = 100) =>
             TypedResults.Ok(await audit.ListAsync(Math.Clamp(take, 1, 500)));

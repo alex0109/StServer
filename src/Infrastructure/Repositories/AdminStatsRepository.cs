@@ -3,8 +3,10 @@ using Application.Interfaces;
 using Domain.Utility.Ai;
 using Domain.Utility.Attempt;
 using Domain.Utility.Library;
+using Domain.Utility.Podcast;
 using Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using MaterialPodcast = Domain.Entities.MaterialPodcast;
 
 namespace Infrastructure.Repositories;
 
@@ -148,5 +150,64 @@ public class AdminStatsRepository : IAdminStatsRepository
     public async Task<int> CountManualAcceptsAsync(DateTime since)
     {
         return await _db.Results.CountAsync(r => r.OverriddenAt != null && r.OverriddenAt >= since);
+    }
+
+    public async Task<AdminPodcastRaw> GetPodcastsAsync(DateTime staleBefore, int take)
+    {
+        var podcasts = _db.MaterialPodcasts.AsNoTracking();
+
+        var ready = await podcasts
+            .Where(x => x.Status == PodcastStatus.Ready)
+            .GroupBy(_ => 1)
+            .Select(g => new { Count = g.Count(), Seconds = g.Sum(x => x.DurationSeconds) })
+            .FirstOrDefaultAsync();
+        var generating = await podcasts.CountAsync(x => x.Status == PodcastStatus.Generating && x.UpdatedAt >= staleBefore);
+        var failed = await podcasts.CountAsync(x =>
+            x.Status == PodcastStatus.Failed || (x.Status == PodcastStatus.Generating && x.UpdatedAt < staleBefore));
+        var storageBytes = await podcasts.Where(x => x.AudioPath != null).SumAsync(x => (long?)x.AudioSize) ?? 0;
+
+        var languages = await podcasts
+            .GroupBy(x => x.Language)
+            .Select(g => new AdminPodcastLanguageDto(g.Key, g.Count()))
+            .OrderByDescending(x => x.Podcasts)
+            .ToListAsync();
+
+        var recent = await Items(podcasts.OrderByDescending(x => x.CreatedAt), take);
+        var failures = await Items(
+            podcasts
+                .Where(x => x.Status == PodcastStatus.Failed || (x.Status == PodcastStatus.Generating && x.UpdatedAt < staleBefore))
+                .OrderByDescending(x => x.UpdatedAt),
+            take);
+
+        return new AdminPodcastRaw(ready?.Count ?? 0, generating, failed, ready?.Seconds ?? 0, storageBytes, languages, recent, failures);
+    }
+
+    // The script stays in the database: the list needs only the facts about each podcast
+    private static Task<List<AdminPodcastItemDto>> Items(IQueryable<MaterialPodcast> podcasts, int take) =>
+        podcasts
+            .Take(take)
+            .Select(x => new AdminPodcastItemDto(
+                x.Id, x.UserId, x.Language, x.Status, x.DurationSeconds, x.AudioSize, x.Error, x.CreatedAt, x.UpdatedAt))
+            .ToListAsync();
+
+    public async Task<List<SpeechUsageGroupRow>> GetSpeechUsageAsync(DateTime since)
+    {
+        var rows = await _db.SpeechUsages
+            .Where(x => x.CreatedAt >= since)
+            .GroupBy(x => new { Day = x.CreatedAt.Date, x.Succeeded })
+            .Select(g => new { g.Key.Day, g.Key.Succeeded, Recordings = g.Count(), Characters = g.Sum(x => (long)x.Characters) })
+            .ToListAsync();
+
+        return rows.Select(x => new SpeechUsageGroupRow(DateOnly.FromDateTime(x.Day), x.Succeeded, x.Recordings, x.Characters)).ToList();
+    }
+
+    public async Task<List<SpeechUsageGroupRow>> GetSpeechUsageTotalsAsync()
+    {
+        var rows = await _db.SpeechUsages
+            .GroupBy(x => x.Succeeded)
+            .Select(g => new { Succeeded = g.Key, Recordings = g.Count(), Characters = g.Sum(x => (long)x.Characters) })
+            .ToListAsync();
+
+        return rows.Select(x => new SpeechUsageGroupRow(default, x.Succeeded, x.Recordings, x.Characters)).ToList();
     }
 }

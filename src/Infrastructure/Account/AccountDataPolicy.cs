@@ -41,6 +41,8 @@ public static class AccountDataPolicy
         DeleteByUser<Note>(),
         DeleteByUser<Dictionary>(),
         DeleteByUser<MaterialShare>(),
+        // The audio files are removed from storage by a background job after the rows
+        DeleteByUser<MaterialPodcast>(),
         DeleteByUser<Material>(),
         DeleteByUser<Tag>(),
         DeleteByUser<LibraryRequest>(),
@@ -78,6 +80,12 @@ public static class AccountDataPolicy
         new(typeof(AiUsage), AccountDataAction.Anonymize,
             "AI costs stay in the totals; the rows get an id that belongs to nobody",
             (db, userId, tombstone) => db.AiUsages
+                .Where(x => x.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, tombstone))),
+
+        new(typeof(SpeechUsage), AccountDataAction.Anonymize,
+            "Podcast voice costs stay in the totals; the rows get an id that belongs to nobody",
+            (db, userId, tombstone) => db.SpeechUsages
                 .Where(x => x.UserId == userId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, tombstone))),
 

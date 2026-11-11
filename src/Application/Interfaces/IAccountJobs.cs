@@ -9,4 +9,7 @@ public interface IAccountJobs
 
     // The customer of a paid plan at the payment provider, with its subscriptions
     void DeleteBillingCustomer(SubscriptionProvider provider, string customerId);
+
+    // Recorded podcasts, which live in file storage, not in the database
+    void DeletePodcastAudio(Guid userId);
 }

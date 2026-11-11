@@ -19,6 +19,29 @@ public sealed class HangfireAccountJobs : IAccountJobs
 
     public void DeleteBillingCustomer(SubscriptionProvider provider, string customerId) =>
         _jobs.Enqueue<DeleteBillingCustomerJob>(x => x.Run(provider, customerId));
+
+    public void DeletePodcastAudio(Guid userId) => _jobs.Enqueue<DeletePodcastAudioJob>(x => x.Run(userId));
+}
+
+// Recording takes minutes and costs money: a failure is stored for the user to retry, not retried here
+public sealed class HangfirePodcastJobs : IPodcastJobs
+{
+    private readonly IBackgroundJobClient _jobs;
+
+    public HangfirePodcastJobs(IBackgroundJobClient jobs)
+    {
+        _jobs = jobs;
+    }
+
+    public void RecordAudio(Guid podcastId) => _jobs.Enqueue<PodcastAudioJob>(x => x.Run(podcastId));
+}
+
+// Tests record podcasts by running the job themselves
+public sealed class NoPodcastJobs : IPodcastJobs
+{
+    public void RecordAudio(Guid podcastId)
+    {
+    }
 }
 
 public sealed class HangfireBillingJobs : IBillingJobs
@@ -36,6 +59,10 @@ public sealed class HangfireBillingJobs : IBillingJobs
 // Tests run without Hangfire: nothing to delete outside the database there
 public sealed class NoAccountJobs : IAccountJobs
 {
+    public void DeletePodcastAudio(Guid userId)
+    {
+    }
+
     public void DeleteAuthUser(Guid userId)
     {
     }

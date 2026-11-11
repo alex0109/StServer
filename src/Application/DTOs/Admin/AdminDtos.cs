@@ -1,5 +1,6 @@
 using Domain.Utility.Admin;
 using Domain.Utility.Ai;
+using Domain.Utility.Podcast;
 
 namespace Application.DTOs.Admin;
 
@@ -79,3 +80,48 @@ public record AdminOverviewRaw(
     Dictionary<DateOnly, int> ReviewsByDay,
     Dictionary<DateOnly, int> NewMaterialsByDay,
     Dictionary<DateOnly, int> AiRequestsByDay);
+
+// Podcasts in the database now. Failed includes recordings that stopped answering;
+// StorageBytes counts every stored file, also the old one a failed re-recording kept
+public record AdminPodcastLibraryDto(
+    int Total, int Ready, int Generating, int Failed, double ReadySeconds, double AverageSeconds, long StorageBytes);
+
+// Voice recordings from the speech log: deleted and replaced podcasts still count
+public record AdminPodcastRecordingsDto(
+    int AllTime, int Today, int Last7Days, int Last30Days, int ThisMonth, int FailedLast30Days,
+    long CharactersLast30Days, long CharactersThisMonth, long CharactersAllTime);
+
+// Estimates in USD: voices by spoken characters (null without a price), scripts from the AI
+// log. AveragePerPodcast30 is everything spent divided by the recordings that succeeded
+public record AdminPodcastCostDto(
+    decimal? VoicesLast30Days, decimal? VoicesThisMonth, decimal? VoicesAllTime,
+    decimal ScriptsLast30Days, decimal ScriptsThisMonth,
+    decimal? AveragePerPodcast30, decimal? SpeechPerMillionCharacters);
+
+public record AdminPodcastDayDto(DateOnly Date, int Recordings, int Failed, long Characters, decimal Cost);
+
+public record AdminPodcastLanguageDto(string Language, int Podcasts);
+
+public record AdminPodcastItemDto(
+    Guid Id, Guid UserId, string Language, PodcastStatus Status, double DurationSeconds, long AudioSize,
+    string? Error, DateTime CreatedAt, DateTime UpdatedAt);
+
+public record AdminPodcastStatsDto(
+    AdminPodcastLibraryDto Podcasts,
+    AdminPodcastRecordingsDto Recordings,
+    AdminPodcastCostDto Cost,
+    List<AdminPodcastDayDto> Days,
+    List<AdminPodcastLanguageDto> Languages,
+    List<AdminPodcastItemDto> Recent,
+    List<AdminPodcastItemDto> Failures,
+    DateTime GeneratedAt);
+
+// Raw podcast numbers, counted by the database; statuses in the lists are as stored
+public record AdminPodcastRaw(
+    int Ready, int Generating, int Failed, double ReadySeconds, long StorageBytes,
+    List<AdminPodcastLanguageDto> Languages,
+    List<AdminPodcastItemDto> Recent,
+    List<AdminPodcastItemDto> Failures);
+
+// Speech log grouped by day and outcome; totals come with a default date
+public record SpeechUsageGroupRow(DateOnly Date, bool Succeeded, int Recordings, long Characters);

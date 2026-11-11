@@ -34,6 +34,13 @@ public interface IAdminStatsRepository
     Task<List<AiMonthlyRow>> GetAiMonthlyAsync();
 
     Task<int> CountManualAcceptsAsync(DateTime since);
+
+    // Generating rows last touched before staleBefore count as failed
+    Task<AdminPodcastRaw> GetPodcastsAsync(DateTime staleBefore, int take);
+
+    Task<List<SpeechUsageGroupRow>> GetSpeechUsageAsync(DateTime since);
+
+    Task<List<SpeechUsageGroupRow>> GetSpeechUsageTotalsAsync();
 }
 
 public interface IAdminStatsService
@@ -41,4 +48,6 @@ public interface IAdminStatsService
     Task<AdminOverviewDto> GetOverviewAsync();
 
     Task<AdminAiStatsDto> GetAiAsync();
+
+    Task<AdminPodcastStatsDto> GetPodcastsAsync();
 }
