@@ -124,6 +124,8 @@ public static class MaterialCopyMapper
                 QuestionType = question.QuestionType,
                 QuestionDifficulty = question.QuestionDifficulty,
                 Explanation = question.Explanation,
+                // The copy keeps the link, so the moments still point into the same video
+                VideoSeconds = question.VideoSeconds,
                 Version = 1,
                 IsActive = true,
                 CreatedAt = now,

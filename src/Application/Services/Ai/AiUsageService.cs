@@ -158,6 +158,7 @@ public class AiUsageService : IAiUsageService
         AiFeature.EssayReview => "essay checks",
         AiFeature.WordExplanation => "word explanations",
         AiFeature.PodcastGeneration => "podcasts",
+        AiFeature.VideoTranscript => "video subtitles",
         _ => "requests",
     };
 

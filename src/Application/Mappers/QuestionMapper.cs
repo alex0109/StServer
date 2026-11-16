@@ -74,6 +74,7 @@ public static class QuestionMapper
             Answer = entity.Answer,
             QuestionType = entity.QuestionType,
             Explanation = entity.Explanation,
+            VideoSeconds = entity.VideoSeconds,
             QuestionDifficulty = entity.QuestionDifficulty,
             Options = entity.Options.OrderBy(o => o.Position).Select(o => new OptionResponseDto
             {

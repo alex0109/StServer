@@ -19,6 +19,32 @@ public class AiClientTests
     private static AiOptions Order(params string[] names) => new() { ProviderOrder = names };
 
     [Fact]
+    public async Task CompleteAsync_Video_GoesOnlyToProvidersThatWatchVideos()
+    {
+        var text = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", """{"value":"a"}""")));
+        var video = new FakeAiProvider("G", () => Task.FromResult(FakeAiProvider.Completion("G", """{"value":"g"}""")), canWatchVideo: true);
+
+        var result = await Create(Order("A", "G"), text, video).CompleteAsync(
+            new AiTestVideoPrompt(),
+            TestContext.Current.CancellationToken);
+
+        result.Value.ShouldBe("g");
+        text.Calls.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task CompleteAsync_VideoWithoutAProviderThatWatchesIt_IsUnavailable()
+    {
+        var text = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", """{"value":"a"}""")));
+
+        await Should.ThrowAsync<AiUnavailableException>(() => Create(Order("A"), text).CompleteAsync(
+            new AiTestVideoPrompt(),
+            TestContext.Current.CancellationToken));
+
+        text.Calls.ShouldBe(0);
+    }
+
+    [Fact]
     public async Task CompleteAsync_FirstProviderAnswers_UsesIt()
     {
         var first = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", """{"value":"a"}""")));

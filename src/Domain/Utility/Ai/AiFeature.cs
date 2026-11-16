@@ -15,5 +15,7 @@ public enum AiFeature
     // Everyday examples for one dictionary word; nothing is saved
     WordExplanation = 8,
     // The script of an audio podcast of a material; the voices are paid separately
-    PodcastGeneration = 9
+    PodcastGeneration = 9,
+    // Subtitles of a YouTube video, written by a model that watches the video itself
+    VideoTranscript = 10
 }

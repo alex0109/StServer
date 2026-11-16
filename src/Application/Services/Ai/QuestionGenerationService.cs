@@ -6,6 +6,7 @@ using Application.DTOs.Question;
 using Application.Exceptions;
 using Application.Interfaces;
 using Application.Mappers;
+using Application.Videos;
 using Domain.Entities;
 using Domain.Utility.Question;
 
@@ -21,6 +22,7 @@ public class QuestionGenerationService : IQuestionGenerationService
     private readonly IAiService _ai;
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
+    private readonly IMaterialVideoRepository? _videos;
 
     public QuestionGenerationService(
         IQuestionRepository questionRepository,
@@ -30,7 +32,8 @@ public class QuestionGenerationService : IQuestionGenerationService
         IAiService ai,
         IUserContext user,
         ILimitLock limitLock,
-        IContentLimits? limits = null)
+        IContentLimits? limits = null,
+        IMaterialVideoRepository? videos = null)
     {
         _questionRepository = questionRepository;
         _materialRepository = materialRepository;
@@ -40,6 +43,7 @@ public class QuestionGenerationService : IQuestionGenerationService
         _user = user;
         _limitLock = limitLock;
         _limits = limits ?? ContentLimits.Free();
+        _videos = videos;
     }
 
     public async Task<List<QuestionResponseDto>?> GenerateAsync(
@@ -56,7 +60,11 @@ public class QuestionGenerationService : IQuestionGenerationService
         if (material is null) return null;
 
         string content;
-        if (dto.NoteId is { } noteId)
+        if (dto.FromVideo)
+        {
+            content = await VideoSourceAsync(material, userId);
+        }
+        else if (dto.NoteId is { } noteId)
         {
             var note = await _noteRepository.GetByIdAsync(noteId, materialId, userId);
             if (note is null) return null;
@@ -83,7 +91,8 @@ public class QuestionGenerationService : IQuestionGenerationService
             content,
             Math.Min(dto.Count, free),
             dto.QuestionType,
-            existingTitles);
+            existingTitles,
+            dto.FromVideo);
 
         bool IsNew(string title) => !existingTitles.Contains(title, StringComparer.OrdinalIgnoreCase);
 
@@ -99,7 +108,14 @@ public class QuestionGenerationService : IQuestionGenerationService
         if (free <= 0)
             throw new LimitExceededException($"Question limit reached: {max} per material");
 
-        var questions = generated.Take(free).Select(x => ToEntity(x, materialId, dto.NoteId, userId)).ToList();
+        // Questions from the video belong to the material, not to a note
+        var noteIdOfQuestions = dto.FromVideo ? null : dto.NoteId;
+        var questions = generated.Take(free).Select(x =>
+        {
+            var question = ToEntity(x, materialId, noteIdOfQuestions, userId);
+            question.VideoSeconds = x.VideoSeconds;
+            return question;
+        }).ToList();
 
         foreach (var question in questions)
         {
@@ -110,6 +126,16 @@ public class QuestionGenerationService : IQuestionGenerationService
         await limitLock.CommitAsync();
 
         return questions.Select(q => QuestionMapper.ToDto(q)).ToList();
+    }
+
+    // The subtitles of the video the material links to now; older ones belong to another video
+    private async Task<string> VideoSourceAsync(Material material, Guid userId)
+    {
+        var video = _videos is null ? null : await _videos.GetByMaterialAsync(material.Id, userId);
+        if (video is null || video.VideoId != YouTubeLink.VideoId(material.Link))
+            throw new BadRequestException("The video has no subtitles yet");
+
+        return VideoTranscript.FromDocument(video.Transcript).ToSourceText();
     }
 
     // Same mappers and option rules as manual creation

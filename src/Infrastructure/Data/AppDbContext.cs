@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<Note> Notes => Set<Note>();
     public DbSet<MaterialPodcast> MaterialPodcasts => Set<MaterialPodcast>();
     public DbSet<SpeechUsage> SpeechUsages => Set<SpeechUsage>();
+    public DbSet<MaterialVideo> MaterialVideos => Set<MaterialVideo>();
     public DbSet<Dictionary> Dictionaries => Set<Dictionary>();
     public DbSet<DictionaryEntry> DictionaryEntries => Set<DictionaryEntry>();
     public DbSet<DictionaryEntryProgress> DictionaryEntryProgresses => Set<DictionaryEntryProgress>();
@@ -155,9 +156,13 @@ public class AppDbContext : DbContext
             .WithMany(t => t.MaterialTags)
             .HasForeignKey(mt => mt.TagId);
         
+        // The app always sets option ids itself. As a database-generated key, a new option with its
+        // id already set, added to a loaded question, looked like an existing row to EF: it was
+        // updated instead of inserted, and the save failed
         modelBuilder.Entity<Option>()
             .Property(x => x.Id)
-            .HasDefaultValueSql("gen_random_uuid()");
+            .HasDefaultValueSql("gen_random_uuid()")
+            .ValueGeneratedNever();
         
         modelBuilder.Entity<Option>()
             .HasOne(o => o.Question)
@@ -490,6 +495,24 @@ public class AppDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
 
             // One podcast per material: a new one replaces it
+            entity.HasIndex(x => x.MaterialId).IsUnique();
+            entity.HasIndex(x => x.UserId);
+        });
+
+        modelBuilder.Entity<MaterialVideo>(entity =>
+        {
+            entity.Property(x => x.Id)
+                .ValueGeneratedNever();
+
+            entity.Property(x => x.Transcript)
+                .HasColumnType("jsonb");
+
+            entity.HasOne(x => x.Material)
+                .WithMany()
+                .HasForeignKey(x => x.MaterialId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // One set of subtitles per material: processing again replaces it
             entity.HasIndex(x => x.MaterialId).IsUnique();
             entity.HasIndex(x => x.UserId);
         });

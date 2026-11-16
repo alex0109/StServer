@@ -46,14 +46,18 @@ public class AiClient : IAiClient
 
         // Providers with an open circuit go last instead of being dropped, they are better than nothing
         var ordered = _providers
+            .Where(x => request.Video is null || x.CanWatchVideo)
             .OrderBy(x => Health.TryGetValue(x.Name, out var h) && h.RetryAfter > now ? 1 : 0)
             .ToList();
+
+        if (ordered.Count == 0)
+            throw new AiUnavailableException("Videos can't be processed right now");
 
         foreach (var provider in ordered)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var timeLimit = TimeSpan.FromSeconds(_options.RequestTimeoutSeconds);
+            var timeLimit = TimeSpan.FromSeconds(request.Video is null ? _options.RequestTimeoutSeconds : _options.VideoTimeoutSeconds);
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(timeLimit);
 

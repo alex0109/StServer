@@ -24,12 +24,41 @@ public sealed class GeminiAiProvider : HttpAiProvider
 
     public override string Name => ProviderName;
 
+    // Gemini takes public YouTube links as input
+    public override bool CanWatchVideo => true;
+
     public override bool IsConfigured =>
         _apiKey is not null && !string.IsNullOrWhiteSpace(_settings.Model) && _settings.HasSecureBaseUrl;
 
     public override async Task<AiCompletion> CompleteAsync(AiRequest request, CancellationToken cancellationToken)
     {
         if (!IsConfigured) throw new AiProviderException($"{ProviderName} is not configured");
+
+        // The video goes before the text: Gemini reads the request in this order
+        var parts = new JsonArray();
+        if (request.Video is { } video)
+        {
+            parts.Add(new JsonObject
+            {
+                ["fileData"] = new JsonObject { ["fileUri"] = video.Url },
+                ["videoMetadata"] = new JsonObject
+                {
+                    ["startOffset"] = "0s",
+                    ["endOffset"] = $"{video.EndSeconds}s",
+                    ["fps"] = video.FramesPerSecond,
+                },
+            });
+        }
+        parts.Add(new JsonObject { ["text"] = request.UserPrompt });
+
+        var generationConfig = new JsonObject
+        {
+            ["maxOutputTokens"] = request.MaxOutputTokens,
+            ["responseMimeType"] = "application/json",
+            ["responseJsonSchema"] = ToNode(request.OutputSchema),
+        };
+        // Small frames: the words come from the sound, and a frame costs 66 tokens instead of 258
+        if (request.Video is not null) generationConfig["mediaResolution"] = "MEDIA_RESOLUTION_LOW";
 
         var body = new JsonObject
         {
@@ -39,18 +68,9 @@ public sealed class GeminiAiProvider : HttpAiProvider
             },
             ["contents"] = new JsonArray
             {
-                new JsonObject
-                {
-                    ["role"] = "user",
-                    ["parts"] = new JsonArray { new JsonObject { ["text"] = request.UserPrompt } },
-                },
+                new JsonObject { ["role"] = "user", ["parts"] = parts },
             },
-            ["generationConfig"] = new JsonObject
-            {
-                ["maxOutputTokens"] = request.MaxOutputTokens,
-                ["responseMimeType"] = "application/json",
-                ["responseJsonSchema"] = ToNode(request.OutputSchema),
-            },
+            ["generationConfig"] = generationConfig,
         };
 
         // The key goes in a header, never in the URL where proxies and logs would keep it

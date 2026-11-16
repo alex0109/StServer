@@ -13,4 +13,9 @@ public record AiRequest
     public required JsonElement OutputSchema { get; init; }
     public required int MaxOutputTokens { get; init; }
     public AiEffort Effort { get; init; } = AiEffort.Medium;
+    // A video the model watches before it answers; only providers that can watch one are used
+    public AiVideo? Video { get; init; }
 }
+
+// A public YouTube video, processed from the start up to EndSeconds at a few frames per second
+public record AiVideo(string Url, int EndSeconds, double FramesPerSecond);

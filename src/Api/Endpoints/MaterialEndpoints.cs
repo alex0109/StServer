@@ -24,6 +24,7 @@ public static class MaterialEndpoints
         materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);
         // The material's podcast, with a fresh link to its audio; 204 when there is none yet
         materialGroup.MapGet("/{materialId:guid}/podcast", GetPodcast);
+        materialGroup.MapGet("/{materialId:guid}/video", GetVideo);
         materialGroup.MapDelete("/{materialId:guid}/tags/{tagId:guid}", DeleteTagFromMaterial);
         materialGroup.MapDelete("/{materialId:guid}", DeleteMaterial);
         
@@ -81,6 +82,13 @@ public static class MaterialEndpoints
         }
         
         static async Task<IResult> GetPodcast(Guid materialId, IPodcastService service)
+        {
+            var result = await service.GetAsync(materialId);
+
+            return result is null ? TypedResults.NoContent() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> GetVideo(Guid materialId, IVideoService service)
         {
             var result = await service.GetAsync(materialId);
 
