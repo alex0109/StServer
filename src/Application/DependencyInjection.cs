@@ -100,6 +100,7 @@ public static class DependencyInjection
         services.AddScoped<IEssayReviewService, EssayReviewService>();
         services.AddScoped<IWordExplanationService, WordExplanationService>();
         services.AddScoped<IPodcastService, PodcastService>();
+        services.AddScoped<IVideoService, VideoService>();
         services.AddScoped<IWordLookupService, WordLookupService>();
 
         return services;

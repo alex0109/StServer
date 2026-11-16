@@ -22,6 +22,8 @@ public class Question
     public ICollection<Option> Options { get; set; } = new List<Option>();
     public QuestionDifficulty QuestionDifficulty { get; set; }
     public string? Explanation { get; set; }
+    // Second of the material's video where the answer is; set for questions made from its subtitles
+    public int? VideoSeconds { get; set; }
     public int Version { get; set; } = 1;
     public bool IsActive { get; set; } = true;
     public required DateTime CreatedAt { get; set; }

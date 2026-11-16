@@ -213,6 +213,49 @@ public class QuestionEndpointsTests : IClassFixture<ApiFactory>
     }
 
     [Fact]
+    public async Task UpdateOptions_ASavedQuestionGetsNewOptions_UpToSix()
+    {
+        var material = await CreateMaterial();
+        var created = await _client.PostAsJsonAsync(
+            $"/api/materials/{material.Id}/questions/options",
+            new OptionQuestionCreateDto
+            {
+                MaterialId = material.Id,
+                Title = "Which are planets?",
+                QuestionDifficulty = QuestionDifficulty.Easy,
+                Options = new[] { "Mars", "Venus", "Moon", "Sun" }.Select((name, i) => new Application.DTOs.Option.OptionCreateDto { Name = name, IsCorrect = i < 2 }).ToList(),
+            },
+            JsonOptions);
+        created.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var question = (await created.Content.ReadFromJsonAsync<QuestionResponseDto>(JsonOptions))!;
+
+        // The existing four keep their ids, the new ones come without
+        async Task<HttpResponseMessage> SaveWith(params string[] newNames) =>
+            await _client.PatchAsJsonAsync(
+                $"/api/materials/{material.Id}/questions/{question.Id}",
+                new QuestionUpdateDto
+                {
+                    Options = question.Options
+                        .Select(x => new Application.DTOs.Option.OptionUpdateDto { Id = x.Id, Name = x.Name, IsCorrect = x.IsCorrect })
+                        .Concat(newNames.Select(name => new Application.DTOs.Option.OptionUpdateDto { Name = name, IsCorrect = false }))
+                        .ToList(),
+                },
+                JsonOptions);
+
+        var fifth = await SaveWith("Jupiter");
+        fifth.StatusCode.ShouldBe(HttpStatusCode.OK);
+        question = (await fifth.Content.ReadFromJsonAsync<QuestionResponseDto>(JsonOptions))!;
+        question.Options.Select(x => x.Name).ShouldBe(["Mars", "Venus", "Moon", "Sun", "Jupiter"]);
+
+        (await SaveWith("Saturn")).StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await SaveWith("Saturn", "Pluto")).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+
+        var saved = await _client.GetFromJsonAsync<QuestionResponseDto>(
+            $"/api/materials/{material.Id}/questions/{question.Id}", JsonOptions);
+        saved!.Options.Count.ShouldBe(6);
+    }
+
+    [Fact]
     public async Task DeleteQuestion_SoftDeletesQuestion()
     {
         var material = await CreateMaterial();

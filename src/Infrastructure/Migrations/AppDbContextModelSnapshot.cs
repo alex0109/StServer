@@ -899,6 +899,50 @@ namespace StServer.Migrations
                     b.ToTable("MaterialTags");
                 });
 
+            modelBuilder.Entity("Domain.Entities.MaterialVideo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsClipped")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Language")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("MaterialId")
+                        .HasColumnType("uuid");
+
+                    b.Property<JsonDocument>("Transcript")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VideoId")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MaterialVideos");
+                });
+
             modelBuilder.Entity("Domain.Entities.Note", b =>
                 {
                     b.Property<Guid>("Id")
@@ -969,7 +1013,6 @@ namespace StServer.Migrations
             modelBuilder.Entity("Domain.Entities.Option", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasDefaultValueSql("gen_random_uuid()");
 
@@ -1044,6 +1087,9 @@ namespace StServer.Migrations
                         .HasColumnType("uuid");
 
                     b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("VideoSeconds")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
@@ -1742,6 +1788,17 @@ namespace StServer.Migrations
                     b.Navigation("Material");
 
                     b.Navigation("Tag");
+                });
+
+            modelBuilder.Entity("Domain.Entities.MaterialVideo", b =>
+                {
+                    b.HasOne("Domain.Entities.Material", "Material")
+                        .WithMany()
+                        .HasForeignKey("MaterialId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Material");
                 });
 
             modelBuilder.Entity("Domain.Entities.Note", b =>

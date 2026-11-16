@@ -18,6 +18,8 @@ public class QuestionResponseDto
     public QuestionDifficulty QuestionDifficulty { get; set; }
     [MaxLength(1000)]
     public string? Explanation { get; set; }
+    // Second of the material's video the answer is at
+    public int? VideoSeconds { get; set; }
     public int Version { get; set; }
     public bool IsActive { get; set; }
     public required DateTime CreatedAt { get; set; }

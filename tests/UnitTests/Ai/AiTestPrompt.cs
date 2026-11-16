@@ -23,19 +23,34 @@ internal class AiTestPrompt : IAiPrompt<string>
     private record Answer(string? Value);
 }
 
+// The same answer, with a video the model has to watch
+internal class AiTestVideoPrompt : IAiPrompt<string>
+{
+    private readonly AiTestPrompt _text = new();
+
+    public AiFeature Feature => AiFeature.VideoTranscript;
+
+    public AiRequest BuildRequest() =>
+        _text.BuildRequest() with { Feature = Feature, Video = new AiVideo("https://www.youtube.com/watch?v=dQw4w9WgXcQ", 1800, 0.5) };
+
+    public string Parse(string json) => _text.Parse(json);
+}
+
 internal class FakeAiProvider : IAiProviderStub
 {
     private readonly Func<Task<AiCompletion>> _answer;
 
-    public FakeAiProvider(string name, Func<Task<AiCompletion>> answer, bool isConfigured = true)
+    public FakeAiProvider(string name, Func<Task<AiCompletion>> answer, bool isConfigured = true, bool canWatchVideo = false)
     {
         Name = name;
         _answer = answer;
         IsConfigured = isConfigured;
+        CanWatchVideo = canWatchVideo;
     }
 
     public string Name { get; }
     public bool IsConfigured { get; }
+    public bool CanWatchVideo { get; }
     public int Calls { get; private set; }
 
     public Task<AiCompletion> CompleteAsync(AiRequest request, CancellationToken cancellationToken)

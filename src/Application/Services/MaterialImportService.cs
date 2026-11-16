@@ -6,6 +6,7 @@ using Application.Exceptions;
 using Application.Import;
 using Application.Interfaces;
 using Application.Mappers;
+using Application.Videos;
 using Domain.Utility.Material;
 using Microsoft.Extensions.Logging;
 using Application.Observability;
@@ -26,6 +27,7 @@ public class MaterialImportService : IMaterialImportService
     private readonly ILimitLock _limitLock;
     private readonly IContentLimits _limits;
     private readonly ILogger<MaterialImportService> _logger;
+    private readonly IVideoInfo? _videoInfo;
 
     public MaterialImportService(
         IArticleImporter importer,
@@ -35,7 +37,8 @@ public class MaterialImportService : IMaterialImportService
         IUserContext user,
         ILimitLock limitLock,
         IContentLimits limits,
-        ILogger<MaterialImportService> logger)
+        ILogger<MaterialImportService> logger,
+        IVideoInfo? videoInfo = null)
     {
         _importer = importer;
         _materials = materials;
@@ -45,6 +48,7 @@ public class MaterialImportService : IMaterialImportService
         _limitLock = limitLock;
         _limits = limits;
         _logger = logger;
+        _videoInfo = videoInfo;
     }
 
     public async Task<MaterialImportResultDto> ImportAsync(MaterialImportDto dto, CancellationToken cancellationToken = default)
@@ -53,6 +57,10 @@ public class MaterialImportService : IMaterialImportService
 
         // A full account learns it before the page is fetched
         await _limits.EnsureMaterialPlaceAsync(userId, libraryCopy: false);
+
+        // A YouTube link is a video to watch, not an article to read
+        if (YouTubeLink.VideoId(dto.Url) is { } videoId)
+            return await ImportVideoAsync(videoId, userId, cancellationToken);
 
         ImportedArticle article;
         try
@@ -94,6 +102,42 @@ public class MaterialImportService : IMaterialImportService
             QuestionsCreated = created,
             QuestionsSkipped = skipped,
         };
+    }
+
+    // Questions come later, from the subtitles the user asks for on the material's page
+    private async Task<MaterialImportResultDto> ImportVideoAsync(string videoId, Guid userId, CancellationToken cancellationToken)
+    {
+        var title = _videoInfo is null ? null : await _videoInfo.GetTitleAsync(videoId, cancellationToken);
+
+        await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Materials, userId);
+        await _limits.EnsureMaterialPlaceAsync(userId, libraryCopy: false);
+
+        var material = MaterialMapper.ToEntity(new MaterialCreateDto
+        {
+            // Titles are short in the app; a long YouTube title is cut on a word where it can be
+            Title = MaterialTitle(title ?? "YouTube " + videoId),
+            Type = MaterialType.video,
+            Status = MaterialStatus.tolearn,
+        }, userId);
+        material.Link = YouTubeLink.WatchUrl(videoId);
+
+        await _materials.AddAsync(material);
+        await _assessments.AddAssessmentAsync(AssessmentMapper.ToEntity(material.Id, userId));
+        await _materials.SaveChangesAsync();
+        await limitLock.CommitAsync();
+        AppMetrics.MaterialCreated("import-video");
+
+        return new MaterialImportResultDto { Material = MaterialMapper.ToDto(material) };
+    }
+
+    private static string MaterialTitle(string title)
+    {
+        const int max = 70;
+        title = title.Trim();
+        if (title.Length <= max) return title;
+
+        var cut = title.LastIndexOf(' ', max - 1);
+        return (cut > max / 2 ? title[..cut] : title[..(max - 1)]).TrimEnd() + "…";
     }
 
     // The material is kept either way: no quota or no AI only means no questions yet

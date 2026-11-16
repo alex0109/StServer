@@ -40,6 +40,8 @@ public class LibraryQuestionSnapshot
     public QuestionType QuestionType { get; set; }
     public QuestionDifficulty QuestionDifficulty { get; set; }
     public string? Explanation { get; set; }
+    // Moment of the material's video; older snapshots have none
+    public int? VideoSeconds { get; set; }
     public int? NoteKey { get; set; }
     public int? EntryKey { get; set; }
     public List<LibraryOptionSnapshot> Options { get; set; } = [];

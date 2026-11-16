@@ -24,6 +24,7 @@ public static class AiEndpoints
         // A podcast of a material: the script is written now, the voices are recorded in the background
         aiGroup.MapPost("/materials/{materialId:guid}/podcast", GeneratePodcast);
         aiGroup.MapPost("/materials/{materialId:guid}/podcast/retry", RetryPodcast);
+        aiGroup.MapPost("/materials/{materialId:guid}/video", ProcessVideo);
 
         static async Task<IResult> GetUsage(IAiUsageService service, IUserContext user)
         {
@@ -111,6 +112,13 @@ public static class AiEndpoints
             CancellationToken cancellationToken)
         {
             var result = await service.GenerateAsync(materialId, dto, cancellationToken);
+
+            return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
+        }
+
+        static async Task<IResult> ProcessVideo(Guid materialId, IVideoService service, CancellationToken cancellationToken)
+        {
+            var result = await service.ProcessAsync(materialId, cancellationToken);
 
             return result is null ? TypedResults.NotFound() : TypedResults.Ok(result);
         }

@@ -11,5 +11,8 @@ public interface IAiProvider
     // False when the key or model is not configured, such a provider is skipped
     bool IsConfigured { get; }
 
+    // Watches a video linked in the request (AiRequest.Video); the others are skipped for such requests
+    bool CanWatchVideo => false;
+
     Task<AiCompletion> CompleteAsync(AiRequest request, CancellationToken cancellationToken);
 }

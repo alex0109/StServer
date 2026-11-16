@@ -377,6 +377,7 @@ public class MaterialImportServiceTests
     private readonly Mock<IAssessmentRepository> _assessments = new();
     private readonly Mock<IQuestionGenerationService> _questions = new();
     private readonly Mock<IContentLimits> _limits = new();
+    private readonly Mock<IVideoInfo> _videoInfo = new();
     private readonly MaterialImportService _sut;
 
     public MaterialImportServiceTests()
@@ -392,7 +393,43 @@ public class MaterialImportServiceTests
 
         _sut = new MaterialImportService(
             _importer.Object, _materials.Object, _assessments.Object, _questions.Object, user.Object,
-            limitLock.Object, _limits.Object, NullLogger<MaterialImportService>.Instance);
+            limitLock.Object, _limits.Object, NullLogger<MaterialImportService>.Instance, _videoInfo.Object);
+    }
+
+    [Fact]
+    public async Task Import_YouTubeLink_MakesAVideoMaterial_WithItsTitle()
+    {
+        Material? saved = null;
+        _materials.Setup(x => x.AddAsync(It.IsAny<Material>())).Callback<Material>(m => saved = m);
+        _videoInfo.Setup(x => x.GetTitleAsync("dQw4w9WgXcQ", It.IsAny<CancellationToken>())).ReturnsAsync("How photosynthesis works");
+
+        var result = await _sut.ImportAsync(
+            new MaterialImportDto { Url = "https://youtu.be/dQw4w9WgXcQ?si=share", GenerateQuestions = true },
+            TestContext.Current.CancellationToken);
+
+        saved!.Type.ShouldBe(Domain.Utility.Material.MaterialType.video);
+        saved.Title.ShouldBe("How photosynthesis works");
+        saved.Link.ShouldBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+        result.QuestionsCreated.ShouldBe(0);
+        // Nothing to read on a video page, and questions wait for the subtitles
+        _importer.VerifyNoOtherCalls();
+        _questions.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Import_YouTubeLink_LongOrUnknownTitle_StillMakesAMaterial()
+    {
+        Material? saved = null;
+        _materials.Setup(x => x.AddAsync(It.IsAny<Material>())).Callback<Material>(m => saved = m);
+        _videoInfo.Setup(x => x.GetTitleAsync("aaaaaaaaaaa", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(string.Join(' ', Enumerable.Repeat("photosynthesis", 10)));
+
+        await _sut.ImportAsync(new MaterialImportDto { Url = "https://www.youtube.com/watch?v=aaaaaaaaaaa" }, TestContext.Current.CancellationToken);
+        saved!.Title.Length.ShouldBeLessThanOrEqualTo(70);
+        saved.Title.ShouldEndWith("…");
+
+        await _sut.ImportAsync(new MaterialImportDto { Url = "https://www.youtube.com/watch?v=bbbbbbbbbbb" }, TestContext.Current.CancellationToken);
+        saved.Title.ShouldBe("YouTube bbbbbbbbbbb");
     }
 
     [Fact]

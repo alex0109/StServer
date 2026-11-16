@@ -15,6 +15,8 @@ public class AiOptions
     public string[]? ProviderOrder { get; set; }
 
     public int RequestTimeoutSeconds { get; set; } = 120;
+    // Watching a video takes longer; still under the 230 s Azure allows one HTTP request
+    public int VideoTimeoutSeconds { get; set; } = 200;
 
     // Fuzzy score from this value up to the fuzzy pass score is the "gray zone" checked by AI
     public int GradingGrayZoneMin { get; set; } = 40;
@@ -53,6 +55,7 @@ public static class AiQuotaDefaults
         [AiFeature.EssayReview] = 30,
         [AiFeature.WordExplanation] = 300,
         [AiFeature.PodcastGeneration] = 10,
+        [AiFeature.VideoTranscript] = 20,
     };
 
     private static readonly Dictionary<SubscriptionTier, Dictionary<AiFeature, int>> Values = new()
@@ -68,6 +71,7 @@ public static class AiQuotaDefaults
             [AiFeature.EssayReview] = 3,
             [AiFeature.WordExplanation] = 30,
             [AiFeature.PodcastGeneration] = 1,
+            [AiFeature.VideoTranscript] = 2,
         },
         [SubscriptionTier.Plus] = PlusQuotas,
         [SubscriptionTier.Duo] = PlusQuotas,
@@ -82,6 +86,7 @@ public static class AiQuotaDefaults
             [AiFeature.EssayReview] = 150,
             [AiFeature.WordExplanation] = 1500,
             [AiFeature.PodcastGeneration] = 40,
+            [AiFeature.VideoTranscript] = 80,
         },
     };
 

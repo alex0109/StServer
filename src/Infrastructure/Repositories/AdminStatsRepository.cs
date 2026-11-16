@@ -166,11 +166,14 @@ public class AdminStatsRepository : IAdminStatsRepository
             x.Status == PodcastStatus.Failed || (x.Status == PodcastStatus.Generating && x.UpdatedAt < staleBefore));
         var storageBytes = await podcasts.Where(x => x.AudioPath != null).SumAsync(x => (long?)x.AudioSize) ?? 0;
 
-        var languages = await podcasts
-            .GroupBy(x => x.Language)
-            .Select(g => new AdminPodcastLanguageDto(g.Key, g.Count()))
-            .OrderByDescending(x => x.Podcasts)
-            .ToListAsync();
+        // Sorted while still in SQL: EF can't order by a field of a record built by its constructor
+        var languages = (await podcasts
+                .GroupBy(x => x.Language)
+                .Select(g => new { Language = g.Key, Count = g.Count() })
+                .OrderByDescending(x => x.Count)
+                .ToListAsync())
+            .Select(x => new AdminPodcastLanguageDto(x.Language, x.Count))
+            .ToList();
 
         var recent = await Items(podcasts.OrderByDescending(x => x.CreatedAt), take);
         var failures = await Items(

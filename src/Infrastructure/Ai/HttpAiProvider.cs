@@ -22,6 +22,8 @@ public abstract class HttpAiProvider : IAiProvider
 
     public abstract bool IsConfigured { get; }
 
+    public virtual bool CanWatchVideo => false;
+
     public abstract Task<AiCompletion> CompleteAsync(AiRequest request, CancellationToken cancellationToken);
 
     protected async Task<JsonNode> SendAsync(HttpRequestMessage message, CancellationToken cancellationToken)

@@ -84,6 +84,7 @@ public static class LibrarySnapshotMapper
                 QuestionType = question.QuestionType,
                 QuestionDifficulty = question.QuestionDifficulty,
                 Explanation = question.Explanation,
+                VideoSeconds = question.VideoSeconds,
                 NoteKey = question.NoteId is Guid noteId && noteKeys.TryGetValue(noteId, out var noteKey) ? noteKey : null,
                 EntryKey = question.DictionaryEntryId is Guid entryId && entryKeys.TryGetValue(entryId, out var entryKey) ? entryKey : null,
                 Options = question.Options
@@ -215,6 +216,7 @@ public static class LibrarySnapshotMapper
                 QuestionType = question.QuestionType,
                 QuestionDifficulty = question.QuestionDifficulty,
                 Explanation = question.Explanation,
+                VideoSeconds = question.VideoSeconds,
                 Version = 1,
                 IsActive = true,
                 CreatedAt = now.AddMilliseconds(++questionIndex),

@@ -5,6 +5,7 @@ using Infrastructure.Admin;
 using Infrastructure.Auth;
 using Infrastructure.Billing;
 using Infrastructure.Ai;
+using Infrastructure.Videos;
 using Infrastructure.Caching;
 using Infrastructure.Import;
 using Infrastructure.Observability;
@@ -43,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
         services.AddScoped<IBillingRepository, BillingRepository>();
         services.AddScoped<IPodcastRepository, PodcastRepository>();
+        services.AddScoped<IMaterialVideoRepository, MaterialVideoRepository>();
 
         // Podcasts: voices from Azure AI Speech, audio in Azure Blob Storage; both off without keys
         services.AddSingleton(AzureSpeechSettings.FromEnvironment());
@@ -68,6 +70,8 @@ public static class DependencyInjection
             return new SafeHttpFetcher(resolver, SafeHttpFetcher.CreateHandler(resolver), $"StudytrackerBot/1.0 (+{site})");
         });
         services.AddScoped<IArticleImporter, ArticleImporter>();
+        services.AddHttpClient(YouTubeOEmbed.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(8));
+        services.AddSingleton<IVideoInfo, YouTubeOEmbed>();
 
         // Monitoring sources for the admin panel; each one is off until its variables are set
         foreach (var name in new[] { PrometheusApi.HttpClientName, GrafanaApi.HttpClientName, SentryApi.HttpClientName, GoogleAnalyticsApi.HttpClientName })
