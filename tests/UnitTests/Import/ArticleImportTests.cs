@@ -464,7 +464,7 @@ public class MaterialImportServiceTests
     public async Task NoAiQuota_TheMaterialIsKeptWithoutQuestions()
     {
         _questions.Setup(x => x.GenerateAsync(It.IsAny<Guid>(), It.IsAny<QuestionGenerateDto>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new AiQuotaExceededException("No quota"));
+            .ThrowsAsync(new AiUsageDeniedException(AiDenialCode.QuotaExhausted, Domain.Utility.Ai.AiFeature.QuestionGeneration, "No quota"));
 
         var result = await _sut.ImportAsync(new MaterialImportDto { Url = "https://news.example/story", GenerateQuestions = true }, TestContext.Current.CancellationToken);
 

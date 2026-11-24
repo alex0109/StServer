@@ -85,3 +85,61 @@ public static class WebhookSignature
         return CryptographicOperations.FixedTimeEquals(expected, given);
     }
 }
+
+// Money a customer paid for an invoice, tax included, in the invoice's currency (minor units)
+public record BillingPayment(DateTime PaidAt, long Amount, string Currency);
+
+// What one movement left on the account after the provider's fees and taxes, refunds as minus,
+// in the account's own currency (minor units)
+public record BillingBalanceEntry(DateTime At, long Net, string Currency);
+
+// A subscription that will be paid again: its price and when the next payment is due
+public record BillingRenewal(Guid? UserId, SubscriptionTier Tier, BillingInterval Interval, long Amount, string Currency, DateTime RenewsAt);
+
+// Webhook types the statistics tell apart. They are the provider's own names: Stripe's, the one in use
+public static class BillingEventTypes
+{
+    public const string Created = "customer.subscription.created";
+    public const string Deleted = "customer.subscription.deleted";
+
+    // Credit packs: a paid checkout (cards at once, bank payments later) and a refund
+    public const string CheckoutCompleted = "checkout.session.completed";
+    public const string CheckoutAsyncSucceeded = "checkout.session.async_payment_succeeded";
+    public const string ChargeRefunded = "charge.refunded";
+
+    public static bool IsCredit(string type) => type is CheckoutCompleted or CheckoutAsyncSucceeded or ChargeRefunded;
+}
+
+// A tier and the window its AI quotas are counted in, [Start, End)
+public record AiPlanPeriod(SubscriptionTier Tier, DateTime Start, DateTime End);
+
+// A credit pack bought at the provider's checkout; credits come from server config, never the client
+public record CreditCheckout(
+    Guid UserId,
+    string? Email,
+    string PackId,
+    int Credits,
+    decimal Price,
+    string Currency,
+    string? CustomerId,
+    string? Language);
+
+public enum CreditEventKind
+{
+    Purchase = 1,
+    Refund = 2,
+}
+
+// A paid credit purchase, or a refund of a payment (which may not be a credit purchase at all).
+// Reference: the payment both carry; Amount and AmountRefunded: minor units of that payment
+public record CreditEvent(
+    string EventId,
+    string Type,
+    DateTime OccurredAt,
+    CreditEventKind Kind,
+    Guid? UserId,
+    string? PackId,
+    string? Reference,
+    string? SessionId,
+    long Amount,
+    long AmountRefunded);

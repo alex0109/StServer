@@ -9,11 +9,15 @@ public static class AiEndpoints
 {
     public static void MapAiEndpoints(this WebApplication app)
     {
+        // Every request here may cost money: a tighter window than the rest of the API, and a cap on
+        // how many run at once per user
         var aiGroup = app.MapGroup("api/ai")
             .RequireAuthorization()
-            .RequireRateLimiting("api");
+            .RequireRateLimiting("ai");
 
         aiGroup.MapGet("/usage", GetUsage);
+        // While a word is typed into a dictionary: a suggested translation, or why there is none
+        aiGroup.MapPost("/translate", TranslateWord);
         aiGroup.MapPost("/materials/{materialId:guid}/questions", GenerateQuestions);
         aiGroup.MapPost("/dictionaries/{dictionaryId:guid}/entries", GenerateEntries);
         aiGroup.MapPost("/materials/{materialId:guid}/notes/{noteId:guid}/summary", GenerateSummary);
@@ -25,6 +29,9 @@ public static class AiEndpoints
         aiGroup.MapPost("/materials/{materialId:guid}/podcast", GeneratePodcast);
         aiGroup.MapPost("/materials/{materialId:guid}/podcast/retry", RetryPodcast);
         aiGroup.MapPost("/materials/{materialId:guid}/video", ProcessVideo);
+
+        static async Task<IResult> TranslateWord(WordTranslateDto dto, IWordTranslationService service, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await service.TranslateAsync(dto, cancellationToken));
 
         static async Task<IResult> GetUsage(IAiUsageService service, IUserContext user)
         {

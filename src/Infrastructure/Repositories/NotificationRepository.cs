@@ -53,7 +53,7 @@ public class NotificationRepository : INotificationRepository
     {
         return await _db.UserNotifications
             .AsNoTracking()
-            .Where(x => x.UserId == userId)
+            .Where(x => x.UserId == userId && x.DismissedAt == null)
             .OrderByDescending(x => x.CreatedAt)
             .Take(take)
             .ToListAsync();
@@ -61,7 +61,7 @@ public class NotificationRepository : INotificationRepository
 
     public async Task<int> CountUnreadAsync(Guid userId)
     {
-        return await _db.UserNotifications.CountAsync(x => x.UserId == userId && x.ReadAt == null);
+        return await _db.UserNotifications.CountAsync(x => x.UserId == userId && x.ReadAt == null && x.DismissedAt == null);
     }
 
     public async Task<UserNotification?> GetAsync(Guid notificationId, Guid userId)
@@ -74,6 +74,13 @@ public class NotificationRepository : INotificationRepository
         await _db.UserNotifications
             .Where(x => x.UserId == userId && x.ReadAt == null)
             .ExecuteUpdateAsync(x => x.SetProperty(n => n.ReadAt, readAt));
+    }
+
+    public async Task DismissAllAsync(Guid userId, DateTime dismissedAt)
+    {
+        await _db.UserNotifications
+            .Where(x => x.UserId == userId && x.DismissedAt == null)
+            .ExecuteUpdateAsync(x => x.SetProperty(n => n.DismissedAt, dismissedAt));
     }
 
     public async Task<int> DeleteCreatedBeforeAsync(DateTime createdBefore)

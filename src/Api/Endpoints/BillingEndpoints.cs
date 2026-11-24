@@ -54,7 +54,7 @@ public static class BillingEndpoints
 
         static async Task<IResult> Portal(PortalCreateDto? dto, IBillingService service)
         {
-            return TypedResults.Ok(new CheckoutDto(await service.CreatePortalAsync(dto?.Language)));
+            return TypedResults.Ok(new CheckoutDto(await service.CreatePortalAsync(dto?.Language, dto?.ChangePlan ?? false)));
         }
 
         static async Task<IResult> GetDuo(IDuoService duo) => TypedResults.Ok(await duo.GetAsync());

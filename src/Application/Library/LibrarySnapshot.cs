@@ -31,6 +31,8 @@ public class LibraryNoteSnapshot
     public JsonElement? DrawingContent { get; set; }
     // Essays only, the review is not part of the library
     public string? EssayTask { get; set; }
+    // The exam it was written for, like "Ielts/B2/Letter"
+    public string? EssayFormat { get; set; }
 }
 
 public class LibraryQuestionSnapshot

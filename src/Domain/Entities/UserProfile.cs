@@ -43,8 +43,9 @@ public class UserProfile
     // Local hours of the reminders, 0 to 23
     public int? DailyReminderHour { get; set; }
     public int? StreakReminderHour { get; set; }
-    // Missed days a month that don't break the streak
-    public int? StreakFreezesPerMonth { get; set; }
+
+    // Suggest a translation while a word is typed into a dictionary (Plus); null is on
+    public bool? AutoTranslate { get; set; }
 
     public required DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }

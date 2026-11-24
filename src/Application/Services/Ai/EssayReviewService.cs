@@ -54,8 +54,23 @@ public class EssayReviewService : IEssayReviewService
             ? ProfileLanguages.QuestionLanguage
             : await _profiles.GetExplanationLanguageAsync(_user.UserId);
 
-        var prompt = new EssayReviewPrompt(text, note.EssayTask, ProfileLanguages.PromptName(language));
-        var draft = (await _ai.RunAsync(prompt, cancellationToken)).Value;
+        // An essay written for an exam is checked by that exam's rules; the rest by the general check
+        var format = EssayFormat.FromCode(note.EssayFormat);
+        var promptLanguage = ProfileLanguages.PromptName(language);
+        EssayReviewDraft draft;
+        bool isTruncated;
+        if (format is null)
+        {
+            var prompt = new EssayReviewPrompt(text, note.EssayTask, promptLanguage);
+            draft = (await _ai.RunAsync(prompt, cancellationToken)).Value;
+            isTruncated = prompt.IsTextTruncated;
+        }
+        else
+        {
+            var prompt = new ExamEssayReviewPrompt(text, note.EssayTask, format, promptLanguage);
+            draft = (await _ai.RunAsync(prompt, cancellationToken)).Value;
+            isTruncated = prompt.IsTextTruncated;
+        }
 
         var review = new EssayReview
         {
@@ -66,8 +81,10 @@ public class EssayReviewService : IEssayReviewService
             Corrections = draft.Corrections.ToList(),
             WordCount = wordCount,
             Language = language,
-            IsTextTruncated = prompt.IsTextTruncated,
+            IsTextTruncated = isTruncated,
             CheckedAt = _time.GetUtcNow().UtcDateTime,
+            Format = format?.Code,
+            ExamResult = draft.ExamResult,
         };
 
         // The text is not changed, so the note keeps its UpdatedAt

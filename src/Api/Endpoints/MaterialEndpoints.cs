@@ -1,3 +1,4 @@
+using Api.Common;
 using Application.DTOs.Material;
 using Application.Interfaces;
 
@@ -18,7 +19,8 @@ public static class MaterialEndpoints
         // An article from a link: the server fetches the page, so it has a small window of its own
         materialGroup.MapPost("/import-url", ImportFromUrl)
             .RequireRateLimiting("import");
-        materialGroup.MapPatch("/{materialId:guid}", UpdateMaterial);
+        materialGroup.MapPatch("/{materialId:guid}", UpdateMaterial)
+            .WithBodyLimit(RequestLimits.MaterialBodyBytes);
         materialGroup.MapPut("/{materialId:guid}/deadline", SetDeadline);
         materialGroup.MapGet("/{materialId:guid}/deadline-plan", GetDeadlinePlan);
         materialGroup.MapPost("/{materialId:guid}/tags/{tagId:guid}", AddTagToMaterial);

@@ -13,6 +13,7 @@ public class NoteResponseDto
     public JsonDocument? DrawingContent { get; set; }
     // Essays only
     public string? EssayTask { get; set; }
+    public string? EssayFormat { get; set; }
     public EssayReviewDto? EssayReview { get; set; }
     public int Order { get; set; }
     public DateTime CreatedAt { get; set; }

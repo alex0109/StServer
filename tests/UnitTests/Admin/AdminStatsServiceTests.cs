@@ -32,7 +32,10 @@ public class AdminStatsServiceTests
     {
         var time = new Mock<TimeProvider>();
         time.Setup(x => x.GetUtcNow()).Returns(new DateTimeOffset(Now));
-        return new AdminStatsService(_repo, _pricing, time.Object);
+        var auth = new Mock<IAuthUserAdmin>();
+        auth.Setup(x => x.GetEmailsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string> { [_ann] = "ann@example.com" });
+        return new AdminStatsService(_repo, _pricing, auth.Object, time.Object);
     }
 
     private AiUsageGroupRow Row(int daysAgo, Guid user, string model, int requests, long input = 1_000_000, long output = 1_000_000,
@@ -65,6 +68,7 @@ public class AdminStatsServiceTests
         stats.Days.Count.ShouldBe(30);
         stats.Days[^1].Requests.ShouldBe(2);
         stats.TopUsers[0].UserId.ShouldBe(_ann);
+        stats.TopUsers[0].Email.ShouldBe("ann@example.com");
     }
 
     [Fact]
@@ -224,5 +228,15 @@ public class AdminStatsServiceTests
             Task.FromResult(Speech.Where(x => x.Date.ToDateTime(TimeOnly.MinValue) >= since).ToList());
 
         public Task<List<SpeechUsageGroupRow>> GetSpeechUsageTotalsAsync() => Task.FromResult(SpeechTotals);
+
+        public List<AiCostRow> Costs { get; set; } = [];
+        public List<AiUserCostRow> UserCosts { get; set; } = [];
+
+        public Task<List<AiCostRow>> GetAiCostsAsync(DateTime since) => Task.FromResult(Costs);
+
+        public Task<List<AiUserCostRow>> GetUserCostsAsync(DateTime since, decimal speechPerMillion, int take) =>
+            Task.FromResult(UserCosts.Take(take).ToList());
+
+        public Task<(int Sold, int Spent)> GetCreditFlowAsync(DateTime since) => Task.FromResult((0, 0));
     }
 }

@@ -1,3 +1,5 @@
+using Domain.Utility.Ai;
+using Application.Ai.Pricing;
 using System.Text.Json;
 using Application.Ai.Prompts;
 using Application.Ai.Text;
@@ -17,14 +19,17 @@ public class SummaryGenerationService : ISummaryGenerationService
     private readonly IDictionaryRepository _dictionaryRepository;
     private readonly IAiService _ai;
     private readonly IUserContext _user;
+    private readonly PricingOptions? _pricing;
 
     public SummaryGenerationService(
         IMaterialRepository materialRepository,
         INoteRepository noteRepository,
         IDictionaryRepository dictionaryRepository,
         IAiService ai,
-        IUserContext user)
+        IUserContext user,
+        PricingOptions? pricing = null)
     {
+        _pricing = pricing;
         _materialRepository = materialRepository;
         _noteRepository = noteRepository;
         _dictionaryRepository = dictionaryRepository;
@@ -73,6 +78,10 @@ public class SummaryGenerationService : ISummaryGenerationService
                            + dictionaries.Sum(x => x.Entries.Count * 10);
         if (sourceLength < AiLimits.MinSourceLength)
             throw new BadRequestException("Not enough content to summarize, add text to the material or notes first");
+
+        // A request is priced for this much text
+        if (_pricing?.FeatureOf(AiFeature.SummaryGeneration)?.MaxInputChars is { } maxInput && sourceLength > maxInput)
+            throw AiUsageDeniedException.InputTooLarge(AiFeature.SummaryGeneration, maxInput);
 
         var prompt = new SummaryPrompt(material.Title, materialText, notes, dictionaries);
         var sections = (await _ai.RunAsync(

@@ -17,7 +17,7 @@ public class BillingCatalogTests
     private readonly Mock<IBillingProvider> _provider = new();
 
     private BillingCatalog Catalog() => new(
-        [_provider.Object], new ContentLimitsOptions(), new AiOptions(), NullLogger<BillingCatalog>.Instance);
+        [_provider.Object], new ContentLimitsOptions(), TestPricing.Shipped(), NullLogger<BillingCatalog>.Instance);
 
     [Fact]
     public async Task Prices_GoToTheirTiers_FreeHasNone()
@@ -41,7 +41,10 @@ public class BillingCatalogTests
         plans.Plans[1].Prices[0].Amounts.ShouldBe(new Dictionary<string, long> { ["nok"] = 7000 });
         plans.Plans[2].Prices.ShouldHaveSingleItem().Amounts["usd"].ShouldBe(11000);
         plans.Plans[2].AiPerMonth.ShouldBe(plans.Plans[1].AiPerMonth);
-        plans.Plans[1].AiPerMonth[AiFeature.QuestionGeneration].ShouldBe(AiQuotaDefaults.Get(SubscriptionTier.Plus, AiFeature.QuestionGeneration));
+        plans.Plans[1].AiPerMonth[AiFeature.QuestionGeneration].ShouldBe(TestPricing.Shipped().QuotaOf(SubscriptionTier.Plus, AiFeature.QuestionGeneration));
+        // Free's media are a one-time trial, not a monthly quota
+        plans.Plans[0].AiPerMonth[AiFeature.PodcastGeneration].ShouldBe(0);
+        plans.Plans[0].AiTrial[AiFeature.PodcastGeneration].ShouldBe(1);
     }
 
     [Fact]
@@ -63,7 +66,7 @@ public class BillingCatalogTests
 
         plans.CheckoutAvailable.ShouldBeFalse();
         plans.Plans.Count.ShouldBe(3);
-        plans.Plans[1].AiPerMonth[AiFeature.AnswerGrading].ShouldBe(AiQuotaDefaults.Get(SubscriptionTier.Plus, AiFeature.AnswerGrading));
+        plans.Plans[1].AiPerMonth[AiFeature.AnswerGrading].ShouldBe(TestPricing.Shipped().QuotaOf(SubscriptionTier.Plus, AiFeature.AnswerGrading));
     }
 
     [Fact]

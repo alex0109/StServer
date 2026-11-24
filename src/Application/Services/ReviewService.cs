@@ -174,6 +174,7 @@ public class ReviewService : IReviewService
         {
             QuestionId = question.Id,
             IsCorrect = result.IsCorrect,
+            SmartCheckLimitReached = result.SmartCheckLimitReached,
             Score = result.Score,
             Method = result.Method,
             Rating = rating,

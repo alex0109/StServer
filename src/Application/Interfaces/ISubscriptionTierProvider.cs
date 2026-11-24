@@ -1,3 +1,4 @@
+using Application.Billing;
 using Domain.Utility.Subscription;
 
 namespace Application.Interfaces;
@@ -6,4 +7,8 @@ namespace Application.Interfaces;
 public interface ISubscriptionTierProvider
 {
     Task<SubscriptionTier> GetTierAsync(Guid userId);
+
+    // The tier with the billing period its AI quotas count in: Stripe's current period for a
+    // paid plan (a Duo member uses the payer's), the calendar month in UTC otherwise
+    Task<AiPlanPeriod> GetAiPlanAsync(Guid userId);
 }

@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Content;
 using Application.DTOs.Material;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -61,6 +62,7 @@ public class MaterialService : IMaterialService
     public async Task<MaterialResponseDto> CreateAsync(MaterialCreateDto materialCreateDto)
     {
         EnsureKnownType(materialCreateDto.Type);
+        ContentRules.EnsureTitle(materialCreateDto.Title, ContentRules.MaxMaterialTitleLength, "Material");
 
         await using var limitLock = await _limitLock.AcquireAsync(LimitScope.Materials, _user.UserId);
 
@@ -94,6 +96,10 @@ public class MaterialService : IMaterialService
         if (!string.IsNullOrEmpty(materialUpdateDto.Link) && !IsWebLink(materialUpdateDto.Link))
             throw new BadRequestException("Link must be a web address starting with http:// or https://");
 
+        ContentRules.EnsureTitle(materialUpdateDto.Title, ContentRules.MaxMaterialTitleLength, "Material");
+        var contentSize = ContentRules.EnsureRichText(materialUpdateDto.Content, "The material text");
+        await _limits.EnsureStorageAsync(_user.UserId, contentSize);
+
         MaterialMapper.ApplyUpdate(material, materialUpdateDto);
 
         await _repo.SaveChangesAsync();
@@ -106,6 +112,10 @@ public class MaterialService : IMaterialService
         var material = await _repo.GetByIdAsync(materialId, _user.UserId);
 
         if (material is null)
+            return null;
+
+        // Both sides must be the user's: another user's tag would show its name here and tie their data to ours
+        if (!await _repo.TagExistsAsync(tagId, _user.UserId))
             return null;
 
         material.AddTag(tagId);

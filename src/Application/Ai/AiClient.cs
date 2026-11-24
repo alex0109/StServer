@@ -63,21 +63,12 @@ public class AiClient : IAiClient
 
             var watch = Stopwatch.StartNew();
 
+            AiCompletion completion;
             try
             {
                 // WaitAsync also stops waiting for a provider that ignores cancellation
-                var completion = await provider.CompleteAsync(request, timeout.Token)
+                completion = await provider.CompleteAsync(request, timeout.Token)
                     .WaitAsync(timeLimit, cancellationToken);
-                var value = prompt.Parse(completion.Text);
-
-                Health.TryRemove(provider.Name, out _);
-
-                _logger.LogInformation(
-                    "AI {Feature} answered by {Provider} ({Model}) in {Elapsed} ms, tokens {Input}/{Output}",
-                    request.Feature, completion.Provider, completion.Model, watch.ElapsedMilliseconds,
-                    completion.InputTokens, completion.OutputTokens);
-
-                return new AiResult<T>(value, completion);
             }
             catch (Exception exception) when (!cancellationToken.IsCancellationRequested && IsProviderFailure(exception))
             {
@@ -87,10 +78,40 @@ public class AiClient : IAiClient
                 _logger.LogWarning(
                     "AI {Feature} failed on {Provider} after {Elapsed} ms: {Error}, trying the next provider",
                     request.Feature, provider.Name, watch.ElapsedMilliseconds, Describe(exception));
+                continue;
             }
+
+            // The provider answered: it is up, and its answer is paid whatever it says
+            Health.TryRemove(provider.Name, out _);
+
+            _logger.LogInformation(
+                "AI {Feature} answered by {Provider} ({Model}) in {Elapsed} ms, tokens {Input}/{Output}",
+                request.Feature, completion.Provider, completion.Model, watch.ElapsedMilliseconds,
+                completion.InputTokens, completion.OutputTokens);
+
+            return new AiResult<T>(Parse(prompt, completion, request.Feature), completion);
         }
 
         throw new AiUnavailableException("AI service is not responding right now, please try again later");
+    }
+
+    // An answer in the wrong shape is not an outage. Asking the next provider would pay for the same
+    // text again (a text written to break the format would be paid three times), and counting it as a
+    // failure would let one user's text open the circuit for everyone. The answer goes back with the
+    // error, so its cost is settled by the usage gate
+    private T Parse<T>(IAiPrompt<T> prompt, AiCompletion completion, Domain.Utility.Ai.AiFeature feature)
+    {
+        try
+        {
+            return prompt.Parse(completion.Text);
+        }
+        catch (AiOutputException exception)
+        {
+            _logger.LogWarning(
+                "AI {Feature} answer from {Provider} could not be read: {Error}",
+                feature, completion.Provider, exception.Message);
+            throw new AiOutputException(exception.Message, completion);
+        }
     }
 
     // Any provider error moves on to the next provider: a broken SDK update of one company

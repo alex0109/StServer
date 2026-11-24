@@ -19,7 +19,8 @@ public static class DictionaryEndpoints
         dictionaryGroup.MapDelete("/{dictionaryId:guid}", DeleteDictionary);
         dictionaryGroup.MapPost("/{dictionaryId:guid}/entries", CreateDictionaryEntry);
         // AI suggestion for a word selected while reading; nothing is saved
-        dictionaryGroup.MapPost("/{dictionaryId:guid}/entries/lookup", LookupEntry);
+        dictionaryGroup.MapPost("/{dictionaryId:guid}/entries/lookup", LookupEntry)
+            .RequireRateLimiting("ai");
         dictionaryGroup.MapGet("/entries/{entryId:guid}", GetDictionaryEntry);
         dictionaryGroup.MapPut("/entries/{entryId:guid}", UpdateDictionaryEntry);
         dictionaryGroup.MapDelete("/entries/{entryId:guid}", DeleteDictionaryEntry);

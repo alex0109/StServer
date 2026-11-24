@@ -213,4 +213,56 @@ public class AdminStatsRepository : IAdminStatsRepository
 
         return rows.Select(x => new SpeechUsageGroupRow(default, x.Succeeded, x.Recordings, x.Characters)).ToList();
     }
+
+    public async Task<List<AiCostRow>> GetAiCostsAsync(DateTime since)
+    {
+        var rows = await _db.AiUsages
+            .Where(x => x.CreatedAt >= since && x.Status == AiUsageStatus.Succeeded)
+            .GroupBy(x => new { x.Feature, x.IsFallback, HasCost = x.EstimatedCost != null })
+            .Select(g => new
+            {
+                g.Key.Feature,
+                g.Key.IsFallback,
+                g.Key.HasCost,
+                Requests = g.Count(),
+                Units = g.Sum(x => (long)x.Units),
+                Cost = g.Sum(x => x.EstimatedCost ?? 0),
+            })
+            .ToListAsync();
+
+        return rows.Select(x => new AiCostRow(x.Feature, x.IsFallback, x.HasCost, x.Requests, x.Units, x.Cost)).ToList();
+    }
+
+    public async Task<List<AiUserCostRow>> GetUserCostsAsync(DateTime since, decimal speechPerMillion, int take)
+    {
+        var ai = await _db.AiUsages
+            .Where(x => x.CreatedAt >= since && x.Status != AiUsageStatus.Failed)
+            .GroupBy(x => x.UserId)
+            .Select(g => new { UserId = g.Key, Cost = g.Sum(x => x.EstimatedCost ?? 0) })
+            .ToListAsync();
+        var voices = await _db.SpeechUsages
+            .Where(x => x.CreatedAt >= since)
+            .GroupBy(x => x.UserId)
+            .Select(g => new { UserId = g.Key, Characters = g.Sum(x => (long)x.Characters) })
+            .ToListAsync();
+
+        return ai.Select(x => (x.UserId, x.Cost))
+            .Concat(voices.Select(x => (x.UserId, Cost: x.Characters / 1_000_000m * speechPerMillion)))
+            .GroupBy(x => x.UserId)
+            .Select(g => new AiUserCostRow(g.Key, g.Sum(x => x.Cost)))
+            .OrderByDescending(x => x.Cost)
+            .Take(take)
+            .ToList();
+    }
+
+    public async Task<(int Sold, int Spent)> GetCreditFlowAsync(DateTime since)
+    {
+        var sold = await _db.CreditTransactions
+            .Where(x => x.CreatedAt >= since && x.Reason == CreditReason.Purchase)
+            .SumAsync(x => x.Delta);
+        var spent = await _db.CreditTransactions
+            .Where(x => x.CreatedAt >= since && (x.Reason == CreditReason.Spend || x.Reason == CreditReason.Return))
+            .SumAsync(x => x.Delta);
+        return (sold, -spent);
+    }
 }

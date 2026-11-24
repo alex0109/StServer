@@ -243,6 +243,17 @@ public class BillingWebhookTests
     }
 
     [Fact]
+    public async Task Portal_ChangePlan_OpensSwitching_OnlyForAPlanThatRenews()
+    {
+        await Deliver(Event("evt_1", SubscriptionStatus.Active, Now));
+        (await _sut.CreatePortalAsync("uk", changePlan: true)).ShouldBe("https://portal.example/ctm_1/switch/sub_1");
+
+        // A cancelled plan is renewed in the portal first, so the usual page opens
+        _repo.Subscriptions.Single().CancelAtPeriodEnd = true;
+        (await _sut.CreatePortalAsync("uk", changePlan: true)).ShouldBe("https://portal.example/ctm_1");
+    }
+
+    [Fact]
     public void Signature_ComparesTheWholeHmac()
     {
         var body = "{}"u8.ToArray();
@@ -265,7 +276,20 @@ public class BillingWebhookTests
         public bool VerifyWebhook(string? signatureHeader, byte[] rawBody, DateTime now) =>
             WebhookSignature.IsValidHmacSha256(Secret, rawBody, signatureHeader);
 
-        public BillingEvent? ParseEvent(byte[] rawBody) => JsonSerializer.Deserialize<BillingEvent>(rawBody);
+        // A credit event is told apart by its Kind
+        public BillingEvent? ParseEvent(byte[] rawBody) =>
+            JsonDocument.Parse(rawBody).RootElement.TryGetProperty("Kind", out _) ? null : JsonSerializer.Deserialize<BillingEvent>(rawBody);
+
+        public CreditEvent? ParseCreditEvent(byte[] rawBody) =>
+            JsonDocument.Parse(rawBody).RootElement.TryGetProperty("Kind", out _) ? JsonSerializer.Deserialize<CreditEvent>(rawBody) : null;
+
+        public List<CreditCheckout> CreditCheckouts { get; } = [];
+
+        public Task<string> CreateCreditCheckoutUrlAsync(CreditCheckout checkout, CancellationToken cancellationToken = default)
+        {
+            CreditCheckouts.Add(checkout);
+            return Task.FromResult($"https://checkout.example/credits/{checkout.PackId}");
+        }
 
         public Task<string> CreateCheckoutUrlAsync(BillingCheckout checkout, CancellationToken cancellationToken = default)
         {
@@ -273,8 +297,9 @@ public class BillingWebhookTests
             return Task.FromResult($"https://checkout.example/{checkout.Plan}/{checkout.Interval}");
         }
 
-        public Task<string> CreatePortalUrlAsync(string customerId, string? language, CancellationToken cancellationToken = default) =>
-            Task.FromResult($"https://portal.example/{customerId}");
+        public Task<string> CreatePortalUrlAsync(
+            string customerId, string? language, string? changePlanOf = null, CancellationToken cancellationToken = default) =>
+            Task.FromResult(changePlanOf is null ? $"https://portal.example/{customerId}" : $"https://portal.example/{customerId}/switch/{changePlanOf}");
 
         public Task DeleteCustomerAsync(string customerId, CancellationToken cancellationToken = default) => Task.CompletedTask;
 
@@ -291,6 +316,7 @@ public class SubscriptionGrantTests
     private readonly FakeBillingRepository _repo = new();
     private readonly Mock<IAdminAudit> _audit = new();
     private readonly Mock<IAdminAlerts> _alerts = new();
+    private readonly Mock<IAuthUserAdmin> _auth = new();
     private readonly SubscriptionAdminService _sut;
 
     public SubscriptionGrantTests()
@@ -300,7 +326,38 @@ public class SubscriptionGrantTests
         var time = new Mock<TimeProvider>();
         time.Setup(x => x.GetUtcNow()).Returns(new DateTimeOffset(Now));
 
-        _sut = new SubscriptionAdminService(_repo, _audit.Object, _alerts.Object, user.Object, time.Object);
+        _auth.Setup(x => x.GetEmailsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string>());
+
+        _sut = new SubscriptionAdminService(_repo, _audit.Object, _alerts.Object, _auth.Object, user.Object, time.Object);
+    }
+
+    [Theory]
+    [InlineData(SubscriptionTier.Pro)]
+    [InlineData((SubscriptionTier)9)]
+    public async Task Grant_OnlyPlusOrDuo(SubscriptionTier tier)
+    {
+        await Should.ThrowAsync<BadRequestException>(() =>
+            _sut.GrantAsync(new SubscriptionGrantDto { UserId = Guid.NewGuid(), Tier = tier, Reason = "Beta tester" }));
+
+        _repo.Subscriptions.ShouldBeEmpty();
+        _audit.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task List_ShowsSignInEmails_WhereKnown()
+    {
+        var known = Guid.NewGuid();
+        var unknown = Guid.NewGuid();
+        await _sut.GrantAsync(new SubscriptionGrantDto { UserId = known, Tier = SubscriptionTier.Duo, Reason = "Beta tester" });
+        await _sut.GrantAsync(new SubscriptionGrantDto { UserId = unknown, Reason = "Beta tester" });
+        _auth.Setup(x => x.GetEmailsAsync(It.IsAny<IReadOnlyCollection<Guid>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Dictionary<Guid, string> { [known] = "duo@example.com" });
+
+        var list = await _sut.ListAsync(10, TestContext.Current.CancellationToken);
+
+        list.Single(x => x.UserId == known).Email.ShouldBe("duo@example.com");
+        list.Single(x => x.UserId == unknown).Email.ShouldBeNull();
     }
 
     [Fact]

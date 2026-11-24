@@ -11,7 +11,8 @@ namespace Application.Services;
 
 public class NotificationService : INotificationService
 {
-    private const int FeedSize = 10;
+    // The page shows the newest few and the rest on demand
+    private const int FeedSize = 30;
 
     private readonly INotificationRepository _repo;
     private readonly IStudyActivityService _activity;
@@ -120,6 +121,22 @@ public class NotificationService : INotificationService
     }
 
     public Task MarkAllReadAsync() => _repo.MarkAllReadAsync(_user.UserId, _time.GetUtcNow().UtcDateTime);
+
+    public async Task<bool> DismissAsync(Guid notificationId)
+    {
+        var notification = await _repo.GetAsync(notificationId, _user.UserId);
+        if (notification is null) return false;
+
+        var now = _time.GetUtcNow().UtcDateTime;
+        notification.DismissedAt ??= now;
+        // A removed one no longer waits to be read
+        notification.ReadAt ??= now;
+        await _repo.SaveChangesAsync();
+
+        return true;
+    }
+
+    public Task DismissAllAsync() => _repo.DismissAllAsync(_user.UserId, _time.GetUtcNow().UtcDateTime);
 
     private static NotificationSettingsDto ToDto(UserNotificationSettings? settings, ProfileDto profile) => new()
     {

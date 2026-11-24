@@ -16,6 +16,7 @@ using Api.Middleware;
 using Application;
 using Application.Admin;
 using Application.Ai;
+using Application.Ai.Pricing;
 using Application.Email;
 using Application.Notifications;
 using Application.Review;
@@ -44,21 +45,23 @@ if (builder.Environment.IsDevelopment())
     Console.WriteLine(Environment.GetEnvironmentVariable("JWKS_URL"));
 }
 
-JsonWebKeySet jwks;
-
-if (builder.Environment.EnvironmentName == "Testing")
-{
-    jwks = new JsonWebKeySet();
-}
-else
-{
-    var jwksUrl = Environment.GetEnvironmentVariable("JWKS_URL") ?? throw new Exception("JWKS_URL missing");
-    using var httpClient = new HttpClient();
-    var jwksJson = await httpClient.GetStringAsync(jwksUrl);
-    jwks = new JsonWebKeySet(jwksJson);
-}
-
 var supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL") ?? throw new Exception("SUPABASE_URL missing");
+var tokenIssuer = $"{supabaseUrl}/auth/v1";
+
+// Signing keys come from Supabase's JWKS and are re-read while the app runs (tests sign nothing)
+var signingKeys = builder.Environment.EnvironmentName == "Testing"
+    ? null
+    : SupabaseSigningKeys.Manager(
+        Environment.GetEnvironmentVariable("JWKS_URL") ?? throw new Exception("JWKS_URL missing"),
+        tokenIssuer);
+
+// Fails the start as before when the keys can't be read, and warms the cache for the first request
+if (signingKeys is not null) await signingKeys.GetConfigurationAsync(CancellationToken.None);
+
+// Kestrel's default of 30 MB per request let one account post huge documents; endpoints that need
+// more (notes with drawings, materials, admin imports) raise it for themselves
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = RequestLimits.DefaultBodyBytes);
+builder.Services.Configure<IISServerOptions>(options => options.MaxRequestBodySize = RequestLimits.DefaultBodyBytes);
 
 var allowedOrigins =
     builder.Configuration
@@ -80,14 +83,19 @@ builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Keys from the manager: refreshed every hour, and early when a token names an unknown key
+        options.ConfigurationManager = signingKeys;
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
-            IssuerSigningKeys = jwks.GetSigningKeys(),
+            IssuerSigningKeys = signingKeys is null ? [] : null,
+            // Supabase signs with ES256 or RS256 keys; anything else (HS256 with a guessed secret,
+            // "none") is refused before a key is even looked at
+            ValidAlgorithms = SupabaseSigningKeys.Algorithms,
             ValidateAudience = true,
             ValidAudience = "authenticated",
             ValidateIssuer = true,
-            ValidIssuer = $"{supabaseUrl}/auth/v1",
+            ValidIssuer = tokenIssuer,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };
@@ -116,6 +124,7 @@ builder.Services.AddAdminAccess();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IUserContext, UserContext>();
+builder.Services.AddScoped<IAiCreditConsent, AiCreditConsent>();
 
 if (builder.Environment.IsEnvironment("Testing"))
 {
@@ -152,7 +161,10 @@ builder.Services.AddApplication(
         .Get<ReviewOptions>(),
     builder.Configuration
         .GetSection(ContentLimitsOptions.SectionName)
-        .Get<ContentLimitsOptions>());
+        .Get<ContentLimitsOptions>(),
+    builder.Configuration
+        .GetSection(PricingOptions.SectionName)
+        .Get<PricingOptions>());
 
 // Models and endpoints come from configuration, API keys only from environment variables
 builder.Services.AddAiProviders(options =>
@@ -196,6 +208,29 @@ builder.Services.AddRateLimiter(options =>
             Window = TimeSpan.FromMinutes(1),
             PermitLimit = 100,
         });
+    });
+
+    // AI requests cost money and some run for minutes: a tighter window than "api", and at most a few at
+    // once per user (a few more wait their turn instead of failing, e.g. translations while typing)
+    options.AddPolicy("ai", httpContext =>
+    {
+        var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var partitionKey = userId is not null
+            ? $"user:{userId}"
+            : $"ip:{httpContext.Connection.RemoteIpAddress}";
+
+        return RateLimitPartition.Get(partitionKey, _ => RateLimiter.CreateChained(
+            new ConcurrencyLimiter(new ConcurrencyLimiterOptions
+            {
+                PermitLimit = 3,
+                QueueLimit = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+            }),
+            new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 30,
+            })));
     });
 
     // Export builds a whole archive, deletion is once in a lifetime: both get tight windows of their own
@@ -251,6 +286,13 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
+// Margin guardrail: a pricing config that loses money is logged as critical at every start
+var pricingViolations = PricingValidator.Validate(app.Services.GetRequiredService<PricingOptions>());
+if (pricingViolations.Count > 0)
+{
+    app.Logger.LogCritical("AI pricing loses money: {Violations}", string.Join("; ", pricingViolations));
+}
 
 // Shows at start which AI providers can answer, a missing key or model is the usual reason for "AI unavailable"
 app.Logger.LogInformation(
@@ -347,6 +389,7 @@ app.MapAccountEndpoints();
 app.MapMetrics(MetricsAccess.Path);
 app.MapProfileEndpoints();
 app.MapBillingEndpoints();
+app.MapCreditEndpoints();
 
 if (!app.Environment.IsEnvironment("Testing"))
 {
@@ -381,10 +424,15 @@ if (!app.Environment.IsEnvironment("Testing"))
         // On start too: past attempts get their reviews without waiting for the night
         recurringJobManager.Trigger("question-reviews");
 
+        recurringJobManager.AddOrUpdate<AiMarginWatchJob>(
+            "ai-margin-watch",
+            x => x.Check(),
+            Cron.Hourly);
         recurringJobManager.AddOrUpdate<AiUsageCleanupJob>(
             "cleanup-ai-usage",
             x => x.Cleanup(),
-            Cron.Hourly);
+            // A stuck reservation holds quota or credits: they come back within 20 minutes
+            "*/10 * * * *");
 
         // Reminders and digests: every user at their own local hour
         recurringJobManager.AddOrUpdate<NotificationJob>(

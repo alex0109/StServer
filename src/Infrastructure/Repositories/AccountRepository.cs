@@ -42,7 +42,7 @@ public class AccountRepository : IAccountRepository
         var notes = await _db.Notes.AsNoTracking()
             .Where(n => n.UserId == userId)
             .OrderBy(n => n.MaterialId).ThenBy(n => n.Order)
-            .Select(n => new ExportNote(n.Id, n.MaterialId, n.Title, n.Type, n.TextContent, n.DrawingContent, n.EssayTask, n.EssayReview, n.Order, n.CreatedAt, n.UpdatedAt))
+            .Select(n => new ExportNote(n.Id, n.MaterialId, n.Title, n.Type, n.TextContent, n.DrawingContent, n.EssayTask, n.EssayFormat, n.EssayReview, n.Order, n.CreatedAt, n.UpdatedAt))
             .ToListAsync();
 
         var questions = await _db.Questions.AsNoTracking()
@@ -142,8 +142,7 @@ public class AccountRepository : IAccountRepository
         var profile = await _db.UserProfiles.AsNoTracking()
             .Where(p => p.UserId == userId)
             .Select(p => new ExportProfile(p.TimeZone, p.InterfaceLanguage, p.ExplanationLanguage, p.NativeLanguage, p.StudyLanguage, p.Nickname, p.DailyGoal,
-                p.DesiredRetention, p.NewCardsPerDay, p.MaxReviewsPerDay, p.DailyReminderHour, p.StreakReminderHour,
-                p.StreakFreezesPerMonth))
+                p.DesiredRetention, p.NewCardsPerDay, p.MaxReviewsPerDay, p.DailyReminderHour, p.StreakReminderHour))
             .FirstOrDefaultAsync();
 
         var subscription = await _db.UserSubscriptions.AsNoTracking()

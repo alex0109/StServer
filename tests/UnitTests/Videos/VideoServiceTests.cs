@@ -44,6 +44,7 @@ public class VideoServiceTests
     private void AiWrites(params VideoSegment[] segments) =>
         _ai.Setup(x => x.RunAsync(
                 It.IsAny<IAiPrompt<VideoTranscriptResult>>(),
+                It.IsAny<AiUnits<VideoTranscriptResult>>(),
                 It.IsAny<Func<VideoTranscriptResult, bool>>(),
                 It.IsAny<string>(),
                 It.IsAny<CancellationToken>()))
@@ -165,5 +166,28 @@ public class VideoServiceTests
             () => sut.GenerateAsync(_material.Id, new QuestionGenerateDto { Count = 3, FromVideo = true }));
 
         _ai.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Process_ReservesTheVideosStartedMinutes()
+    {
+        var info = new Mock<IVideoInfo>();
+        info.Setup(x => x.GetDurationSecondsAsync(VideoId, It.IsAny<CancellationToken>())).ReturnsAsync(700);
+        AiUnits<VideoTranscriptResult>? units = null;
+        _ai.Setup(x => x.RunAsync(
+                It.IsAny<IAiPrompt<VideoTranscriptResult>>(),
+                It.IsAny<AiUnits<VideoTranscriptResult>>(),
+                It.IsAny<Func<VideoTranscriptResult, bool>>(),
+                It.IsAny<string>(),
+                It.IsAny<CancellationToken>()))
+            .Callback((IAiPrompt<VideoTranscriptResult> _, AiUnits<VideoTranscriptResult> reserved, Func<VideoTranscriptResult, bool> _, string _, CancellationToken _) => units = reserved)
+            .ReturnsAsync(new AiResult<VideoTranscriptResult>(
+                new VideoTranscriptResult("en", [new VideoSegment(2, "Plants make sugar.")], false),
+                FakeAiProvider.Completion("Gemini", "{}")));
+
+        await new VideoService(_videos.Object, _materials.Object, _ai.Object, _user.Object, info: info.Object).ProcessAsync(_material.Id);
+
+        units!.Reserved.ShouldBe(12);
+        units.VideoSeconds!(new VideoTranscriptResult("en", [], false)).ShouldBe(700);
     }
 }

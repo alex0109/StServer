@@ -52,7 +52,7 @@ public record AdminAiModelDto(string Provider, string Model, int Requests, int F
 
 public record AdminAiDayDto(DateOnly Date, int Requests, int Failed, decimal Cost);
 
-public record AdminAiUserDto(Guid UserId, int Requests, decimal Cost);
+public record AdminAiUserDto(Guid UserId, int Requests, decimal Cost, string? Email = null);
 
 public record AdminAiStatsDto(
     AdminAiTotalsDto Totals,

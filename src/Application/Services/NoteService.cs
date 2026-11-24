@@ -1,4 +1,5 @@
 using Application.Constants;
+using Application.Content;
 using Application.DTOs.Note;
 using Application.Essays;
 using Application.Exceptions;
@@ -47,6 +48,8 @@ public class NoteService : INoteService
 
     public async Task<NoteResponseDto?> CreateAsync(Guid materialId, NoteCreateDto dto)
     {
+        ContentRules.EnsureTitle(dto.Title, ContentRules.MaxNoteTitleLength, "Note");
+
         if (!await _repo.MaterialExistsAsync(materialId, _user.UserId))
             return null;
 
@@ -87,6 +90,14 @@ public class NoteService : INoteService
 
         if (dto.EssayTask?.Trim().Length > EssayRules.MaxTaskLength)
             throw new BadRequestException($"The essay task is longer than {EssayRules.MaxTaskLength} characters");
+
+        if (!string.IsNullOrWhiteSpace(dto.EssayFormat) && !EssayFormat.TryParse(dto.EssayFormat, out _))
+            throw new BadRequestException("Unknown essay format");
+
+        ContentRules.EnsureTitle(dto.Title, ContentRules.MaxNoteTitleLength, "Note");
+        var contentSize = ContentRules.EnsureRichText(dto.TextContent, "The note text")
+                          + ContentRules.EnsureDrawing(dto.DrawingContent);
+        await _limits.EnsureStorageAsync(_user.UserId, contentSize);
 
         NoteMapper.ApplyUpdate(note, dto);
 

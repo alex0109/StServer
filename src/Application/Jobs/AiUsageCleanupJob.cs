@@ -11,9 +11,9 @@ public class AiUsageCleanupJob
         _aiUsageService = aiUsageService;
     }
 
-    // Requests lost with a restarted process stay pending, this gives them back to the quota
+    // Requests lost with a restarted process stay pending: their quota or credits go back
     public async Task Cleanup()
     {
-        await _aiUsageService.FailStaleAsync();
+        await _aiUsageService.ReleaseStaleAsync();
     }
 }

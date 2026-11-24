@@ -26,6 +26,9 @@ public class Note
     // Essays only: the task the essay answers, and the last AI check of it
     [MaxLength(MaxEssayTaskLength)]
     public string? EssayTask { get; set; }
+    // The language exam the essay is written for, like "Ielts/B2/Letter"; null is a general essay
+    [MaxLength(32)]
+    public string? EssayFormat { get; set; }
     public JsonDocument? EssayReview { get; set; }
 
     public int Order { get; set; }

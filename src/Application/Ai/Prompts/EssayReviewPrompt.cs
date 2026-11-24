@@ -10,13 +10,15 @@ public record EssayReviewDraft(
     IReadOnlyList<EssayCriterionScore> Criteria,
     IReadOnlyList<string> Strengths,
     IReadOnlyList<string> Improvements,
-    IReadOnlyList<EssayCorrection> Corrections);
+    IReadOnlyList<EssayCorrection> Corrections,
+    // Exam checks only: the result on the exam's own scale, like "6.5" or "B1"
+    string? ExamResult = null);
 
 public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
 {
     public const int MaxCorrections = 15;
-    private const int MaxComment = 600;
-    private const int MaxPoint = 400;
+    internal const int MaxComment = 600;
+    internal const int MaxPoint = 400;
     private const int MaxFragment = 300;
 
     // Property names of the answer, in the order the criteria are shown
@@ -28,7 +30,7 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
         ("grammar", EssayCriterion.Grammar),
     ];
 
-    private static readonly string[] CategoryNames = ["grammar", "vocabulary", "spelling", "punctuation", "style"];
+    internal static readonly string[] CategoryNames = ["grammar", "vocabulary", "spelling", "punctuation", "style"];
 
     private readonly string _essay;
     private readonly string? _task;
@@ -151,7 +153,15 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
                 : throw new AiOutputException($"AI gave no score for {x.Item1}"))
             .ToList();
 
-        var corrections = (answer.Corrections ?? [])
+        return new EssayReviewDraft(
+            criteria,
+            Points(answer.Strengths, 6),
+            Points(answer.Improvements, 6),
+            Corrections(answer.Corrections));
+    }
+
+    internal static List<EssayCorrection> Corrections(List<AnswerCorrection>? answer) =>
+        (answer ?? [])
             .Select(x => new EssayCorrection(
                 AiJson.Limit(x.Original, MaxFragment),
                 AiJson.Limit(x.Correction, MaxFragment),
@@ -162,14 +172,7 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
             .Take(MaxCorrections)
             .ToList();
 
-        return new EssayReviewDraft(
-            criteria,
-            Points(answer.Strengths, 6),
-            Points(answer.Improvements, 6),
-            corrections);
-    }
-
-    private static List<string> Points(List<string>? points, int max) =>
+    internal static List<string> Points(List<string>? points, int max) =>
         (points ?? []).Select(x => AiJson.Limit(x, MaxPoint)).Where(x => x.Length > 0).Distinct().Take(max).ToList();
 
     // Names only, never numbers; an unknown category still shows the correction, as a matter of style
@@ -190,5 +193,5 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
 
     private record AnswerCriterion(int? Score, string? Comment);
 
-    private record AnswerCorrection(string? Original, string? Correction, string? Explanation, string? Category);
+    internal record AnswerCorrection(string? Original, string? Correction, string? Explanation, string? Category);
 }

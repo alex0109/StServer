@@ -71,11 +71,21 @@ namespace StServer.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Credits")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("EstimatedCost")
+                        .HasPrecision(12, 6)
+                        .HasColumnType("numeric(12,6)");
+
                     b.Property<int>("Feature")
                         .HasColumnType("integer");
 
                     b.Property<long>("InputTokens")
                         .HasColumnType("bigint");
+
+                    b.Property<bool>("IsFallback")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Model")
                         .HasMaxLength(100)
@@ -88,11 +98,24 @@ namespace StServer.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<int>("Source")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<int>("Units")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("VideoSeconds")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 
@@ -101,6 +124,8 @@ namespace StServer.Migrations
                     b.HasIndex("Status", "CreatedAt");
 
                     b.HasIndex("UserId", "Feature", "CreatedAt");
+
+                    b.HasIndex("UserId", "Source", "Feature");
 
                     b.ToTable("AiUsages");
                 });
@@ -222,6 +247,81 @@ namespace StServer.Migrations
                     b.HasIndex("UserId", "AttemptStatus", "FinishedAt");
 
                     b.ToTable("Attempts");
+                });
+
+            modelBuilder.Entity("Domain.Entities.CreditTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("Feature")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("IdempotencyKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("PackId")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("StripeReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("UsageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IdempotencyKey")
+                        .IsUnique();
+
+                    b.HasIndex("StripeReference");
+
+                    b.HasIndex("UserId", "CreatedAt");
+
+                    b.ToTable("CreditTransactions");
+                });
+
+            modelBuilder.Entity("Domain.Entities.CreditWallet", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AutoUseForStudy")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Balance")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("CreditWallets");
                 });
 
             modelBuilder.Entity("Domain.Entities.Dictionary", b =>
@@ -956,6 +1056,10 @@ namespace StServer.Migrations
                     b.Property<JsonDocument>("DrawingContent")
                         .HasColumnType("jsonb");
 
+                    b.Property<string>("EssayFormat")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<JsonDocument>("EssayReview")
                         .HasColumnType("jsonb");
 
@@ -1004,7 +1108,7 @@ namespace StServer.Migrations
 
                     b.ToTable("Notes", t =>
                         {
-                            t.HasCheckConstraint("CK_Note_EssayFields", "\"Type\" = 4 OR (\"EssayTask\" IS NULL AND \"EssayReview\" IS NULL)");
+                            t.HasCheckConstraint("CK_Note_EssayFields", "\"Type\" = 4 OR (\"EssayTask\" IS NULL AND \"EssayReview\" IS NULL AND \"EssayFormat\" IS NULL)");
 
                             t.HasCheckConstraint("CK_Note_TypeConsistency", "(\"Type\" = 0 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 1 AND \"TextContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 3 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL) OR\n(\"Type\" = 4 AND \"DrawingContent\" IS NULL AND \"FileId\" IS NULL)");
                         });
@@ -1461,6 +1565,9 @@ namespace StServer.Migrations
                         .IsRequired()
                         .HasColumnType("jsonb");
 
+                    b.Property<DateTime?>("DismissedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<DateTime?>("EmailSentAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1534,6 +1641,9 @@ namespace StServer.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool?>("AutoTranslate")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1568,9 +1678,6 @@ namespace StServer.Migrations
                     b.Property<string>("Nickname")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
-
-                    b.Property<int?>("StreakFreezesPerMonth")
-                        .HasColumnType("integer");
 
                     b.Property<int?>("StreakReminderHour")
                         .HasColumnType("integer");

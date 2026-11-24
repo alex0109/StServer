@@ -1,3 +1,4 @@
+using Api.Common;
 using Application.DTOs.Note;
 using Application.Interfaces;
 
@@ -14,7 +15,8 @@ public static class NoteEndpoints
         noteGroup.MapGet("/", GetAllNotes);
         noteGroup.MapGet("/{noteId:guid}", GetOneNote);
         noteGroup.MapPost("/", CreateNote);
-        noteGroup.MapPatch("/{noteId:guid}", UpdateNote);
+        noteGroup.MapPatch("/{noteId:guid}", UpdateNote)
+            .WithBodyLimit(RequestLimits.NoteBodyBytes);
         noteGroup.MapDelete("/{noteId:guid}", DeleteNote);
         
         static async Task<IResult> GetAllNotes(Guid materialId, INoteService service)

@@ -96,6 +96,10 @@ public class FlashcardService : IFlashcardService
             if (dto.EntryIds is null || dto.EntryIds.Count == 0)
                 throw new BadRequestException("EntryIds are required for Custom mode");
 
+            // Every id goes into one database query
+            if (dto.EntryIds.Count > FlashcardLimits.MaxCustomEntryIds)
+                throw new BadRequestException($"A custom session takes at most {FlashcardLimits.MaxCustomEntryIds} words");
+
             cards = (await _flashcardRepository.GetEntriesWithProgressAsync(userId, dto.EntryIds)).Take(limit).ToList();
         }
         else

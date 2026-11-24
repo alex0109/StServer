@@ -28,23 +28,33 @@ public class AiUsageRepository : IAiUsageRepository
             .FirstOrDefaultAsync();
     }
 
-    public async Task<int> CountAsync(Guid userId, AiFeature feature, DateTime since)
-    {
-        return await _db.AiUsages.CountAsync(x =>
-            x.UserId == userId
-            && x.Feature == feature
-            && x.CreatedAt >= since
-            && x.Status != AiUsageStatus.Failed);
-    }
-
-    public async Task<Dictionary<AiFeature, int>> CountByFeatureAsync(Guid userId, DateTime since)
+    public async Task<int> SumUnitsAsync(Guid userId, AiFeature feature, AiUsageSource source, DateTime since)
     {
         return await _db.AiUsages
-            .Where(x => x.UserId == userId && x.CreatedAt >= since && x.Status != AiUsageStatus.Failed)
-            .GroupBy(x => x.Feature)
-            .Select(x => new { Feature = x.Key, Count = x.Count() })
-            .ToDictionaryAsync(x => x.Feature, x => x.Count);
+            .Where(x => x.UserId == userId
+                        && x.Feature == feature
+                        && x.Source == source
+                        && x.CreatedAt >= since
+                        && x.Status != AiUsageStatus.Failed)
+            .SumAsync(x => x.Units);
     }
+
+    public async Task<Dictionary<AiFeature, int>> SumUnitsByFeatureAsync(Guid userId, AiUsageSource source, DateTime since)
+    {
+        return await _db.AiUsages
+            .Where(x => x.UserId == userId && x.Source == source && x.CreatedAt >= since && x.Status != AiUsageStatus.Failed)
+            .GroupBy(x => x.Feature)
+            .Select(x => new { Feature = x.Key, Units = x.Sum(u => u.Units) })
+            .ToDictionaryAsync(x => x.Feature, x => x.Units);
+    }
+
+    // A release without an answer leaves Provider empty; only an answer that came back sets it
+    public Task<int> CountForgivenAsync(Guid userId, AiFeature feature, DateTime since) =>
+        _db.AiUsages.CountAsync(x => x.UserId == userId
+                                     && x.Feature == feature
+                                     && x.Status == AiUsageStatus.Failed
+                                     && x.Provider != null
+                                     && x.CreatedAt >= since);
 
     public async Task AddAsync(AiUsage usage)
     {
@@ -56,21 +66,19 @@ public class AiUsageRepository : IAiUsageRepository
         return await _db.AiUsages.FirstOrDefaultAsync(x => x.Id == usageId);
     }
 
-    public async Task<int> FailPendingAsync(DateTime createdBefore, DateTime now)
-    {
-        return await _db.AiUsages
+    public Task<List<Guid>> ListPendingAsync(DateTime createdBefore) =>
+        _db.AiUsages
             .Where(x => x.Status == AiUsageStatus.Pending && x.CreatedAt < createdBefore)
-            .ExecuteUpdateAsync(x => x
-                .SetProperty(u => u.Status, AiUsageStatus.Failed)
-                .SetProperty(u => u.CompletedAt, now));
-    }
+            .Select(x => x.Id)
+            .ToListAsync();
 
     public async Task<int> RollUpBeforeAsync(DateTime createdBefore)
     {
         await using var transaction = await _db.Database.BeginTransactionAsync();
 
+        // Trial rows prove the one-time trial is spent, so they stay
         var totals = await _db.AiUsages
-            .Where(x => x.CreatedAt < createdBefore)
+            .Where(x => x.CreatedAt < createdBefore && x.Source != AiUsageSource.Trial)
             .GroupBy(x => new
             {
                 x.UserId,
@@ -122,7 +130,7 @@ public class AiUsageRepository : IAiUsageRepository
         await _db.SaveChangesAsync();
 
         var removed = await _db.AiUsages
-            .Where(x => x.CreatedAt < createdBefore)
+            .Where(x => x.CreatedAt < createdBefore && x.Source != AiUsageSource.Trial)
             .ExecuteDeleteAsync();
 
         await transaction.CommitAsync();

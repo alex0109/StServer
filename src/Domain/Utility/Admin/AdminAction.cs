@@ -15,4 +15,8 @@ public enum AdminAction
     // Plans given or taken back by hand, e.g. Plus for beta testers
     GrantSubscription = 7,
     RevokeSubscription = 8,
+
+    // Promo codes made in the billing provider, and switched off there
+    CreatePromoCodes = 9,
+    DeactivatePromoCodes = 10,
 }

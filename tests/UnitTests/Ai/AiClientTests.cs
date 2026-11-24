@@ -86,17 +86,40 @@ public class AiClientTests
         result.Completion.Provider.ShouldBe("B");
     }
 
+    // An answer in the wrong shape isn't an outage: the next provider would be paid for the same text again
     [Fact]
-    public async Task CompleteAsync_InvalidJson_FallsBackToNext()
+    public async Task CompleteAsync_InvalidJson_IsNotAskedAgainAndCarriesTheAnswer()
     {
         var broken = new FakeAiProvider("A", () => Task.FromResult(FakeAiProvider.Completion("A", "not json")));
         var working = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
 
-        var result = await Create(Order("A", "B"), broken, working).CompleteAsync(
+        var error = await Should.ThrowAsync<AiOutputException>(() => Create(Order("A", "B"), broken, working).CompleteAsync(
             new AiTestPrompt(),
-            TestContext.Current.CancellationToken);
+            TestContext.Current.CancellationToken));
 
-        result.Value.ShouldBe("b");
+        error.Completion.ShouldNotBeNull().Provider.ShouldBe("A");
+        working.Calls.ShouldBe(0);
+    }
+
+    // One user's text that breaks the format must not open the circuit for everyone
+    [Fact]
+    public async Task CompleteAsync_InvalidJson_DoesNotOpenTheCircuit()
+    {
+        var answers = 0;
+        var provider = new FakeAiProvider("A", () => Task.FromResult(
+            FakeAiProvider.Completion("A", ++answers <= 3 ? "not json" : """{"value":"a"}""")));
+        var other = new FakeAiProvider("B", () => Task.FromResult(FakeAiProvider.Completion("B", """{"value":"b"}""")));
+        var client = Create(Order("A", "B"), provider, other);
+
+        for (var i = 0; i < 3; i++)
+        {
+            await Should.ThrowAsync<AiOutputException>(() => client.CompleteAsync(new AiTestPrompt(), TestContext.Current.CancellationToken));
+        }
+
+        var result = await client.CompleteAsync(new AiTestPrompt(), TestContext.Current.CancellationToken);
+
+        result.Completion.Provider.ShouldBe("A");
+        other.Calls.ShouldBe(0);
     }
 
     [Fact]

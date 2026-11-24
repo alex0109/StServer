@@ -1,3 +1,5 @@
+using Domain.Utility.Ai;
+using Application.Ai.Pricing;
 using Application.Ai.Prompts;
 using Application.Constants;
 using Application.DTOs.Ai;
@@ -23,6 +25,7 @@ public class QuestionGenerationService : IQuestionGenerationService
     private readonly IUserContext _user;
     private readonly ILimitLock _limitLock;
     private readonly IMaterialVideoRepository? _videos;
+    private readonly PricingOptions? _pricing;
 
     public QuestionGenerationService(
         IQuestionRepository questionRepository,
@@ -33,8 +36,10 @@ public class QuestionGenerationService : IQuestionGenerationService
         IUserContext user,
         ILimitLock limitLock,
         IContentLimits? limits = null,
-        IMaterialVideoRepository? videos = null)
+        IMaterialVideoRepository? videos = null,
+        PricingOptions? pricing = null)
     {
+        _pricing = pricing;
         _questionRepository = questionRepository;
         _materialRepository = materialRepository;
         _noteRepository = noteRepository;
@@ -75,6 +80,10 @@ public class QuestionGenerationService : IQuestionGenerationService
         {
             content = AiSourceText.FromMaterial(material);
         }
+
+        // A request is priced for this much text; video subtitles are bounded by the video's length instead
+        if (!dto.FromVideo && _pricing?.FeatureOf(AiFeature.QuestionGeneration)?.MaxInputChars is { } maxInput && content.Length > maxInput)
+            throw AiUsageDeniedException.InputTooLarge(AiFeature.QuestionGeneration, maxInput);
 
         // Checked before the AI call too, so a full material does not waste a request
         var max = (await _limits.ForUserAsync(userId)).QuestionsPerMaterial;

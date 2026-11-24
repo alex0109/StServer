@@ -72,6 +72,7 @@ public record ExportNote(
     JsonDocument? TextContent,
     JsonDocument? DrawingContent,
     string? EssayTask,
+    string? EssayFormat,
     JsonDocument? EssayReview,
     int Order,
     DateTime CreatedAt,
@@ -258,5 +259,4 @@ public record ExportProfile(
     int? NewCardsPerDay,
     int? MaxReviewsPerDay,
     int? DailyReminderHour,
-    int? StreakReminderHour,
-    int? StreakFreezesPerMonth);
+    int? StreakReminderHour);

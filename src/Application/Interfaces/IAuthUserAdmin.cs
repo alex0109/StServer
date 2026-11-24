@@ -7,4 +7,8 @@ public interface IAuthUserAdmin
 
     // A user that is already gone counts as deleted
     Task DeleteUserAsync(Guid userId, CancellationToken cancellationToken = default);
+
+    // Sign-in emails for the admin panel. Users that can't be looked up are left out, so the
+    // answer may be empty; it never fails
+    Task<IReadOnlyDictionary<Guid, string>> GetEmailsAsync(IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
 }

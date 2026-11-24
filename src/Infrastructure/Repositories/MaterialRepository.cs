@@ -135,6 +135,32 @@ public class MaterialRepository : IMaterialRepository
         return await _db.Materials.CountAsync(x => x.UserId == userId);
     }
 
+    public Task<bool> TagExistsAsync(Guid tagId, Guid userId) =>
+        _db.Tags.AnyAsync(x => x.Id == tagId && x.UserId == userId);
+
+    // pg_column_size is the stored, compressed size, read from the value's header without loading it.
+    // Both tables are indexed by user id
+    public async Task<long> GetStoredContentBytesAsync(Guid userId)
+    {
+        var materials = await _db.Database
+            .SqlQuery<long>($"""
+                SELECT COALESCE(SUM(pg_column_size("Content")), 0)::bigint AS "Value"
+                FROM "Materials" WHERE "UserId" = {userId}
+                """)
+            .SingleAsync();
+
+        var notes = await _db.Database
+            .SqlQuery<long>($"""
+                SELECT COALESCE(SUM(COALESCE(pg_column_size("TextContent"), 0)
+                                  + COALESCE(pg_column_size("DrawingContent"), 0)
+                                  + COALESCE(pg_column_size("EssayReview"), 0)), 0)::bigint AS "Value"
+                FROM "Notes" WHERE "UserId" = {userId}
+                """)
+            .SingleAsync();
+
+        return materials + notes;
+    }
+
     public Task SaveChangesAsync()
     {
         return _db.SaveChangesAsync();

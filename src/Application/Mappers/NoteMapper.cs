@@ -36,6 +36,7 @@ public static class NoteMapper
             TextContent = RichTextJson.Parse(entity.TextContent),
             DrawingContent = entity.DrawingContent,
             EssayTask = entity.EssayTask,
+            EssayFormat = EssayFormat.FromCode(entity.EssayFormat)?.Code,
             EssayReview = review is null ? null : EssayReviewMapper.ToDto(review),
             Order = entity.Order,
             CreatedAt = entity.CreatedAt,
@@ -48,8 +49,9 @@ public static class NoteMapper
         if (dto.Title is not null)
             entity.Title = dto.Title;
             
+        // Cleaned before it's stored: links and images may only point to the web
         if (dto.TextContent is not null)
-            entity.TextContent = JsonSerializer.SerializeToDocument(dto.TextContent);
+            entity.TextContent = RichTextJson.ToStored(dto.TextContent);
         
         // "drawingContent": null arrives as a JSON null document; stored, it would break the note type check
         if (dto.DrawingContent is { RootElement.ValueKind: not JsonValueKind.Null })
@@ -58,6 +60,10 @@ public static class NoteMapper
         // Other notes have no task, the database refuses one
         if (dto.EssayTask is not null && entity.Type == NoteType.essay)
             entity.EssayTask = EssayRules.NormalizeTask(dto.EssayTask);
+
+        // Checked by the service before: an empty string or an unknown code makes it a general essay
+        if (dto.EssayFormat is not null && entity.Type == NoteType.essay)
+            entity.EssayFormat = EssayFormat.FromCode(dto.EssayFormat)?.Code;
         
         entity.UpdatedAt = DateTime.UtcNow;
     }

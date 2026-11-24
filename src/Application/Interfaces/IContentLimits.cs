@@ -11,5 +11,9 @@ public interface IContentLimits
     // A library copy is checked against the library limit unless imports share the material limit
     Task EnsureMaterialPlaceAsync(Guid userId, bool libraryCopy);
 
+    // Throws LimitExceededException when saving this many more characters of editor data would go over
+    // the user's storage (ContentLimitsOptions.StorageMb)
+    Task EnsureStorageAsync(Guid userId, long addingChars);
+
     bool CountLibraryImports { get; }
 }

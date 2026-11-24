@@ -20,7 +20,8 @@ public class ProfileDto
     public int? MaxReviewsPerDay { get; init; }
     public int? DailyReminderHour { get; init; }
     public int? StreakReminderHour { get; init; }
-    public int? StreakFreezesPerMonth { get; init; }
+    // Suggest a translation while a word is typed into a dictionary (Plus)
+    public bool AutoTranslate { get; init; } = true;
     public required LearningDefaultsDto Defaults { get; init; }
 }
 
@@ -28,7 +29,6 @@ public record LearningDefaultsDto(
     double DesiredRetention,
     int DailyReminderHour,
     int StreakReminderHour,
-    int StreakFreezesPerMonth,
     double MinRetention,
     double MaxRetention);
 
@@ -49,5 +49,5 @@ public class ProfileUpdateDto
     public int? MaxReviewsPerDay { get; set; }
     public int? DailyReminderHour { get; set; }
     public int? StreakReminderHour { get; set; }
-    public int? StreakFreezesPerMonth { get; set; }
+    public bool? AutoTranslate { get; set; }
 }

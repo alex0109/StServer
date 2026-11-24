@@ -13,8 +13,8 @@ public interface IBillingService
 
     Task<string> CreateCheckoutAsync(BillingPlan plan, BillingInterval interval, string? language);
 
-    // The provider's page where a paid plan is managed
-    Task<string> CreatePortalAsync(string? language);
+    // The provider's page where a paid plan is managed; changePlan opens it on switching plans
+    Task<string> CreatePortalAsync(string? language, bool changePlan = false);
 
     Task<BillingStatusDto> GetStatusAsync();
 
@@ -48,8 +48,32 @@ public interface IDuoService
 
 public interface ISubscriptionAdminService
 {
-    Task<List<AdminSubscriptionDto>> ListAsync(int take);
+    Task<List<AdminSubscriptionDto>> ListAsync(int take, CancellationToken cancellationToken = default);
     Task<AdminSubscriptionDto> GrantAsync(SubscriptionGrantDto dto);
     // Only hand-made grants; false when there is none
     Task<bool> RevokeAsync(Guid userId);
+}
+
+// Promo codes for the admin panel; they live in the billing provider
+public interface IPromoCodeAdminService
+{
+    Task<AdminPromoCodesDto> ListAsync(CancellationToken cancellationToken = default);
+
+    Task<PromoBatchCreatedDto> CreateAsync(PromoBatchCreateDto dto, CancellationToken cancellationToken = default);
+
+    // Switches off every code of a batch; returns how many were still on
+    Task<int> DeactivateAsync(string id, CancellationToken cancellationToken = default);
+}
+
+// Prepaid AI credits of the current user
+public interface ICreditService
+{
+    CreditPricingDto GetPricing();
+    Task<CreditWalletDto> GetWalletAsync();
+    Task<CreditHistoryDto> GetHistoryAsync(int page, int pageSize);
+    Task<CreditWalletDto> SetAutoUseAsync(bool enabled);
+    // The provider's checkout for a pack
+    Task<string> CreateCheckoutAsync(string? packId, string? language);
+    // A purchase or refund from a webhook; returns why nothing changed, or null
+    Task<string?> ApplyAsync(CreditEvent credit);
 }

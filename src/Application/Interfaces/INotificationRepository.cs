@@ -15,6 +15,8 @@ public interface INotificationRepository
     Task<int> CountUnreadAsync(Guid userId);
     Task<UserNotification?> GetAsync(Guid notificationId, Guid userId);
     Task MarkAllReadAsync(Guid userId, DateTime readAt);
+    // Hides every notification of the feed at once
+    Task DismissAllAsync(Guid userId, DateTime dismissedAt);
     Task<int> DeleteCreatedBeforeAsync(DateTime createdBefore);
     Task SaveChangesAsync();
 }

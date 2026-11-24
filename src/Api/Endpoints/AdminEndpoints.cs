@@ -28,6 +28,8 @@ public static class AdminEndpoints
         admin.MapGet("/stats/overview", Overview);
         admin.MapGet("/stats/ai", Ai);
         admin.MapGet("/stats/podcasts", Podcasts);
+        admin.MapGet("/stats/billing", Billing);
+        admin.MapGet("/stats/ai-margins", AiMargins);
         admin.MapGet("/health", Health);
         admin.MapGet("/audit", Audit);
         // Prometheus, Grafana and Sentry in one answer; Google Analytics separately (it is slower)
@@ -37,6 +39,10 @@ public static class AdminEndpoints
         admin.MapGet("/subscriptions", Subscriptions);
         admin.MapPost("/subscriptions", GrantSubscription);
         admin.MapDelete("/subscriptions/{userId:guid}", RevokeSubscription);
+        // Promo codes: Stripe coupons with codes buyers type at checkout
+        admin.MapGet("/promo-codes", PromoCodes);
+        admin.MapPost("/promo-codes", CreatePromoCodes);
+        admin.MapPost("/promo-codes/{id}/deactivate", DeactivatePromoCodes);
 
         // Before the second factor: tells the panel whether to ask for a TOTP code at all.
         // Any signed-in account may ask; a refusal also emails the owner
@@ -74,6 +80,12 @@ public static class AdminEndpoints
         static async Task<IResult> Podcasts(IAdminStatsService stats) =>
             TypedResults.Ok(await stats.GetPodcastsAsync());
 
+        static async Task<IResult> AiMargins(IAdminStatsService stats) =>
+            TypedResults.Ok(await stats.GetAiMarginsAsync());
+
+        static async Task<IResult> Billing(IAdminBillingStatsService stats, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await stats.GetAsync(cancellationToken));
+
         static async Task<IResult> Audit(IAdminAudit audit, int take = 100) =>
             TypedResults.Ok(await audit.ListAsync(Math.Clamp(take, 1, 500)));
 
@@ -83,8 +95,8 @@ public static class AdminEndpoints
         static async Task<IResult> Analytics(IObservabilityService service, CancellationToken cancellationToken) =>
             TypedResults.Ok(await service.GetAnalyticsAsync(cancellationToken));
 
-        static async Task<IResult> Subscriptions(ISubscriptionAdminService service, int take = 100) =>
-            TypedResults.Ok(await service.ListAsync(Math.Clamp(take, 1, 500)));
+        static async Task<IResult> Subscriptions(ISubscriptionAdminService service, CancellationToken cancellationToken, int take = 200) =>
+            TypedResults.Ok(await service.ListAsync(Math.Clamp(take, 1, 500), cancellationToken));
 
         static async Task<IResult> GrantSubscription(SubscriptionGrantDto dto, ISubscriptionAdminService service) =>
             TypedResults.Ok(await service.GrantAsync(dto));
@@ -92,9 +104,19 @@ public static class AdminEndpoints
         static async Task<IResult> RevokeSubscription(Guid userId, ISubscriptionAdminService service) =>
             await service.RevokeAsync(userId) ? TypedResults.NoContent() : TypedResults.NotFound();
 
+        static async Task<IResult> PromoCodes(IPromoCodeAdminService service, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await service.ListAsync(cancellationToken));
+
+        static async Task<IResult> CreatePromoCodes(PromoBatchCreateDto dto, IPromoCodeAdminService service, CancellationToken cancellationToken) =>
+            TypedResults.Ok(await service.CreateAsync(dto, cancellationToken));
+
+        static async Task<IResult> DeactivatePromoCodes(string id, IPromoCodeAdminService service, CancellationToken cancellationToken) =>
+            TypedResults.Ok(new { SwitchedOff = await service.DeactivateAsync(id, cancellationToken) });
+
         static async Task<IResult> Health(
             AppDbContext db,
             IEnumerable<IAiProvider> providers,
+            IEnumerable<IBillingProvider> billing,
             AiOptions aiOptions,
             IEmailSender email,
             IWebHostEnvironment environment,
@@ -129,6 +151,7 @@ public static class AdminEndpoints
                     Providers = providers.Select(x => new { x.Name, x.IsConfigured }),
                 },
                 Email = new { Configured = email.IsConfigured },
+                Billing = new { Providers = billing.Select(x => new { x.Name, x.IsConfigured }) },
             });
         }
     }

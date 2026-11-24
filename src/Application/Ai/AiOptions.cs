@@ -1,6 +1,3 @@
-using Domain.Utility.Ai;
-using Domain.Utility.Subscription;
-
 namespace Application.Ai;
 
 // Rules of AI usage that do not depend on a provider
@@ -23,73 +20,10 @@ public class AiOptions
     // AI score from this value counts as a correct answer
     public int GradingPassScore { get; set; } = 70;
 
-    // Monthly requests per tier and feature, missing values use AiQuotaDefaults
-    public Dictionary<SubscriptionTier, Dictionary<AiFeature, int>>? Quotas { get; set; }
+    // Answers a provider gave (and billed) but the user can't use: "no new words", a video without
+    // speech, text that isn't the asked format. This many a day per user and feature are forgiven,
+    // later ones count like a usable answer, or an empty answer would be a free request without end
+    public int UnusableGracePerDay { get; set; } = 3;
 
     public static readonly string[] DefaultProviderOrder = ["Anthropic", "OpenAi", "Gemini"];
-
-    public int GetMonthlyQuota(SubscriptionTier tier, AiFeature feature)
-    {
-        if (Quotas is not null
-            && Quotas.TryGetValue(tier, out var features)
-            && features.TryGetValue(feature, out var quota))
-        {
-            return quota;
-        }
-
-        return AiQuotaDefaults.Get(tier, feature);
-    }
-}
-
-public static class AiQuotaDefaults
-{
-    // Each person on a Duo has these for themselves
-    private static readonly Dictionary<AiFeature, int> PlusQuotas = new()
-    {
-        [AiFeature.QuestionGeneration] = 100,
-        [AiFeature.DictionaryGeneration] = 50,
-        [AiFeature.AnswerGrading] = 300,
-        [AiFeature.SummaryGeneration] = 30,
-        [AiFeature.MistakeExplanation] = 50,
-        [AiFeature.WordLookup] = 1000,
-        [AiFeature.EssayReview] = 30,
-        [AiFeature.WordExplanation] = 300,
-        [AiFeature.PodcastGeneration] = 10,
-        [AiFeature.VideoTranscript] = 20,
-    };
-
-    private static readonly Dictionary<SubscriptionTier, Dictionary<AiFeature, int>> Values = new()
-    {
-        [SubscriptionTier.Free] = new()
-        {
-            [AiFeature.QuestionGeneration] = 10,
-            [AiFeature.DictionaryGeneration] = 5,
-            [AiFeature.AnswerGrading] = 30,
-            [AiFeature.SummaryGeneration] = 3,
-            [AiFeature.MistakeExplanation] = 5,
-            [AiFeature.WordLookup] = 100,
-            [AiFeature.EssayReview] = 3,
-            [AiFeature.WordExplanation] = 30,
-            [AiFeature.PodcastGeneration] = 1,
-            [AiFeature.VideoTranscript] = 2,
-        },
-        [SubscriptionTier.Plus] = PlusQuotas,
-        [SubscriptionTier.Duo] = PlusQuotas,
-        [SubscriptionTier.Pro] = new()
-        {
-            [AiFeature.QuestionGeneration] = 500,
-            [AiFeature.DictionaryGeneration] = 250,
-            [AiFeature.AnswerGrading] = 1500,
-            [AiFeature.SummaryGeneration] = 150,
-            [AiFeature.MistakeExplanation] = 250,
-            [AiFeature.WordLookup] = 5000,
-            [AiFeature.EssayReview] = 150,
-            [AiFeature.WordExplanation] = 1500,
-            [AiFeature.PodcastGeneration] = 40,
-            [AiFeature.VideoTranscript] = 80,
-        },
-    };
-
-    public static int Get(SubscriptionTier tier, AiFeature feature) =>
-        Values.TryGetValue(tier, out var features) && features.TryGetValue(feature, out var quota) ? quota : 0;
 }

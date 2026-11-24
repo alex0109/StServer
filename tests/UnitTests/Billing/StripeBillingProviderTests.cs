@@ -18,12 +18,12 @@ public class StripeBillingProviderTests
     private static readonly DateTime Now = new(2026, 10, 31, 12, 0, 0, DateTimeKind.Utc);
     private static readonly Guid UserId = Guid.Parse("8c6f3d2a-1b4e-4f5a-9c7d-0e1f2a3b4c5d");
 
-    private readonly FakeHandler _handler = new();
+    private readonly FakeStripeHandler _handler = new();
     private readonly Mock<IHttpClientFactory> _factory = new();
 
     public StripeBillingProviderTests()
     {
-        _factory.Setup(x => x.CreateClient(StripeBillingProvider.HttpClientName))
+        _factory.Setup(x => x.CreateClient(StripeApi.HttpClientName))
             .Returns(() => new HttpClient(_handler, disposeHandler: false) { BaseAddress = new Uri("https://api.stripe.com/") });
     }
 
@@ -40,11 +40,15 @@ public class StripeBillingProviderTests
         trialDays,
         new Uri("https://www.studytracker.xyz/"));
 
-    private StripeBillingProvider Provider(StripeSettings? settings = null) => new(
-        _factory.Object,
-        new MemoryCache(new MemoryCacheOptions()),
-        settings ?? Settings(),
-        NullLogger<StripeBillingProvider>.Instance);
+    private StripeBillingProvider Provider(StripeSettings? settings = null)
+    {
+        settings ??= Settings();
+        return new StripeBillingProvider(
+            new StripeApi(_factory.Object, settings, NullLogger<StripeApi>.Instance),
+            new MemoryCache(new MemoryCacheOptions()),
+            settings,
+            NullLogger<StripeBillingProvider>.Instance);
+    }
 
     private static string Signature(string secret, long timestamp, byte[] body)
     {
@@ -200,7 +204,7 @@ public class StripeBillingProviderTests
         request.Method.ShouldBe(HttpMethod.Post);
         request.RequestUri!.AbsolutePath.ShouldBe("/v1/checkout/sessions");
         request.Headers.Authorization!.Parameter.ShouldBe("sk_test_key");
-        request.Headers.GetValues("Stripe-Version").ShouldHaveSingleItem().ShouldBe(StripeBillingProvider.ApiVersion);
+        request.Headers.GetValues("Stripe-Version").ShouldHaveSingleItem().ShouldBe(StripeApi.ApiVersion);
 
         var form = _handler.Forms.Single();
         form["mode"].ShouldBe("subscription");
@@ -278,12 +282,99 @@ public class StripeBillingProviderTests
     {
         _handler.Answers.Enqueue("""{"url":"https://billing.stripe.com/p/session/test_1"}""");
 
-        (await Provider().CreatePortalUrlAsync("cus_1", "uk", TestContext.Current.CancellationToken)).ShouldBe("https://billing.stripe.com/p/session/test_1");
+        (await Provider().CreatePortalUrlAsync("cus_1", "uk", cancellationToken: TestContext.Current.CancellationToken)).ShouldBe("https://billing.stripe.com/p/session/test_1");
 
         _handler.Requests.Single().RequestUri!.AbsolutePath.ShouldBe("/v1/billing_portal/sessions");
         var form = _handler.Forms.Single();
         form["customer"].ShouldBe("cus_1");
         form["return_url"].ShouldBe("https://www.studytracker.xyz/limits");
+    }
+
+    [Fact]
+    public async Task Portal_ChangePlan_OpensOnSwitchingPlans()
+    {
+        _handler.Answers.Enqueue("""{"url":"https://billing.stripe.com/p/session/switch"}""");
+
+        (await Provider().CreatePortalUrlAsync("cus_1", "uk", "sub_1", TestContext.Current.CancellationToken))
+            .ShouldBe("https://billing.stripe.com/p/session/switch");
+
+        var form = _handler.Forms.Single();
+        form["flow_data[type]"].ShouldBe("subscription_update");
+        form["flow_data[subscription_update][subscription]"].ShouldBe("sub_1");
+        form["flow_data[after_completion][redirect][return_url]"].ShouldBe("https://www.studytracker.xyz/limits");
+    }
+
+    [Fact]
+    public async Task Portal_ChangePlan_WhenSwitchingIsOff_OpensTheUsualPortal()
+    {
+        _handler.Statuses.Enqueue(HttpStatusCode.BadRequest);
+        _handler.Answers.Enqueue("""{"error":{"message":"The subscription update feature in the portal configuration is disabled."}}""");
+        _handler.Answers.Enqueue("""{"url":"https://billing.stripe.com/p/session/usual"}""");
+
+        (await Provider().CreatePortalUrlAsync("cus_1", "uk", "sub_1", TestContext.Current.CancellationToken))
+            .ShouldBe("https://billing.stripe.com/p/session/usual");
+
+        _handler.Forms.Count.ShouldBe(2);
+        _handler.Forms[1].ContainsKey("flow_data[type]").ShouldBeFalse();
+    }
+
+    private static byte[] CheckoutEvent(string mode, string paymentStatus, string kind = "ai_credits") => Encoding.UTF8.GetBytes($$$"""
+        {"id":"evt_c1","type":"checkout.session.completed","created":{{{Unix(Now)}}},
+         "data":{"object":{"id":"cs_1","object":"checkout.session","mode":"{{{mode}}}","payment_status":"{{{paymentStatus}}}",
+           "payment_intent":"pi_1","amount_total":500,"metadata":{"kind":"{{{kind}}}","user_id":"{{{UserId}}}","pack_id":"medium"} } } }
+        """);
+
+    [Fact]
+    public void APaidCreditCheckout_IsAPurchase_OthersAreNot()
+    {
+        var purchase = Provider().ParseCreditEvent(CheckoutEvent("payment", "paid")).ShouldNotBeNull();
+
+        purchase.Kind.ShouldBe(CreditEventKind.Purchase);
+        purchase.UserId.ShouldBe(UserId);
+        purchase.PackId.ShouldBe("medium");
+        purchase.SessionId.ShouldBe("cs_1");
+        purchase.Reference.ShouldBe("pi_1");
+
+        Provider().ParseCreditEvent(CheckoutEvent("payment", "unpaid")).ShouldBeNull();
+        Provider().ParseCreditEvent(CheckoutEvent("subscription", "paid")).ShouldBeNull();
+        Provider().ParseCreditEvent(CheckoutEvent("payment", "paid", kind: "other")).ShouldBeNull();
+        // A subscription event is no credit event, and the other way round
+        Provider().ParseEvent(CheckoutEvent("payment", "paid")).ShouldBeNull();
+    }
+
+    [Fact]
+    public void ARefundedCharge_CarriesItsPaymentAndAmounts()
+    {
+        var body = Encoding.UTF8.GetBytes($$"""
+            {"id":"evt_r1","type":"charge.refunded","created":{{Unix(Now)}},
+             "data":{"object":{"id":"ch_1","object":"charge","payment_intent":"pi_1","amount":500,"amount_refunded":250} } }
+            """);
+
+        var refund = Provider().ParseCreditEvent(body).ShouldNotBeNull();
+
+        refund.Kind.ShouldBe(CreditEventKind.Refund);
+        refund.Reference.ShouldBe("pi_1");
+        refund.Amount.ShouldBe(500);
+        refund.AmountRefunded.ShouldBe(250);
+    }
+
+    [Fact]
+    public async Task CreditCheckout_IsAOneOffPaymentOfTheServersPack()
+    {
+        _handler.Answers.Enqueue("""{"url":"https://checkout.stripe.com/c/pay/cs_1"}""");
+
+        (await Provider().CreateCreditCheckoutUrlAsync(
+                new CreditCheckout(UserId, "ann@example.com", "medium", 500, 5m, "USD", null, "uk"), TestContext.Current.CancellationToken))
+            .ShouldBe("https://checkout.stripe.com/c/pay/cs_1");
+
+        var form = _handler.Forms.Single();
+        form["mode"].ShouldBe("payment");
+        form["line_items[0][price_data][currency]"].ShouldBe("usd");
+        form["line_items[0][price_data][unit_amount]"].ShouldBe("500");
+        form["metadata[user_id]"].ShouldBe(UserId.ToString());
+        form["metadata[pack_id]"].ShouldBe("medium");
+        form["metadata[kind]"].ShouldBe("ai_credits");
+        form["success_url"].ShouldBe("https://www.studytracker.xyz/limits?credits=success");
     }
 
     [Fact]
@@ -345,31 +436,6 @@ public class StripeBillingProviderTests
         Provider(Settings() with { SiteUrl = null }).IsConfigured.ShouldBeFalse();
         Provider(Settings() with { Prices = new Dictionary<(BillingPlan, BillingInterval), string>() }).IsConfigured.ShouldBeFalse();
         Provider().IsConfigured.ShouldBeTrue();
-    }
-
-    private sealed class FakeHandler : HttpMessageHandler
-    {
-        public Queue<string> Answers { get; } = new();
-        public Queue<HttpStatusCode> Statuses { get; } = new();
-        public Func<string, string>? Respond { get; set; }
-        public List<HttpRequestMessage> Requests { get; } = [];
-        public List<Dictionary<string, string>> Forms { get; } = [];
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            Requests.Add(request);
-            if (request.Content is not null)
-            {
-                var text = await request.Content.ReadAsStringAsync(cancellationToken);
-                Forms.Add(text.Split('&', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(pair => pair.Split('=', 2))
-                    .ToDictionary(pair => Uri.UnescapeDataString(pair[0].Replace('+', ' ')), pair => Uri.UnescapeDataString(pair[1].Replace('+', ' '))));
-            }
-
-            var body = Respond?.Invoke(request.RequestUri!.AbsolutePath) ?? (Answers.Count > 0 ? Answers.Dequeue() : "{}");
-            var status = Statuses.Count > 0 ? Statuses.Dequeue() : HttpStatusCode.OK;
-            return new HttpResponseMessage(status) { Content = new StringContent(body) };
-        }
     }
 }
 
