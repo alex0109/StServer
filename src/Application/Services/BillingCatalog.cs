@@ -1,4 +1,4 @@
-using Application.Ai;
+using Application.Ai.Pricing;
 using Application.Billing;
 using Application.DTOs.Billing;
 using Application.Exceptions;
@@ -14,18 +14,18 @@ public class BillingCatalog : IBillingCatalog
 {
     private readonly IEnumerable<IBillingProvider> _providers;
     private readonly ContentLimitsOptions _limits;
-    private readonly AiOptions _ai;
+    private readonly PricingOptions _pricing;
     private readonly ILogger<BillingCatalog> _logger;
 
     public BillingCatalog(
         IEnumerable<IBillingProvider> providers,
         ContentLimitsOptions limits,
-        AiOptions ai,
+        PricingOptions pricing,
         ILogger<BillingCatalog> logger)
     {
         _providers = providers;
         _limits = limits;
-        _ai = ai;
+        _pricing = pricing;
         _logger = logger;
     }
 
@@ -48,7 +48,8 @@ public class BillingCatalog : IBillingCatalog
                         x.CurrencyAmounts ?? new Dictionary<string, long> { [x.Currency] = x.Amount }))
                     .ToList(),
                 _limits.For(tier),
-                Enum.GetValues<AiFeature>().ToDictionary(feature => feature, feature => _ai.GetMonthlyQuota(tier, feature))))
+                Enum.GetValues<AiFeature>().ToDictionary(feature => feature, feature => _pricing.QuotaOf(tier, feature)),
+                _pricing.PlanOf(tier)?.LifetimeTrial.ToDictionary() ?? []))
             .ToList();
 
         return new BillingPlansDto(prices.Count > 0, plans);

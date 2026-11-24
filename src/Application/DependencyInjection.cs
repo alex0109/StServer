@@ -12,6 +12,7 @@ using Application.Schedulers;
 using Application.Schedulers.Fsrs;
 using Application.ScoreCalculators;
 using Application.Services;
+using Application.Ai.Pricing;
 using Application.Services.Ai;
 
 namespace Application;
@@ -26,8 +27,10 @@ public static class DependencyInjection
         NotificationOptions? notificationOptions = null,
         AiPricingOptions? aiPricingOptions = null,
         ReviewOptions? reviewOptions = null,
-        ContentLimitsOptions? contentLimitsOptions = null)
+        ContentLimitsOptions? contentLimitsOptions = null,
+        PricingOptions? pricingOptions = null)
     {
+        services.AddSingleton(pricingOptions ?? new PricingOptions());
         services.AddScoped<IMaterialService, MaterialService>();
         services.AddScoped<IQuestionService, QuestionService>();
         services.AddScoped<IAssessmentService, AssessmentService>();
@@ -60,13 +63,17 @@ public static class DependencyInjection
         services.AddScoped<ILibraryAdminService, LibraryAdminService>();
         services.AddSingleton(aiPricingOptions ?? new AiPricingOptions());
         services.AddScoped<IAdminStatsService, AdminStatsService>();
+        services.AddScoped<IAdminBillingStatsService, AdminBillingStatsService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserProfileService, UserProfileService>();
         services.AddScoped<IBillingService, BillingService>();
+        services.AddScoped<ICreditService, CreditService>();
+        services.AddScoped<IWordTranslationService, WordTranslationService>();
         services.AddScoped<IBillingCatalog, BillingCatalog>();
         services.AddScoped<IDuoService, DuoService>();
         services.AddScoped<IMaterialImportService, MaterialImportService>();
         services.AddScoped<ISubscriptionAdminService, SubscriptionAdminService>();
+        services.AddScoped<IPromoCodeAdminService, PromoCodeAdminService>();
         services.AddScoped<ILearningSettingsProvider, LearningSettingsProvider>();
 
         services.AddSingleton(notificationOptions ?? new NotificationOptions());

@@ -36,6 +36,7 @@ public static class LibrarySnapshotMapper
                     TextContent = note.TextContent is null ? null : RichTextJson.ToClient(note.TextContent.RootElement),
                     DrawingContent = note.DrawingContent?.RootElement.Clone(),
                     EssayTask = note.Type == NoteType.essay ? note.EssayTask : null,
+                    EssayFormat = note.Type == NoteType.essay ? note.EssayFormat : null,
                 };
             })
             .ToList();
@@ -145,6 +146,8 @@ public static class LibrarySnapshotMapper
                 DrawingContent = ToDocument(note.DrawingContent),
                 // A task on any other note would be refused by the database
                 EssayTask = note.Type == NoteType.essay ? EssayRules.NormalizeTask(note.EssayTask) : null,
+                // An unknown format makes it a general essay rather than refusing the material
+                EssayFormat = note.Type == NoteType.essay ? EssayFormat.FromCode(note.EssayFormat)?.Code : null,
                 Order = order++,
                 // A millisecond apart (the database keeps microseconds), so notes keep the library order
                 CreatedAt = now.AddMilliseconds(order),

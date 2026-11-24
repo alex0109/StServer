@@ -149,7 +149,7 @@ public class MaterialImportService : IMaterialImportService
                 materialId, new QuestionGenerateDto { Count = GeneratedQuestions }, cancellationToken);
             return (questions?.Count ?? 0, null);
         }
-        catch (AiQuotaExceededException)
+        catch (AiUsageDeniedException)
         {
             return (0, "quota");
         }

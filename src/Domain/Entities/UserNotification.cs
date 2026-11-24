@@ -18,5 +18,8 @@ public class UserNotification
     public required JsonDocument Data { get; set; }
     public required DateTime CreatedAt { get; set; }
     public DateTime? ReadAt { get; set; }
+    // Removed by the user: hidden from the feed, but kept so the same reminder for the same period
+    // isn't made again; the cleanup job deletes it with the other old ones
+    public DateTime? DismissedAt { get; set; }
     public DateTime? EmailSentAt { get; set; }
 }

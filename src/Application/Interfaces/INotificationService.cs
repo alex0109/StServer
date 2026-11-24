@@ -9,6 +9,9 @@ public interface INotificationService
     Task<NotificationFeedDto> GetFeedAsync();
     Task<bool> MarkReadAsync(Guid notificationId);
     Task MarkAllReadAsync();
+    // Removes one from the feed; false when it isn't the user's
+    Task<bool> DismissAsync(Guid notificationId);
+    Task DismissAllAsync();
 }
 
 // Run by the hourly job

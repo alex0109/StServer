@@ -30,18 +30,22 @@ public class CheckoutCreateDto
 public class PortalCreateDto
 {
     public string? Language { get; set; }
+    // Open the portal on choosing another plan
+    public bool ChangePlan { get; set; }
 }
 
 // Amounts: the same price in every currency set on it, so the page can show the buyer's own.
 // Stripe's checkout decides the currency by where the buyer is
 public record BillingPriceDto(BillingInterval Interval, long Amount, string Currency, IReadOnlyDictionary<string, long> Amounts);
 
-// One tier: its prices (none for Free) and what it allows. Null limits mean no limit
+// One tier: its prices (none for Free) and what it allows. Null limits mean no limit. AI is per
+// person per billing period, in units: requests, words, podcasts or video minutes; AiTrial once per account
 public record BillingPlanDto(
     SubscriptionTier Tier,
     List<BillingPriceDto> Prices,
     TierLimits Limits,
-    Dictionary<AiFeature, int> AiPerMonth);
+    Dictionary<AiFeature, int> AiPerMonth,
+    Dictionary<AiFeature, int> AiTrial);
 
 public record BillingPlansDto(bool CheckoutAvailable, List<BillingPlanDto> Plans);
 
@@ -58,6 +62,8 @@ public class SubscriptionGrantDto
 
 public record AdminSubscriptionDto(
     Guid UserId,
+    // The sign-in email; null when the auth provider couldn't be asked
+    string? Email,
     SubscriptionTier Tier,
     SubscriptionTier EffectiveTier,
     SubscriptionStatus Status,
@@ -65,7 +71,9 @@ public record AdminSubscriptionDto(
     // Opens the customer in the provider's dashboard
     string? ProviderCustomerId,
     DateTime? CurrentPeriodEnd,
+    DateTime? TrialEndsAt,
     bool CancelAtPeriodEnd,
     string? GrantReason,
     Guid? GrantedByAdminId,
+    DateTime CreatedAt,
     DateTime UpdatedAt);

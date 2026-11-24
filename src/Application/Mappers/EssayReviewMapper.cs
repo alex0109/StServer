@@ -9,7 +9,7 @@ public static class EssayReviewMapper
     {
         Score = review.Score,
         Criteria = review.Criteria
-            .Select(x => new EssayCriterionScoreDto { Criterion = x.Criterion, Score = x.Score, Comment = x.Comment })
+            .Select(x => new EssayCriterionScoreDto { Criterion = x.Criterion, Score = x.Score, Comment = x.Comment, Band = x.Band })
             .ToList(),
         Strengths = review.Strengths.ToList(),
         Improvements = review.Improvements.ToList(),
@@ -25,5 +25,7 @@ public static class EssayReviewMapper
         WordCount = review.WordCount,
         IsTextTruncated = review.IsTextTruncated,
         CheckedAt = review.CheckedAt,
+        Format = review.Format,
+        ExamResult = review.ExamResult,
     };
 }

@@ -93,6 +93,17 @@ public class DailyLimitTests
     }
 
     [Fact]
+    public async Task StreakFreezes_AreTwoAMonthForEveryone()
+    {
+        Profile(newPerDay: 5);
+
+        var settings = await Provider().GetAsync(_userId);
+
+        settings.StreakFreezesPerMonth.ShouldBe(2);
+        (await Provider().GetAsync(Guid.NewGuid())).StreakFreezesPerMonth.ShouldBe(2);
+    }
+
+    [Fact]
     public async Task NoSettings_NoLimits()
     {
         _statistics.Setup(x => x.CountReviewsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync((500, 200));

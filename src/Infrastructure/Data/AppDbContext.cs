@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Domain.Entities;
+using Domain.Utility.Ai;
 using Domain.Utility.Material;
 
 namespace Infrastructure.Data;
@@ -38,6 +39,8 @@ public class AppDbContext : DbContext
     public DbSet<DuoMembership> DuoMemberships => Set<DuoMembership>();
     public DbSet<AiUsage> AiUsages => Set<AiUsage>();
     public DbSet<AiUsageMonthly> AiUsageMonthly => Set<AiUsageMonthly>();
+    public DbSet<CreditWallet> CreditWallets => Set<CreditWallet>();
+    public DbSet<CreditTransaction> CreditTransactions => Set<CreditTransaction>();
     public DbSet<UserNotificationSettings> UserNotificationSettings => Set<UserNotificationSettings>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();
     public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
@@ -214,11 +217,11 @@ public class AppDbContext : DbContext
                     ("Type" = 4 AND "DrawingContent" IS NULL AND "FileId" IS NULL)
                     """);
 
-                // Only an essay has a task and a review
+                // Only an essay has a task, an exam format and a review
                 t.HasCheckConstraint(
                     "CK_Note_EssayFields",
                     """
-                    "Type" = 4 OR ("EssayTask" IS NULL AND "EssayReview" IS NULL)
+                    "Type" = 4 OR ("EssayTask" IS NULL AND "EssayReview" IS NULL AND "EssayFormat" IS NULL)
                     """);
             });
         });
@@ -416,6 +419,26 @@ public class AppDbContext : DbContext
             entity.HasIndex(x => new { x.UserId, x.Feature, x.CreatedAt });
             entity.HasIndex(x => new { x.Status, x.CreatedAt });
             entity.HasIndex(x => x.CreatedAt);
+            // Lifetime trial and credit block counts
+            entity.HasIndex(x => new { x.UserId, x.Source, x.Feature });
+
+            // Rows from before units and sources: one request paid from the quota
+            entity.Property(x => x.Units).HasDefaultValue(1);
+            entity.Property(x => x.Source).HasDefaultValue(AiUsageSource.Quota);
+            entity.Property(x => x.EstimatedCost).HasPrecision(12, 6);
+        });
+
+        modelBuilder.Entity<CreditWallet>(entity =>
+        {
+            entity.HasKey(x => x.UserId);
+        });
+
+        modelBuilder.Entity<CreditTransaction>(entity =>
+        {
+            entity.Property(x => x.Id).ValueGeneratedNever();
+            entity.HasIndex(x => x.IdempotencyKey).IsUnique();
+            entity.HasIndex(x => new { x.UserId, x.CreatedAt });
+            entity.HasIndex(x => x.StripeReference);
         });
 
         modelBuilder.Entity<AiUsageMonthly>(entity =>

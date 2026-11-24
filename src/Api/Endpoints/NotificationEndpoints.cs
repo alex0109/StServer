@@ -16,6 +16,8 @@ public static class NotificationEndpoints
         group.MapPut("/settings", UpdateSettings);
         group.MapPost("/{notificationId:guid}/read", MarkRead);
         group.MapPost("/read-all", MarkAllRead);
+        group.MapDelete("/{notificationId:guid}", Dismiss);
+        group.MapDelete("/", DismissAll);
 
         static async Task<IResult> GetFeed(INotificationService service)
         {
@@ -35,6 +37,17 @@ public static class NotificationEndpoints
         static async Task<IResult> MarkRead(Guid notificationId, INotificationService service)
         {
             return await service.MarkReadAsync(notificationId) ? TypedResults.NoContent() : TypedResults.NotFound();
+        }
+
+        static async Task<IResult> Dismiss(Guid notificationId, INotificationService service)
+        {
+            return await service.DismissAsync(notificationId) ? TypedResults.NoContent() : TypedResults.NotFound();
+        }
+
+        static async Task<IResult> DismissAll(INotificationService service)
+        {
+            await service.DismissAllAsync();
+            return TypedResults.NoContent();
         }
 
         static async Task<IResult> MarkAllRead(INotificationService service)

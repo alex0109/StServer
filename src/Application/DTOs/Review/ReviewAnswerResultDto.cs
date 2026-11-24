@@ -9,6 +9,7 @@ public class ReviewAnswerResultDto
 {
     public required Guid QuestionId { get; init; }
     public required bool IsCorrect { get; init; }
+    public bool SmartCheckLimitReached { get; init; }
     public required double Score { get; init; }
     public required EvaluationMethod Method { get; init; }
     public required ReviewRating Rating { get; init; }

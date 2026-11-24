@@ -16,6 +16,7 @@ public class SubscriptionAdminService : ISubscriptionAdminService
     private readonly IBillingRepository _repo;
     private readonly IAdminAudit _audit;
     private readonly IAdminAlerts _alerts;
+    private readonly IAuthUserAdmin _auth;
     private readonly IUserContext _user;
     private readonly TimeProvider _time;
 
@@ -23,20 +24,25 @@ public class SubscriptionAdminService : ISubscriptionAdminService
         IBillingRepository repo,
         IAdminAudit audit,
         IAdminAlerts alerts,
+        IAuthUserAdmin auth,
         IUserContext user,
         TimeProvider time)
     {
         _repo = repo;
         _audit = audit;
         _alerts = alerts;
+        _auth = auth;
         _user = user;
         _time = time;
     }
 
-    public async Task<List<AdminSubscriptionDto>> ListAsync(int take)
+    public async Task<List<AdminSubscriptionDto>> ListAsync(int take, CancellationToken cancellationToken = default)
     {
         var now = _time.GetUtcNow().UtcDateTime;
-        return (await _repo.ListSubscriptionsAsync(take)).Select(x => ToDto(x, now)).ToList();
+        var subscriptions = await _repo.ListSubscriptionsAsync(take);
+        var emails = await _auth.GetEmailsAsync(subscriptions.Select(x => x.UserId).ToList(), cancellationToken);
+
+        return subscriptions.Select(x => ToDto(x, now, emails.GetValueOrDefault(x.UserId))).ToList();
     }
 
     public async Task<AdminSubscriptionDto> GrantAsync(SubscriptionGrantDto dto)
@@ -46,6 +52,8 @@ public class SubscriptionAdminService : ISubscriptionAdminService
 
         if (dto.UserId == Guid.Empty) throw new BadRequestException("Enter the user id");
         if (dto.Tier == SubscriptionTier.Free) throw new BadRequestException("Free needs no grant, revoke instead");
+        // Pro isn't sold any more; grants made earlier run out on their own
+        if (dto.Tier is not (SubscriptionTier.Plus or SubscriptionTier.Duo)) throw new BadRequestException("Only Plus or Duo can be given");
         if (dto.Until is { } until && until <= now) throw new BadRequestException("The end date must be in the future");
         if (reason.Length is < 3 or > MaxReasonLength)
             throw new BadRequestException($"Write a reason, 3 to {MaxReasonLength} characters");
@@ -85,7 +93,7 @@ public class SubscriptionAdminService : ISubscriptionAdminService
         await _audit.RecordAsync(AdminAction.GrantSubscription, dto.UserId, $"{dto.Tier} {period}: {reason}");
         await _alerts.SubscriptionChangedAsync($"Видано {dto.Tier} {period} користувачу {dto.UserId}. Причина: {reason}");
 
-        return ToDto(subscription, now);
+        return ToDto(subscription, now, null);
     }
 
     public async Task<bool> RevokeAsync(Guid userId)
@@ -103,16 +111,19 @@ public class SubscriptionAdminService : ISubscriptionAdminService
         return true;
     }
 
-    private static AdminSubscriptionDto ToDto(UserSubscription subscription, DateTime now) => new(
+    private static AdminSubscriptionDto ToDto(UserSubscription subscription, DateTime now, string? email) => new(
         subscription.UserId,
+        email,
         subscription.Tier,
         SubscriptionRules.EffectiveTier(subscription, now),
         subscription.Status,
         subscription.Provider,
         subscription.ProviderCustomerId,
         subscription.CurrentPeriodEnd,
+        subscription.TrialEndsAt,
         subscription.CancelAtPeriodEnd,
         subscription.GrantReason,
         subscription.GrantedByAdminId,
+        subscription.CreatedAt,
         subscription.UpdatedAt);
 }

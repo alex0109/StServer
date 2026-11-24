@@ -51,6 +51,8 @@ public static class AccountDataPolicy
         DeleteByUser<UserNotificationSettings>(),
         DeleteByUser<UserProfile>(),
         DeleteByUser<UserSubscription>(),
+        // Credits left are gone with the account
+        DeleteByUser<CreditWallet>(),
 
         new(typeof(DuoMembership), AccountDataAction.Delete,
             "A payer's Duo goes with them; a member leaves the payer's Duo, which stays",
@@ -94,6 +96,12 @@ public static class AccountDataPolicy
         new(typeof(AiUsageMonthly), AccountDataAction.Anonymize,
             "Monthly AI totals for cost reports",
             (db, userId, tombstone) => db.AiUsageMonthly
+                .Where(x => x.UserId == userId)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, tombstone))),
+
+        new(typeof(CreditTransaction), AccountDataAction.Anonymize,
+            "Credit purchases and their use stay for accounting; the rows get an id that belongs to nobody",
+            (db, userId, tombstone) => db.CreditTransactions
                 .Where(x => x.UserId == userId)
                 .ExecuteUpdateAsync(s => s.SetProperty(x => x.UserId, tombstone))),
 

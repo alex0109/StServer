@@ -9,4 +9,7 @@ public static class VideoRules
     public const double FramesPerSecond = 0.5;
     public const int MaxSegmentLength = 500;
     public const int MaxSegments = 1500;
+
+    // Video quota and credits count started minutes of what is processed
+    public static int Minutes(int seconds) => Math.Max(1, (Math.Min(seconds, MaxSeconds) + 59) / 60);
 }

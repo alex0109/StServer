@@ -1,3 +1,5 @@
+using Domain.Utility.Subscription;
+using Application.Ai.Pricing;
 using Application.Admin;
 using Application.DTOs.Admin;
 using Application.Interfaces;
@@ -15,13 +17,83 @@ public class AdminStatsService : IAdminStatsService
 
     private readonly IAdminStatsRepository _repo;
     private readonly AiPricingOptions _pricing;
+    private readonly IAuthUserAdmin _auth;
     private readonly TimeProvider _time;
+    private readonly PricingOptions _plans;
+    private readonly ISubscriptionTierProvider? _tiers;
 
-    public AdminStatsService(IAdminStatsRepository repo, AiPricingOptions pricing, TimeProvider time)
+    public AdminStatsService(
+        IAdminStatsRepository repo,
+        AiPricingOptions pricing,
+        IAuthUserAdmin auth,
+        TimeProvider time,
+        PricingOptions? plans = null,
+        ISubscriptionTierProvider? tiers = null)
     {
         _repo = repo;
         _pricing = pricing;
+        _auth = auth;
         _time = time;
+        _plans = plans ?? new PricingOptions();
+        _tiers = tiers;
+    }
+
+    public async Task<AdminAiMarginsDto> GetAiMarginsAsync()
+    {
+        var now = _time.GetUtcNow().UtcDateTime;
+        var monthStart = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        var window = await _repo.GetAiCostsAsync(now.AddDays(-Window));
+        var week = await _repo.GetAiCostsAsync(now.AddDays(-7));
+
+        var features = window
+            .GroupBy(x => x.Feature)
+            .Select(g =>
+            {
+                // Only requests with a known price tell what a unit really costs
+                var priced = g.Where(x => x.HasCost).ToList();
+                var units = priced.Sum(x => x.Units);
+                var cost = priced.Sum(x => x.Cost);
+                return new AdminAiFeatureCostDto(
+                    g.Key,
+                    g.Sum(x => x.Requests),
+                    g.Sum(x => x.Units),
+                    Math.Round(cost, 4),
+                    units == 0 ? 0 : Math.Round(cost / units, 6),
+                    Math.Round(_plans.BlendedCost(g.Key), 6));
+            })
+            .OrderByDescending(x => x.ActualCost)
+            .ToList();
+
+        var users = await _repo.GetUserCostsAsync(monthStart, _pricing.SpeechPerMillionCharacters ?? 0, 20);
+        var emails = await _auth.GetEmailsAsync(users.Select(x => x.UserId).ToList());
+        var topUsers = new List<AdminAiUserCostDto>();
+        foreach (var user in users)
+        {
+            var tier = _tiers is null ? SubscriptionTier.Free : await _tiers.GetTierAsync(user.UserId);
+            topUsers.Add(new AdminAiUserCostDto(
+                user.UserId, emails.GetValueOrDefault(user.UserId), tier, Math.Round(user.Cost, 4), Math.Round(_plans.MonthlyNetPerSeat(tier), 4)));
+        }
+
+        var (sold, spent) = await _repo.GetCreditFlowAsync(monthStart);
+
+        return new AdminAiMarginsDto(
+            monthStart,
+            Math.Round(FallbackShare(week), 4),
+            _plans.FallbackShare,
+            features,
+            topUsers,
+            sold,
+            spent,
+            now);
+    }
+
+    // Among requests of features that have a fallback, the share it answered
+    public decimal FallbackShare(IEnumerable<AiCostRow> rows)
+    {
+        var withFallback = rows.Where(x => _plans.FeatureOf(x.Feature)?.FallbackUnitCost is not null).ToList();
+        var total = withFallback.Sum(x => x.Requests);
+        return total == 0 ? 0 : (decimal)withFallback.Where(x => x.IsFallback).Sum(x => x.Requests) / total;
     }
 
     public async Task<AdminOverviewDto> GetOverviewAsync()
@@ -152,6 +224,9 @@ public class AdminStatsService : IAdminStatsService
             .OrderByDescending(x => x.Requests)
             .Take(10)
             .ToList();
+        // Who they are, so a heavy user can be found without copying ids
+        var emails = await _auth.GetEmailsAsync(topUsers.Select(x => x.UserId).ToList());
+        topUsers = topUsers.Select(x => x with { Email = emails.GetValueOrDefault(x.UserId) }).ToList();
 
         return new AdminAiStatsDto(totals, tokens, cost, byFeature, byModel, days, topUsers, now);
     }

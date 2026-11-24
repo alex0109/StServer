@@ -46,16 +46,19 @@ public class AnswerEvaluationService : IAnswerEvaluationService
         if (fuzzy.Score < _aiOptions.GradingGrayZoneMin)
             return result;
 
-        var aiScore = await _semanticGrader.GradeAsync(question, correctAnswer, userAnswer, cancellationToken);
+        var grade = await _semanticGrader.GradeAsync(question, correctAnswer, userAnswer, cancellationToken);
 
         // Grading must never break answering: without AI the usual result stays
-        if (aiScore is null)
+        if (grade.Score is not { } aiScore)
+        {
+            result.SmartCheckLimitReached = grade.LimitReached;
             return result;
+        }
 
         return new AnswerEvaluationResult
         {
             IsCorrect = aiScore >= _aiOptions.GradingPassScore,
-            Score = aiScore.Value,
+            Score = aiScore,
             Method = EvaluationMethod.AI
         };
     }

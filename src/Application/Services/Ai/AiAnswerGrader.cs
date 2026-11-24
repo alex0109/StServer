@@ -1,3 +1,4 @@
+using Application.Exceptions;
 using Application.Ai.Prompts;
 using Application.Interfaces;
 
@@ -12,17 +13,26 @@ public class AiAnswerGrader : IAnswerSemanticGrader
         _ai = ai;
     }
 
-    public async Task<int?> GradeAsync(
+    public async Task<SemanticGrade> GradeAsync(
         string question,
         string referenceAnswer,
         string userAnswer,
         CancellationToken cancellationToken = default)
     {
-        // Grading is optional: without quota or providers the usual result stays
-        var result = await _ai.TryRunAsync(
-            new AnswerGradingPrompt(question, referenceAnswer, userAnswer),
-            cancellationToken);
-
-        return result?.Value;
+        // Grading is optional: over the quota or without providers the plain check stays, and the
+        // answer check is never sold for credits
+        try
+        {
+            var result = await _ai.RunAsync(new AnswerGradingPrompt(question, referenceAnswer, userAnswer), cancellationToken);
+            return new SemanticGrade(result.Value);
+        }
+        catch (AiUsageDeniedException)
+        {
+            return new SemanticGrade(null, LimitReached: true);
+        }
+        catch (AiUnavailableException)
+        {
+            return new SemanticGrade(null);
+        }
     }
 }

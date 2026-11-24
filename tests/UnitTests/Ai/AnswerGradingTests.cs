@@ -39,7 +39,7 @@ public class AnswerGradingTests
     public async Task GrayZone_AiAccepts_AnswerIsCorrect()
     {
         _grader.Setup(x => x.GradeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(92);
+            .ReturnsAsync(new SemanticGrade(92));
 
         var result = await _sut.EvaluateAnswerAsync(
             "Що таке фотосинтез?",
@@ -56,7 +56,7 @@ public class AnswerGradingTests
     public async Task GrayZone_AiGivesPartialScore_AnswerIsWrongWithScore()
     {
         _grader.Setup(x => x.GradeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(55);
+            .ReturnsAsync(new SemanticGrade(55));
 
         var result = await _sut.EvaluateAnswerAsync(
             "Що таке фотосинтез?",
@@ -73,7 +73,7 @@ public class AnswerGradingTests
     public async Task GrayZone_AiUnavailable_KeepsUsualResult()
     {
         _grader.Setup(x => x.GradeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((int?)null);
+            .ReturnsAsync(new SemanticGrade(null));
 
         var result = await _sut.EvaluateAnswerAsync(
             "Що таке фотосинтез?",
@@ -89,7 +89,7 @@ public class AnswerGradingTests
     public async Task CloseAnswerWithAnotherNumber_IsCheckedByAi()
     {
         _grader.Setup(x => x.GradeAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(10);
+            .ReturnsAsync(new SemanticGrade(10));
 
         var result = await _sut.EvaluateAnswerAsync(
             "When did World War II end?",
@@ -141,5 +141,24 @@ public class AnswerGradingTests
             TestContext.Current.CancellationToken);
 
         result.ShouldBeEquivalentTo(new AnswerEvaluationResult { IsCorrect = false, Score = 0, Method = EvaluationMethod.None });
+    }
+
+    // Over the AI answer check quota: never a 402 and no credits, the plain check decides and says so
+    [Fact]
+    public async Task OverTheAiCheckQuota_ThePlainCheckDecides_WithAHint()
+    {
+        var ai = new Mock<IAiService>();
+        ai.Setup(x => x.RunAsync(It.IsAny<Application.Ai.Prompts.IAiPrompt<int>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new Application.Exceptions.AiUsageDeniedException(
+                Application.Exceptions.AiDenialCode.QuotaExhausted, Domain.Utility.Ai.AiFeature.AnswerGrading, "limit"));
+        var sut = new AnswerEvaluationService(
+            new AnswerNormalizer(), [new ExactValidationStep(), new FuzzyValidationStep()], new Application.Services.Ai.AiAnswerGrader(ai.Object), new AiOptions());
+
+        var result = await sut.EvaluateAnswerAsync(
+            "What does photosynthesis do?", "Фотосинтез перетворює світло на хімічну енергію", "Рослини з світла роблять енергію",
+            TestContext.Current.CancellationToken);
+
+        result.Method.ShouldNotBe(EvaluationMethod.AI);
+        result.SmartCheckLimitReached.ShouldBeTrue();
     }
 }

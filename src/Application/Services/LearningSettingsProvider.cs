@@ -34,7 +34,7 @@ public class LearningSettingsProvider : ILearningSettingsProvider
             profile?.DailyReminderHour ?? _notifications.DailyReminderHour,
             profile?.StreakReminderHour ?? _notifications.StreakReminderHour,
             profile?.DailyGoal,
-            profile?.StreakFreezesPerMonth ?? LearningRules.DefaultStreakFreezesPerMonth);
+            LearningRules.StreakFreezesPerMonth);
 
         _cache[userId] = settings;
         return settings;

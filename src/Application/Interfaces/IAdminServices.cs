@@ -1,4 +1,5 @@
 using Application.DTOs.Admin;
+using Domain.Entities;
 using Domain.Utility.Admin;
 
 namespace Application.Interfaces;
@@ -41,6 +42,28 @@ public interface IAdminStatsRepository
     Task<List<SpeechUsageGroupRow>> GetSpeechUsageAsync(DateTime since);
 
     Task<List<SpeechUsageGroupRow>> GetSpeechUsageTotalsAsync();
+
+    // Succeeded AI requests since a moment, grouped by feature and fallback
+    Task<List<AiCostRow>> GetAiCostsAsync(DateTime since);
+
+    // AI cost per user since a moment, voices of podcasts included, most expensive first
+    Task<List<AiUserCostRow>> GetUserCostsAsync(DateTime since, decimal speechPerMillion, int take);
+
+    // Credits bought and spent since a moment
+    Task<(int Sold, int Spent)> GetCreditFlowAsync(DateTime since);
+}
+
+// Read-only subscription data for the admin panel's billing page
+public interface IAdminBillingRepository
+{
+    // Every subscription row, ended ones too: there are only as many as users who ever had a plan
+    Task<List<UserSubscription>> ListSubscriptionsAsync();
+
+    // Payers whose Duo has a second person in it
+    Task<List<Guid>> ListDuoPayersWithMemberAsync();
+
+    // Provider webhooks since a moment, oldest first
+    Task<List<SubscriptionEventRow>> ListSubscriptionEventsAsync(DateTime since);
 }
 
 public interface IAdminStatsService
@@ -50,4 +73,11 @@ public interface IAdminStatsService
     Task<AdminAiStatsDto> GetAiAsync();
 
     Task<AdminPodcastStatsDto> GetPodcastsAsync();
+
+    Task<AdminAiMarginsDto> GetAiMarginsAsync();
+}
+
+public interface IAdminBillingStatsService
+{
+    Task<AdminBillingStatsDto> GetAsync(CancellationToken cancellationToken = default);
 }

@@ -20,6 +20,7 @@ public class BillingService : IBillingService
     private readonly IUserContext _user;
     private readonly TimeProvider _time;
     private readonly ILogger<BillingService> _logger;
+    private readonly ICreditService? _credits;
 
     public BillingService(
         IEnumerable<IBillingProvider> providers,
@@ -27,8 +28,10 @@ public class BillingService : IBillingService
         IBillingJobs jobs,
         IUserContext user,
         TimeProvider time,
-        ILogger<BillingService> logger)
+        ILogger<BillingService> logger,
+        ICreditService? credits = null)
     {
+        _credits = credits;
         _providers = providers;
         _repo = repo;
         _jobs = jobs;
@@ -58,21 +61,26 @@ public class BillingService : IBillingService
             return WebhookOutcome.BadSignature;
         }
 
+        // A subscription change, or a credit purchase or refund
         var parsed = billing.ParseEvent(body);
-        if (parsed is null)
+        var credit = parsed is null ? billing.ParseCreditEvent(body) : null;
+        if (parsed is null && credit is null)
         {
             _logger.LogInformation("Billing webhook from {Provider} skipped: not an event the app uses", billing.Name);
             return WebhookOutcome.Ignored;
         }
 
+        var type = parsed?.Type ?? credit!.Type;
         var stored = new SubscriptionEvent
         {
             Id = Guid.NewGuid(),
             Provider = billing.Provider,
-            ProviderEventId = parsed.EventId,
-            Type = parsed.Type.Length <= 100 ? parsed.Type : parsed.Type[..100],
-            UserId = parsed.UserId,
-            Payload = JsonSerializer.SerializeToDocument(parsed, EventJson),
+            ProviderEventId = parsed?.EventId ?? credit!.EventId,
+            Type = type.Length <= 100 ? type : type[..100],
+            UserId = parsed?.UserId ?? credit!.UserId,
+            Payload = parsed is not null
+                ? JsonSerializer.SerializeToDocument(parsed, EventJson)
+                : JsonSerializer.SerializeToDocument(credit, EventJson),
             ReceivedAt = now,
         };
 
@@ -89,6 +97,16 @@ public class BillingService : IBillingService
         if (stored is null || stored.ProcessedAt is not null) return;
 
         var now = _time.GetUtcNow().UtcDateTime;
+
+        if (BillingEventTypes.IsCredit(stored.Type))
+        {
+            var credit = stored.Payload.Deserialize<CreditEvent>(EventJson)!;
+            var outcome = _credits is null ? "Credits are not set up" : await _credits.ApplyAsync(credit);
+            Finish(stored, now, outcome);
+            await _repo.SaveChangesAsync();
+            return;
+        }
+
         var data = stored.Payload.Deserialize<BillingEvent>(EventJson)!;
 
         var subscription = data.SubscriptionId is not null
@@ -170,7 +188,7 @@ public class BillingService : IBillingService
             new BillingCheckout(_user.UserId, _user.Email, plan, interval, customerId, language));
     }
 
-    public async Task<string> CreatePortalAsync(string? language)
+    public async Task<string> CreatePortalAsync(string? language, bool changePlan = false)
     {
         var subscription = await _repo.GetSubscriptionAsync(_user.UserId);
         if (subscription?.ProviderCustomerId is not { } customerId)
@@ -181,7 +199,14 @@ public class BillingService : IBillingService
         var billing = Configured(subscription.Provider)
                       ?? throw new BillingUnavailableException("Payments are not set up yet");
 
-        return await billing.CreatePortalUrlAsync(customerId, language);
+        // Only a plan that still renews can be switched; a cancelled one is renewed in the portal first
+        var now = _time.GetUtcNow().UtcDateTime;
+        var switchable = changePlan
+                         && subscription is { ProviderSubscriptionId: not null, CancelAtPeriodEnd: false }
+                         && subscription.Status is not (SubscriptionStatus.Canceled or SubscriptionStatus.Expired)
+                         && SubscriptionRules.EffectiveTier(subscription, now) != SubscriptionTier.Free;
+
+        return await billing.CreatePortalUrlAsync(customerId, language, switchable ? subscription.ProviderSubscriptionId : null);
     }
 
     public async Task<BillingStatusDto> GetStatusAsync()

@@ -22,7 +22,8 @@ public enum EssayCorrectionCategory
     Style,
 }
 
-public record EssayCriterionScore(EssayCriterion Criterion, int Score, string Comment);
+// Band is set by IELTS checks only: the 0-9 band the score was taken from
+public record EssayCriterionScore(EssayCriterion Criterion, int Score, string Comment, int? Band = null);
 
 // "Original" is copied from the essay, so the editor can find and mark it
 public record EssayCorrection(string Original, string Correction, string Explanation, EssayCorrectionCategory Category);
@@ -41,4 +42,8 @@ public record EssayReview
     // Only the first part of a very long essay was checked
     public required bool IsTextTruncated { get; init; }
     public required DateTime CheckedAt { get; init; }
+    // The exam format it was checked for ("Ielts/B2/Letter"); null for the general check
+    public string? Format { get; init; }
+    // The estimated result on that exam's scale: an IELTS band like "6.5", or a level like "B1" or "below_A2"
+    public string? ExamResult { get; init; }
 }

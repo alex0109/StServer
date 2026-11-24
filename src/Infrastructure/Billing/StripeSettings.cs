@@ -1,5 +1,6 @@
 using System.Globalization;
 using Application.Billing;
+using Domain.Utility.Subscription;
 
 namespace Infrastructure.Billing;
 
@@ -36,6 +37,12 @@ public sealed record StripeSettings(
         [(BillingPlan.Duo, BillingInterval.Month)] = "STRIPE_PRICE_DUO_MONTHLY",
         [(BillingPlan.Duo, BillingInterval.Year)] = "STRIPE_PRICE_DUO_YEARLY",
     };
+
+    // The plan a configured price sells; null for a price the app doesn't know
+    public SubscriptionTier? TierOf(string? priceId) =>
+        Prices.FirstOrDefault(pair => pair.Value == priceId) is { Value: not null } match
+            ? match.Key.Plan == BillingPlan.Duo ? SubscriptionTier.Duo : SubscriptionTier.Plus
+            : null;
 
     public bool IsComplete => SecretKey is not null && WebhookSecret is not null && SiteUrl is not null && Prices.Count > 0;
 

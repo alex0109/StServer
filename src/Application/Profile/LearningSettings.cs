@@ -28,6 +28,6 @@ public static class LearningRules
     public const double MaxRetention = 0.97;
     public const int MaxNewCardsPerDay = 1000;
     public const int MaxReviewsPerDay = 5000;
-    public const int MaxStreakFreezes = 10;
-    public const int DefaultStreakFreezesPerMonth = 2;
+    // Missed days a month that don't break the streak: the same for everyone, not a setting
+    public const int StreakFreezesPerMonth = 2;
 }

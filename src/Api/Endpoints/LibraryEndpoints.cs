@@ -33,7 +33,8 @@ public static class LibraryEndpoints
         admin.MapPost("/requests/{requestId:guid}/approve", Approve);
         admin.MapPost("/requests/{requestId:guid}/reject", Reject);
         admin.MapPost("/items", Publish);
-        admin.MapPost("/items/import", ImportItem);
+        admin.MapPost("/items/import", ImportItem)
+            .WithBodyLimit(RequestLimits.LibraryImportBodyBytes);
         admin.MapDelete("/items/{itemId:guid}", Remove);
 
         static async Task<IResult> List(

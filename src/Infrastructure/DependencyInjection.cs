@@ -39,6 +39,8 @@ public static class DependencyInjection
         services.AddScoped<IFeedbackLogRepository, FeedbackLogRepository>();
         services.AddScoped<ILibraryRepository, LibraryRepository>();
         services.AddScoped<IAdminStatsRepository, AdminStatsRepository>();
+        services.AddScoped<IAdminBillingRepository, AdminBillingRepository>();
+        services.AddScoped<ICreditRepository, CreditRepository>();
         services.AddScoped<IAdminAudit, AdminAudit>();
         services.AddScoped<IAccountRepository, AccountRepository>();
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
@@ -53,13 +55,16 @@ public static class DependencyInjection
         services.AddSingleton<IAudioStorage>(_ => AzureBlobAudioStorage.FromEnvironment());
 
         // Stripe stays off until its keys and prices are in the environment
-        services.AddHttpClient(StripeBillingProvider.HttpClientName, client =>
+        services.AddHttpClient(StripeApi.HttpClientName, client =>
         {
             client.BaseAddress = new Uri("https://api.stripe.com/");
             client.Timeout = TimeSpan.FromSeconds(20);
         });
         services.AddSingleton(sp => StripeSettings.FromEnvironment(sp.GetRequiredService<EmailOptions>().AppUrl));
+        services.AddSingleton<StripeApi>();
         services.AddSingleton<IBillingProvider, StripeBillingProvider>();
+        services.AddSingleton<IBillingReports, StripeBillingReports>();
+        services.AddSingleton<IBillingPromotions, StripePromotions>();
 
         // Article import: one long-lived client whose sockets connect only to checked public addresses
         services.AddSingleton<IAddressResolver, DnsAddressResolver>();

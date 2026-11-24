@@ -11,8 +11,6 @@ namespace Application.Services.Ai;
 
 public class WordLookupService : IWordLookupService
 {
-    private const string FallbackLanguage = "English";
-
     private readonly IDictionaryRepository _dictionaries;
     private readonly IAiService _ai;
     private readonly IUserContext _user;
@@ -74,21 +72,7 @@ public class WordLookupService : IWordLookupService
     }
 
     // The language goes into the prompt: a checked plain name, from the request or the profile
-    private async Task<string> LanguageAsync(string? requested, Guid userId)
-    {
-        if (!string.IsNullOrWhiteSpace(requested))
-        {
-            var name = requested.Trim();
-            return AiLanguageName.IsValid(name)
-                ? name
-                : throw new BadRequestException("Language must be a language name, e.g. \"Ukrainian\"");
-        }
-
-        var profile = _profiles is null ? null : await _profiles.GetAsync(userId);
-        if (AiLanguageName.IsValid(profile?.NativeLanguage)) return profile!.NativeLanguage!;
-
-        return profile is not null && ProfileLanguages.PromptName(profile.InterfaceLanguage) is { } interfaceName
-            ? interfaceName
-            : FallbackLanguage;
-    }
+    private async Task<string> LanguageAsync(string? requested, Guid userId) =>
+        await AiTranslationLanguage.ResolveAsync(
+            requested, string.IsNullOrWhiteSpace(requested) && _profiles is not null ? await _profiles.GetAsync(userId) : null);
 }

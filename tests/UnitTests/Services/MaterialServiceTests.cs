@@ -377,12 +377,79 @@ public class MaterialServiceTests
             .SetupSequence(x => x.GetByIdAsync(materialId, _userId))
             .ReturnsAsync(material)
             .ReturnsAsync(updatedMaterial);
+        _materialRepo.Setup(x => x.TagExistsAsync(tagId, _userId)).ReturnsAsync(true);
 
         var result = await _sut.AddTagToMaterialAsync(materialId, tagId);
 
         result.ShouldNotBeNull();
 
         _materialRepo.Verify(x => x.SaveChangesAsync(), Times.Once);
+    }
+
+    // Another user's tag: its name would show in the answer and tie their data to ours
+    [Fact]
+    public async Task AddTagToMaterialAsync_TagOfAnotherUser_ReturnsNullAndChangesNothing()
+    {
+        var material = new Material
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            Title = "Test",
+            Type = MaterialType.article,
+            Status = MaterialStatus.tolearn,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        };
+        var foreignTagId = Guid.NewGuid();
+
+        _materialRepo.Setup(x => x.GetByIdAsync(material.Id, _userId)).ReturnsAsync(material);
+        _materialRepo.Setup(x => x.TagExistsAsync(foreignTagId, _userId)).ReturnsAsync(false);
+
+        var result = await _sut.AddTagToMaterialAsync(material.Id, foreignTagId);
+
+        result.ShouldBeNull();
+        material.MaterialTags.ShouldBeEmpty();
+        _materialRepo.Verify(x => x.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_TitleLongerThan70_IsABadRequest()
+    {
+        var dto = new MaterialCreateDto { Title = new string('a', 71), Type = MaterialType.article, Status = MaterialStatus.tolearn };
+
+        await Should.ThrowAsync<BadRequestException>(() => _sut.CreateAsync(dto));
+
+        _materialRepo.Verify(x => x.AddAsync(It.IsAny<Material>()), Times.Never);
+    }
+
+    // The editor data counts towards the user's storage before anything is saved
+    [Fact]
+    public async Task UpdateAsync_OverTheStorageLimit_IsRefused()
+    {
+        var material = new Material
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            Title = "Test",
+            Type = MaterialType.article,
+            Status = MaterialStatus.tolearn,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+        };
+        _materialRepo.Setup(x => x.GetByIdAsync(material.Id, _userId)).ReturnsAsync(material);
+        _materialRepo.Setup(x => x.GetStoredContentBytesAsync(_userId)).ReturnsAsync(500L * 1024 * 1024);
+
+        var dto = new MaterialUpdateDto
+        {
+            Content = new Application.DTOs.RichTextDocument.RichTextDocument
+            {
+                Content = [new Application.DTOs.RichTextDocument.Node { Type = "paragraph" }],
+            },
+        };
+
+        await Should.ThrowAsync<LimitExceededException>(() => _sut.UpdateAsync(material.Id, dto));
+
+        _materialRepo.Verify(x => x.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]

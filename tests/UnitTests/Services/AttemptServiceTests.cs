@@ -266,6 +266,39 @@ public class AttemptServiceTests
         result[1].Options!.ShouldAllBe(o => !o.IsCorrect);
     }
 
+    // Choices come in the order they were written, the right one often first: every attempt
+    // shows them in an order of its own, so the place of the answer gives nothing away
+    [Fact]
+    public async Task GetQuestions_EveryAttemptShufflesTheChoices_TheSameOnEveryLoad()
+    {
+        var question = new Question
+        {
+            Id = Guid.NewGuid(), UserId = _userId, Title = "Which is a planet?", QuestionType = QuestionType.Options,
+            CreatedAt = DateTime.UtcNow,
+            Options = Enumerable.Range(0, 4)
+                .Select(i => new Option { Id = Guid.NewGuid(), Name = $"Option {i}", Position = i, IsCorrect = i == 0 })
+                .ToList(),
+        };
+        var rightId = question.Options.First().Id;
+
+        async Task<List<Guid>> ChoicesOf(Attempt attempt)
+        {
+            attempt.QuestionIds = [question.Id];
+            _questionRepo.Setup(x => x.GetActiveQuestionsAsync(attempt.Assessment.MaterialId, _userId)).ReturnsAsync([question]);
+            _repo.Setup(x => x.GetAttemptWithAssessmentByIdAsync(attempt.Id, _userId)).ReturnsAsync(attempt);
+            return (await _sut.GetQuestions(attempt.Id))!.Single().Options!.Select(o => o.Id).ToList();
+        }
+
+        var places = new HashSet<int>();
+        for (var i = 0; i < 40; i++)
+            places.Add((await ChoicesOf(CreateAttempt())).IndexOf(rightId));
+
+        places.Count.ShouldBeGreaterThan(1);
+
+        var same = CreateAttempt();
+        (await ChoicesOf(same)).ShouldBe(await ChoicesOf(same));
+    }
+
     [Fact]
     public async Task AnswerQuestion_QuestionTheAttemptDidNotDraw_IsNotSaved()
     {

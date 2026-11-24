@@ -9,5 +9,7 @@ public class NoteUpdateDto
     public JsonDocument? DrawingContent { get; set; }
     // Essays only; an empty string removes the task
     public string? EssayTask { get; set; }
+    // Essays only: the exam it is written for, like "Ielts/B2/Letter"; an empty string makes it a general essay
+    public string? EssayFormat { get; set; }
     public int? Order { get; set; }
 }

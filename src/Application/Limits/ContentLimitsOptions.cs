@@ -33,6 +33,10 @@ public class ContentLimitsOptions
     // Off: library copies have their own limit and do not take places of the user's own materials
     public bool CountLibraryImports { get; set; }
 
+    // Megabytes the editor data of one user (material texts, note texts and drawings) may take in the
+    // database, as stored. Far above real use; it only keeps a script from filling the disk. 0 is no limit
+    public int StorageMb { get; set; } = 500;
+
     public TierLimits For(SubscriptionTier tier)
     {
         var defaults = ContentLimitDefaults.For(tier);

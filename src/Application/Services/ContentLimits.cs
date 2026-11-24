@@ -25,6 +25,13 @@ public class ContentLimits : IContentLimits
     {
         public Task<Domain.Utility.Subscription.SubscriptionTier> GetTierAsync(Guid userId) =>
             Task.FromResult(Domain.Utility.Subscription.SubscriptionTier.Free);
+
+        public Task<Billing.AiPlanPeriod> GetAiPlanAsync(Guid userId)
+        {
+            var now = DateTime.UtcNow;
+            var month = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            return Task.FromResult(new Billing.AiPlanPeriod(Domain.Utility.Subscription.SubscriptionTier.Free, month, month.AddMonths(1)));
+        }
     }
 
     public bool CountLibraryImports => _options.CountLibraryImports;
@@ -51,5 +58,17 @@ public class ContentLimits : IContentLimits
 
         if (used >= max)
             throw new LimitExceededException($"Material limit reached: {max}");
+    }
+
+    public async Task EnsureStorageAsync(Guid userId, long addingChars)
+    {
+        // Services built by hand without a repository (tests) have nothing to measure
+        if (addingChars <= 0 || _options.StorageMb <= 0 || _materials is null) return;
+
+        var limit = _options.StorageMb * 1024L * 1024L;
+        var used = await _materials.GetStoredContentBytesAsync(userId);
+
+        if (used + addingChars > limit)
+            throw new LimitExceededException($"Storage limit reached: {_options.StorageMb} MB of texts and drawings");
     }
 }

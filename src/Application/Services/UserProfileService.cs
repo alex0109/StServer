@@ -39,7 +39,6 @@ public class UserProfileService : IUserProfileService
             (scheduler ?? new FlashcardSchedulerOptions()).Fsrs.DesiredRetention,
             notifications.DailyReminderHour,
             notifications.StreakReminderHour,
-            LearningRules.DefaultStreakFreezesPerMonth,
             LearningRules.MinRetention,
             LearningRules.MaxRetention);
     }
@@ -74,7 +73,7 @@ public class UserProfileService : IUserProfileService
         if (dto.MaxReviewsPerDay is not null) profile.MaxReviewsPerDay = MinusOneToNull(dto.MaxReviewsPerDay.Value);
         if (dto.DailyReminderHour is not null) profile.DailyReminderHour = MinusOneToNull(dto.DailyReminderHour.Value);
         if (dto.StreakReminderHour is not null) profile.StreakReminderHour = MinusOneToNull(dto.StreakReminderHour.Value);
-        if (dto.StreakFreezesPerMonth is not null) profile.StreakFreezesPerMonth = MinusOneToNull(dto.StreakFreezesPerMonth.Value);
+        if (dto.AutoTranslate is { } autoTranslate) profile.AutoTranslate = autoTranslate;
 
         await MirrorToLegacyAsync(profile);
 
@@ -130,7 +129,6 @@ public class UserProfileService : IUserProfileService
         CheckRange(dto.MaxReviewsPerDay, 1, LearningRules.MaxReviewsPerDay, "Reviews a day");
         CheckRange(dto.DailyReminderHour, 0, 23, "Reminder hour");
         CheckRange(dto.StreakReminderHour, 0, 23, "Reminder hour");
-        CheckRange(dto.StreakFreezesPerMonth, 0, LearningRules.MaxStreakFreezes, "Streak freezes");
     }
 
     // -1 means "back to the default" and is always allowed
@@ -194,7 +192,7 @@ public class UserProfileService : IUserProfileService
         MaxReviewsPerDay = profile.MaxReviewsPerDay,
         DailyReminderHour = profile.DailyReminderHour,
         StreakReminderHour = profile.StreakReminderHour,
-        StreakFreezesPerMonth = profile.StreakFreezesPerMonth,
+        AutoTranslate = profile.AutoTranslate ?? true,
         Defaults = _defaults,
     };
 }

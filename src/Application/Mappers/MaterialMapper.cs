@@ -80,8 +80,9 @@ public static class MaterialMapper
         if (dto.Link is not null)
             entity.Link = dto.Link;
 
+        // Cleaned before it's stored: links and images may only point to the web
         if (dto.Content is not null)
-            entity.Content = JsonSerializer.SerializeToDocument(dto.Content);
+            entity.Content = RichTextJson.ToStored(dto.Content);
 
         if (dto.Status is MaterialStatus status)
             entity.Status = status;
