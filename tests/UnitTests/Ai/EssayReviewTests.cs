@@ -50,7 +50,7 @@ public class EssayReviewTests
     public EssayReviewTests()
     {
         _user.Setup(x => x.UserId).Returns(_userId);
-        _profiles.Setup(x => x.GetExplanationLanguageAsync(_userId)).ReturnsAsync("uk");
+        _profiles.Setup(x => x.GetEssayFeedbackLanguageAsync(_userId)).ReturnsAsync("uk");
         _time.Setup(x => x.GetUtcNow()).Returns(Now);
     }
 

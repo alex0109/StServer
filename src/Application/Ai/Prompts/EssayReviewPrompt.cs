@@ -50,6 +50,24 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
 
     public AiFeature Feature => AiFeature.EssayReview;
 
+    // The learner reads the feedback, so it is in their language. It is said first and in the role as well: a text in
+    // the language being learned, and a brief full of that language, otherwise pull the feedback into it
+    internal static string FeedbackLanguage(string? language, string text) => language is null
+        ? $"Write every comment, point and explanation in the language of the {text}."
+        : $"Write every comment, point and explanation in {language}, whatever language the {text} is in.";
+
+    internal static string FeedbackLanguageRule(string? language, string text) => language is null
+        ? $"Language of the feedback: {FeedbackLanguage(null, text)}"
+        : $"""
+           Language of the feedback: {language}. The learner reads the feedback in {language}, so every criterion
+           "comment", every point in "strengths" and "improvements" and every "explanation" of a correction is written
+           in {language}, even though the {text}, the task and the examples in these instructions are in another
+           language. Only "original" and "correction" stay in the language of the {text}.
+           """;
+
+    internal static string ExaminerRole(string role, string? language) =>
+        language is null ? role : $"{role} who writes all feedback in {language}";
+
     public AiRequest BuildRequest()
     {
         var task = _task is null
@@ -59,12 +77,12 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
                {AiContentSanitizer.Wrap(_tag, _task)}
                """;
 
-        var language = _language is null
-            ? "Write every comment, point and explanation in the language of the essay."
-            : $"Write every comment, point and explanation in {_language}, whatever language the essay is in.";
+        var language = FeedbackLanguage(_language, "essay");
 
         var userPrompt = $"""
             Assess the essay below as an impartial, experienced examiner of written work.
+
+            {FeedbackLanguageRule(_language, "essay")}
 
             {task}
 
@@ -128,7 +146,7 @@ public class EssayReviewPrompt : IAiPrompt<EssayReviewDraft>
         return new AiRequest
         {
             Feature = Feature,
-            SystemPrompt = AiPromptRules.System("an impartial examiner who assesses essays", _tag),
+            SystemPrompt = AiPromptRules.System(ExaminerRole("an impartial examiner who assesses essays", _language), _tag),
             UserPrompt = userPrompt,
             OutputSchema = AiJson.ToElement(schema),
             MaxOutputTokens = 16000,

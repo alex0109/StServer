@@ -165,6 +165,31 @@ public class ExamEssayReviewTests
     }
 
     [Fact]
+    public async Task Review_ExamEssay_FeedbackIsInTheLearnersLanguage_NotTheExams()
+    {
+        var note = Essay("Dtb/B2/Letter");
+        var profiles = new Mock<IUserProfileService>();
+        profiles.Setup(x => x.GetEssayFeedbackLanguageAsync(_userId)).ReturnsAsync("uk");
+        IAiPrompt<EssayReviewDraft>? sent = null;
+        _ai.Setup(x => x.RunAsync(It.IsAny<IAiPrompt<EssayReviewDraft>>(), It.IsAny<CancellationToken>()))
+            .Callback((IAiPrompt<EssayReviewDraft> prompt, CancellationToken _) => sent = prompt)
+            .ReturnsAsync((IAiPrompt<EssayReviewDraft> prompt, CancellationToken _) =>
+                new AiResult<EssayReviewDraft>(prompt.Parse(LevelAnswer), FakeAiProvider.Completion("A", LevelAnswer)));
+
+        await new EssayReviewService(_notes.Object, _ai.Object, _user.Object, profiles: profiles.Object)
+            .ReviewAsync(_materialId, note.Id, TestContext.Current.CancellationToken);
+
+        var request = sent!.BuildRequest();
+        // Said before the long German brief ends and repeated in the role, so the brief can't pull the feedback into German
+        request.SystemPrompt.ShouldContain("writing examiner who writes all feedback in Ukrainian");
+        var rule = request.UserPrompt.IndexOf("Language of the feedback: Ukrainian", StringComparison.Ordinal);
+        rule.ShouldBeGreaterThan(0);
+        rule.ShouldBeLessThan(request.UserPrompt.IndexOf("Score four criteria", StringComparison.Ordinal));
+        request.UserPrompt.ShouldContain("every \"explanation\" of a correction");
+        request.UserPrompt.ShouldContain("Write every comment, point and explanation in Ukrainian, whatever language the text is in.");
+    }
+
+    [Fact]
     public async Task Review_ExamEssay_IsCheckedByTheExamsRules_AndKeepsTheResult()
     {
         var note = Essay("Dtz/B1/Letter");

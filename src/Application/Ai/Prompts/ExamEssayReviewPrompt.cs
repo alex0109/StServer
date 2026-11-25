@@ -73,12 +73,12 @@ public class ExamEssayReviewPrompt : IAiPrompt<EssayReviewDraft>
                {AiContentSanitizer.Wrap(_tag, _task)}
                """;
 
-        var language = _language is null
-            ? "Write every comment, point and explanation in the language of the text."
-            : $"Write every comment, point and explanation in {_language}, whatever language the text is in.";
+        var language = EssayReviewPrompt.FeedbackLanguage(_language, "text");
 
         var userPrompt = $"""
             {ExamBrief()}
+
+            {EssayReviewPrompt.FeedbackLanguageRule(_language, "text")}
 
             {task}
 
@@ -127,7 +127,8 @@ public class ExamEssayReviewPrompt : IAiPrompt<EssayReviewDraft>
         return new AiRequest
         {
             Feature = Feature,
-            SystemPrompt = AiPromptRules.System($"an experienced, impartial {ExamName()} writing examiner", _tag),
+            SystemPrompt = AiPromptRules.System(
+                EssayReviewPrompt.ExaminerRole($"an experienced, impartial {ExamName()} writing examiner", _language), _tag),
             UserPrompt = userPrompt,
             OutputSchema = AiJson.ToElement(AiJson.Object(properties.ToArray())),
             MaxOutputTokens = 16000,

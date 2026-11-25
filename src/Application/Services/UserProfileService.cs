@@ -100,6 +100,13 @@ public class UserProfileService : IUserProfileService
         return ProfileLanguages.ResolveExplanation(profile.ExplanationLanguage, profile.InterfaceLanguage);
     }
 
+    public async Task<string> GetEssayFeedbackLanguageAsync(Guid userId)
+    {
+        var profile = await _repo.GetAsync(userId) ?? await NewFromLegacyAsync(userId);
+
+        return ProfileLanguages.ResolveEssayFeedback(profile.ExplanationLanguage, profile.InterfaceLanguage);
+    }
+
     // Everything that reaches a prompt or a time calculation is checked before anything changes
     private static void Validate(ProfileUpdateDto dto)
     {

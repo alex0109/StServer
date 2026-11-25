@@ -13,4 +13,7 @@ public interface IUserProfileService
 
     // Resolved code AI explanations are written in for the user
     Task<string> GetExplanationLanguageAsync(Guid userId);
+
+    // Resolved code essay feedback is written in: the explanation language, never the language of the essay itself
+    Task<string> GetEssayFeedbackLanguageAsync(Guid userId);
 }
