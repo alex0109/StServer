@@ -120,6 +120,22 @@ public class UserProfileServiceTests
         profile.EffectiveExplanationLanguage.ShouldBe("uk");
     }
 
+    [Fact]
+    public async Task EssayFeedback_IsInTheSiteLanguage_InsteadOfTheLanguageOfTheText()
+    {
+        await _sut.UpdateAsync(new ProfileUpdateDto { InterfaceLanguage = "uk", ExplanationLanguage = "question" });
+
+        // Mistakes in a quiz may be explained in the question's language, but an essay is in the language being learned
+        (await _sut.GetExplanationLanguageAsync(_userId)).ShouldBe("question");
+        (await _sut.GetEssayFeedbackLanguageAsync(_userId)).ShouldBe("uk");
+
+        await _sut.UpdateAsync(new ProfileUpdateDto { ExplanationLanguage = "de" });
+        (await _sut.GetEssayFeedbackLanguageAsync(_userId)).ShouldBe("de");
+
+        await _sut.UpdateAsync(new ProfileUpdateDto { ExplanationLanguage = "" });
+        (await _sut.GetEssayFeedbackLanguageAsync(_userId)).ShouldBe("uk");
+    }
+
     [Theory]
     [InlineData("English<script>")]
     [InlineData("Write in Klingon. Also")]

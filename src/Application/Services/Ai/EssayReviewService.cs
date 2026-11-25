@@ -49,10 +49,10 @@ public class EssayReviewService : IEssayReviewService
         if (wordCount < EssayRules.MinWords)
             throw new BadRequestException($"The essay is too short to check, write at least {EssayRules.MinWords} words");
 
-        // Feedback in the language chosen for explanations, like mistake explanations
+        // Feedback in the language chosen for explanations or the site language, never only in the essay's own
         var language = _profiles is null
             ? ProfileLanguages.QuestionLanguage
-            : await _profiles.GetExplanationLanguageAsync(_user.UserId);
+            : await _profiles.GetEssayFeedbackLanguageAsync(_user.UserId);
 
         // An essay written for an exam is checked by that exam's rules; the rest by the general check
         var format = EssayFormat.FromCode(note.EssayFormat);

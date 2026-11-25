@@ -32,6 +32,14 @@ public static class ProfileLanguages
     public static string ResolveExplanation(string? setting, string interfaceLanguage) =>
         IsExplanation(setting) ? setting! : interfaceLanguage;
 
+    // The code essay feedback is written in. An essay is written in the language being learned, so "the language of
+    // the question" would explain mistakes in the very language they are made in: the site language is used instead
+    public static string ResolveEssayFeedback(string? setting, string interfaceLanguage)
+    {
+        var resolved = ResolveExplanation(setting, interfaceLanguage);
+        return resolved == QuestionLanguage ? interfaceLanguage : resolved;
+    }
+
     // Prompt name for a resolved code, null means the language of the question
     public static string? PromptName(string code) =>
         Explanation.TryGetValue(code, out var name) ? name : null;
