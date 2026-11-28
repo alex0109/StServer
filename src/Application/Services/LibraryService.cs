@@ -109,6 +109,19 @@ public class LibraryService : ILibraryService
         return MaterialMapper.ToDto(copy);
     }
 
+    public async Task<LibraryStartDto?> StartAsync(Guid itemId)
+    {
+        var item = await _library.GetItemAsync(itemId);
+        if (item is null || item.Status != LibraryItemStatus.Published) return null;
+
+        // A second click opens what is already there instead of making a duplicate
+        var existing = await _library.FindCopyAsync(item.Id, _user.UserId, item.SourceMaterialId);
+        if (existing is { } materialId) return new LibraryStartDto { MaterialId = materialId, IsNew = false };
+
+        var copy = await ImportAsync(itemId);
+        return copy is null ? null : new LibraryStartDto { MaterialId = copy.Id, IsNew = true };
+    }
+
     public Task<List<LibraryRequestDto>> GetMyRequestsAsync() =>
         _library.GetUserRequestsAsync(_user.UserId, RequestsShown);
 

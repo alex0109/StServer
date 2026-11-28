@@ -82,6 +82,14 @@ public class LibraryRepository : ILibraryRepository
     public Task<bool> HasImportedAsync(Guid itemId, Guid userId) =>
         _db.Materials.AnyAsync(m => m.UserId == userId && m.ImportedFromLibraryItemId == itemId);
 
+    public Task<Guid?> FindCopyAsync(Guid itemId, Guid userId, Guid? sourceMaterialId) =>
+        _db.Materials
+            .Where(m => m.UserId == userId && (m.Id == sourceMaterialId || m.ImportedFromLibraryItemId == itemId))
+            .OrderBy(m => m.Id == sourceMaterialId ? 0 : 1)
+            .ThenByDescending(m => m.CreatedAt)
+            .Select(m => (Guid?)m.Id)
+            .FirstOrDefaultAsync();
+
     public async Task AddItemAsync(LibraryItem item)
     {
         await _db.LibraryItems.AddAsync(item);

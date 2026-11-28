@@ -134,7 +134,7 @@ public class StatisticsRepository : IStatisticsRepository
     }
 
     // Same rules as the flashcard stats: archived words don't count, new words are not "due"
-    public async Task<List<DictionaryDueDto>> GetDueWordsAsync(Guid userId, DateTime dueBeforeUtc)
+    public async Task<List<DictionaryDueDto>> GetDueWordsAsync(Guid userId, DateTime dueBeforeUtc, DateTime notReviewedSinceUtc)
     {
         return await _db.Dictionaries
             .Where(d => d.UserId == userId)
@@ -147,7 +147,8 @@ public class StatisticsRepository : IStatisticsRepository
                     !e.IsArchived
                     && e.Progress != null
                     && e.Progress.State != FlashcardState.New
-                    && e.Progress.Due <= dueBeforeUtc),
+                    && e.Progress.Due <= dueBeforeUtc
+                    && (e.Progress.LastReviewAt == null || e.Progress.LastReviewAt < notReviewedSinceUtc)),
                 New = d.Entries.Count(e =>
                     !e.IsArchived && (e.Progress == null || e.Progress.State == FlashcardState.New)),
             })
@@ -156,12 +157,13 @@ public class StatisticsRepository : IStatisticsRepository
             .ToListAsync();
     }
 
-    public async Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc)
+    public async Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc, DateTime notReviewedSinceUtc)
     {
         return await _db.QuestionProgresses
             .CountAsync(p => p.UserId == userId
                              && p.State != FlashcardState.New
                              && p.Due <= dueBeforeUtc
+                             && (p.LastReviewAt == null || p.LastReviewAt < notReviewedSinceUtc)
                              && p.Question.IsActive
                              && p.Question.DeletedAt == null);
     }

@@ -30,6 +30,13 @@ public class LibraryItemDto : LibraryItemSummaryDto
     public LibraryRequestType? PendingRequest { get; set; }
 }
 
+// Where "Start learning" leads: the user's material, made now or found among their materials
+public class LibraryStartDto
+{
+    public Guid MaterialId { get; set; }
+    public bool IsNew { get; set; }
+}
+
 public class LibraryPageDto
 {
     public List<LibraryItemSummaryDto> Items { get; set; } = [];

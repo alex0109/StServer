@@ -19,6 +19,7 @@ public static class LibraryEndpoints
         library.MapGet("/", List).AllowAnonymous();
         library.MapGet("/{itemId:guid}", Get).AllowAnonymous();
         library.MapPost("/{itemId:guid}/import", Import);
+        library.MapPost("/{itemId:guid}/start", Start);
         library.MapGet("/requests", MyRequests);
         library.MapPost("/requests", CreateRequest);
         library.MapDelete("/requests/{requestId:guid}", CancelRequest);
@@ -46,6 +47,9 @@ public static class LibraryEndpoints
 
         static async Task<IResult> Import(Guid itemId, ILibraryService service) =>
             await service.ImportAsync(itemId) is { } material ? TypedResults.Ok(material) : TypedResults.NotFound();
+
+        static async Task<IResult> Start(Guid itemId, ILibraryService service) =>
+            await service.StartAsync(itemId) is { } start ? TypedResults.Ok(start) : TypedResults.NotFound();
 
         static async Task<IResult> MyRequests(ILibraryService service) =>
             TypedResults.Ok(await service.GetMyRequestsAsync());

@@ -19,6 +19,9 @@ public interface ILibraryRepository
 
     Task<bool> HasImportedAsync(Guid itemId, Guid userId);
 
+    // The material the user already learns this item from: their own original if they wrote it, else their latest copy
+    Task<Guid?> FindCopyAsync(Guid itemId, Guid userId, Guid? sourceMaterialId);
+
     Task AddItemAsync(LibraryItem item);
 
     Task AddRequestAsync(LibraryRequest request);

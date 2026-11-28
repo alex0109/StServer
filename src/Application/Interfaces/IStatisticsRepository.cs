@@ -26,9 +26,11 @@ public interface IStatisticsRepository
     // Moments of study: finished attempts and flashcard reviews, in UTC
     Task<List<DateTime>> GetActivityTimesAsync(Guid userId, DateTime? from = null);
 
-    Task<List<DictionaryDueDto>> GetDueWordsAsync(Guid userId, DateTime dueBeforeUtc);
+    // Words studied at least once that are due by dueBeforeUtc; one answered since notReviewedSinceUtc waits
+    // for the next day. New counts the words never studied
+    Task<List<DictionaryDueDto>> GetDueWordsAsync(Guid userId, DateTime dueBeforeUtc, DateTime notReviewedSinceUtc);
     // Active questions whose next review is due by the given time
-    Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc);
+    Task<int> CountDueQuestionsAsync(Guid userId, DateTime dueBeforeUtc, DateTime notReviewedSinceUtc);
 
     Task<int> GetReviewsCountAsync(Guid userId, DateTime from, DateTime to);
 

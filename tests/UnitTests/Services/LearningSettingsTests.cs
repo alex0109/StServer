@@ -127,7 +127,7 @@ public class DailyLimitTests
         learning.Setup(x => x.GetAsync(_userId)).ReturnsAsync(new LearningSettings(null, 3, 50, 9, 20, null, 2));
 
         var repo = new Mock<IReviewRepository>();
-        repo.Setup(x => x.GetDueQuestionsAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync([]);
+        repo.Setup(x => x.GetDueQuestionsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
 
         return new ReviewService(
             repo.Object, _statistics.Object, flashcards.Object,
@@ -137,13 +137,13 @@ public class DailyLimitTests
     }
 
     [Fact]
-    public async Task TodayQueue_GivesNoMoreNewWordsThanTheDayAllows()
+    public async Task TodayQueue_GivesNoMoreWordsThanTheDayAllows()
     {
         var flashcards = new Mock<IFlashcardService>();
 
         await Today(new DailyBudget(10, 1, NewWordsLeft: 2, ReviewsLeft: 40), flashcards).StartWordsAsync(new FlashcardSessionCreateDto());
 
-        flashcards.Verify(x => x.StartTodaySessionAsync(It.IsAny<FlashcardSessionCreateDto>(), It.IsAny<DateTime>(), 2, 40));
+        flashcards.Verify(x => x.StartTodaySessionAsync(It.IsAny<FlashcardSessionCreateDto>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), 40));
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class DailyLimitTests
     [Fact]
     public async Task TodaySummary_ShowsWhatIsLeft()
     {
-        _statistics.Setup(x => x.GetDueWordsAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync(
+        _statistics.Setup(x => x.GetDueWordsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync(
             [new DictionaryDueDto { DictionaryId = Guid.NewGuid(), MaterialId = Guid.NewGuid(), Title = "A", Due = 30, New = 40 }]);
 
         var today = await Today(new DailyBudget(45, 2, 1, 5), new Mock<IFlashcardService>()).GetTodayAsync();

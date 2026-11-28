@@ -60,15 +60,17 @@ public class ReviewService : IReviewService
         var userId = _user.UserId;
         var day = await TodayAsync(userId);
 
-        var dictionaries = await _statistics.GetDueWordsAsync(userId, day.End);
-        var materials = await _repo.GetDueQuestionsAsync(userId, day.End);
+        // Once a day: what was studied before and is due today, minus what was already answered today
+        var dictionaries = await _statistics.GetDueWordsAsync(userId, day.End, day.Start);
+        var materials = await _repo.GetDueQuestionsAsync(userId, day.End, day.Start);
 
         var dueWords = dictionaries.Sum(x => x.Due);
         var newWords = dictionaries.Sum(x => x.New);
         var dueQuestions = materials.Sum(x => x.Due);
         var budget = await BudgetAsync(userId, day);
 
-        var words = Math.Min(MaxWords(budget), dueWords + Math.Min(newWords, NewWordsLimit(budget)));
+        // New words are not part of "Today": they are first met in their dictionary
+        var words = Math.Min(MaxWords(budget), dueWords);
         // Words come first in the queue, questions get what the daily limit leaves
         var questions = Math.Min(MaxQuestions(budget, words), dueQuestions);
         var seconds = words * _options.SecondsPerWord + questions * _options.SecondsPerQuestion;
@@ -93,6 +95,16 @@ public class ReviewService : IReviewService
         };
     }
 
+    public async Task<ReviewDaySummaryDto> GetDaySummaryAsync()
+    {
+        var userId = _user.UserId;
+        var timeZone = await _timeZones.GetAsync(userId);
+        var today = UserTimeZone.LocalDate(_time.GetUtcNow().UtcDateTime, timeZone);
+        var from = UserTimeZone.StartOfLocalDayUtc(today.AddDays(-ReviewDaySummary.LookBackDays), timeZone);
+
+        return ReviewDaySummary.Build(await _repo.GetReviewLogAsync(userId, from), today, timeZone);
+    }
+
     public async Task<FlashcardSessionResponseDto> StartWordsAsync(FlashcardSessionCreateDto dto)
     {
         var day = await TodayAsync(_user.UserId);
@@ -100,7 +112,7 @@ public class ReviewService : IReviewService
         if (budget.ReviewsLeft == 0)
             throw new ConflictException("The daily review limit is reached");
 
-        return await _flashcards.StartTodaySessionAsync(dto, day.End, NewWordsLimit(budget), MaxWords(budget));
+        return await _flashcards.StartTodaySessionAsync(dto, day.End, day.Start, MaxWords(budget));
     }
 
     public async Task<QuestionReviewSessionDto> StartQuestionsAsync(QuestionReviewSessionCreateDto dto)
@@ -114,7 +126,7 @@ public class ReviewService : IReviewService
 
         var limit = Math.Clamp(dto.Limit ?? max, 1, max);
 
-        var questions = await _repo.GetDueQuestionsForSessionAsync(userId, day.End, limit);
+        var questions = await _repo.GetDueQuestionsForSessionAsync(userId, day.End, day.Start, limit);
         if (questions.Count == 0)
             throw new ConflictException("There are no questions to review");
 
@@ -202,9 +214,6 @@ public class ReviewService : IReviewService
 
     private async Task<DailyBudget> BudgetAsync(Guid userId, LocalDay day) =>
         _learning is null ? DailyBudget.Unlimited : await _learning.GetBudgetAsync(userId, day.Start, day.End);
-
-    private int NewWordsLimit(DailyBudget budget) =>
-        Math.Min(_options.NewWordsPerSession, budget.NewWordsLeft ?? int.MaxValue);
 
     private int MaxWords(DailyBudget budget) =>
         Math.Min(_options.MaxWordsPerSession, budget.ReviewsLeft ?? int.MaxValue);

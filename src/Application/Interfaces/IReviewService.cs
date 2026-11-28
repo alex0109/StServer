@@ -9,6 +9,9 @@ public interface IReviewService
 {
     Task<ReviewTodayDto> GetTodayAsync();
 
+    // How today went, compared with the last day before it with reviews
+    Task<ReviewDaySummaryDto> GetDaySummaryAsync();
+
     Task<FlashcardSessionResponseDto> StartWordsAsync(FlashcardSessionCreateDto dto);
 
     Task<QuestionReviewSessionDto> StartQuestionsAsync(QuestionReviewSessionCreateDto dto);

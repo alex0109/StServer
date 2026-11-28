@@ -85,7 +85,7 @@ public class FlashcardService : IFlashcardService
     }
 
     public async Task<FlashcardSessionResponseDto> StartTodaySessionAsync(
-        FlashcardSessionCreateDto dto, DateTime dueByUtc, int newLimit, int maxCards)
+        FlashcardSessionCreateDto dto, DateTime dueByUtc, DateTime notReviewedSinceUtc, int maxCards)
     {
         var userId = _user.UserId;
         var limit = Math.Clamp(dto.Limit ?? maxCards, 1, FlashcardLimits.MaxSessionSize);
@@ -104,10 +104,9 @@ public class FlashcardService : IFlashcardService
         }
         else
         {
-            // Most overdue first, new words fill what is left
-            var due = await _flashcardRepository.GetDueEntriesAsync(userId, dueByUtc, limit);
-            var fresh = await _flashcardRepository.GetNewEntriesAsync(userId, Math.Min(newLimit, limit - due.Count));
-            cards = due.Concat(fresh).ToList();
+            // Only words studied before, most overdue first. New ones are met in their dictionary,
+            // and a word answered today comes back tomorrow at the earliest
+            cards = await _flashcardRepository.GetDueEntriesAsync(userId, dueByUtc, notReviewedSinceUtc, limit);
         }
 
         if (cards.Count == 0)

@@ -88,7 +88,9 @@ public class StudyActivityService : IStudyActivityService
         var today = DateOnly.FromDateTime(local);
 
         var endOfDay = UserTimeZone.EndOfLocalDayUtc(today, timeZone);
-        var dictionaries = await _repo.GetDueWordsAsync(userId, endOfDay);
+        // The same queue as "Today": what was answered today is not counted again
+        var startOfDay = UserTimeZone.StartOfLocalDayUtc(today, timeZone);
+        var dictionaries = await _repo.GetDueWordsAsync(userId, endOfDay, startOfDay);
         var streak = await GetStreakAsync(userId, timeZone, utcNow);
 
         return new TodayDto
@@ -96,7 +98,7 @@ public class StudyActivityService : IStudyActivityService
             LocalDate = today.ToString("yyyy-MM-dd"),
             DueWords = dictionaries.Sum(x => x.Due),
             NewWords = dictionaries.Sum(x => x.New),
-            DueQuestions = await _repo.CountDueQuestionsAsync(userId, endOfDay),
+            DueQuestions = await _repo.CountDueQuestionsAsync(userId, endOfDay, startOfDay),
             Dictionaries = dictionaries.Take(MaxDictionariesInReminder).ToList(),
             StreakDays = streak.CurrentStreakDays,
             StudiedToday = streak.StudiedToday,
