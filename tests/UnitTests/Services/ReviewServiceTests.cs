@@ -44,8 +44,8 @@ public class ReviewServiceTests
         var time = new Mock<TimeProvider>();
         time.Setup(x => x.GetUtcNow()).Returns(new DateTimeOffset(Now));
 
-        _statistics.Setup(x => x.GetDueWordsAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync([]);
-        _repo.Setup(x => x.GetDueQuestionsAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync([]);
+        _statistics.Setup(x => x.GetDueWordsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
+        _repo.Setup(x => x.GetDueQuestionsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync([]);
 
         _sut = new ReviewService(
             _repo.Object, _statistics.Object, _flashcards.Object, _questionReviews.Object,
@@ -57,20 +57,71 @@ public class ReviewServiceTests
     {
         await _sut.GetTodayAsync();
 
-        // 30 October in Kyiv runs from 22:00 UTC on the 29th to 22:00 UTC on the 30th
-        _statistics.Verify(x => x.GetDueWordsAsync(_userId, new DateTime(2026, 10, 30, 22, 0, 0, DateTimeKind.Utc)));
+        // 30 October in Kyiv runs from 22:00 UTC on the 29th to 22:00 UTC on the 30th; what was answered since
+        // its start waits for tomorrow
+        var start = new DateTime(2026, 10, 29, 22, 0, 0, DateTimeKind.Utc);
+        var end = new DateTime(2026, 10, 30, 22, 0, 0, DateTimeKind.Utc);
+        _statistics.Verify(x => x.GetDueWordsAsync(_userId, end, start));
+        _repo.Verify(x => x.GetDueQuestionsAsync(_userId, end, start));
         _repo.Verify(x => x.CountOverdueWordsAsync(_userId, new DateTime(2026, 10, 29, 22, 0, 0, DateTimeKind.Utc)));
+    }
+
+    [Fact]
+    public async Task DaySummary_ComparesTodayWithTheLastDayBefore_InTheUsersCalendar()
+    {
+        // In Kyiv "today" is 30 October; 22:10 UTC on the 29th already belongs to it
+        _repo.Setup(x => x.GetReviewLogAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync(
+        [
+            new ReviewLogPoint(new DateTime(2026, 10, 29, 22, 10, 0, DateTimeKind.Utc), ReviewRating.Good, true),
+            new ReviewLogPoint(new DateTime(2026, 10, 29, 22, 20, 0, DateTimeKind.Utc), ReviewRating.Easy, false),
+            new ReviewLogPoint(new DateTime(2026, 10, 29, 22, 25, 0, DateTimeKind.Utc), ReviewRating.Again, true),
+            new ReviewLogPoint(new DateTime(2026, 10, 29, 22, 26, 0, DateTimeKind.Utc), ReviewRating.Good, true),
+            // A word marked as known by hand is not an answer
+            new ReviewLogPoint(new DateTime(2026, 10, 29, 22, 27, 0, DateTimeKind.Utc), ReviewRating.Manual, true),
+            // The 27th in Kyiv, with a gap of a day after it
+            new ReviewLogPoint(new DateTime(2026, 10, 27, 9, 0, 0, DateTimeKind.Utc), ReviewRating.Good, true),
+            new ReviewLogPoint(new DateTime(2026, 10, 27, 9, 1, 0, DateTimeKind.Utc), ReviewRating.Hard, false),
+            // Older days are not the one to compare with
+            new ReviewLogPoint(new DateTime(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc), ReviewRating.Again, true),
+        ]);
+
+        var summary = await _sut.GetDaySummaryAsync();
+
+        summary.Today.Date.ShouldBe("2026-10-30");
+        summary.Today.Reviews.ShouldBe(4);
+        summary.Today.Remembered.ShouldBe(3);
+        summary.Today.Accuracy.ShouldBe(75);
+        summary.Today.Words.ShouldBe(3);
+        summary.Today.Questions.ShouldBe(1);
+        summary.Previous.ShouldNotBeNull();
+        summary.Previous.Date.ShouldBe("2026-10-27");
+        summary.Previous.Accuracy.ShouldBe(50);
+        // 90 days back from the start of the user's day
+        _repo.Verify(x => x.GetReviewLogAsync(_userId, new DateTime(2026, 7, 31, 21, 0, 0, DateTimeKind.Utc)));
+    }
+
+    [Fact]
+    public async Task DaySummary_FirstDay_HasNothingToCompare()
+    {
+        _repo.Setup(x => x.GetReviewLogAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync(
+            [new ReviewLogPoint(new DateTime(2026, 10, 29, 23, 0, 0, DateTimeKind.Utc), ReviewRating.Again, false)]);
+
+        var summary = await _sut.GetDaySummaryAsync();
+
+        summary.Today.Reviews.ShouldBe(1);
+        summary.Today.Accuracy.ShouldBe(0);
+        summary.Previous.ShouldBeNull();
     }
 
     [Fact]
     public async Task Today_CountsAndEstimate()
     {
-        _statistics.Setup(x => x.GetDueWordsAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync(
+        _statistics.Setup(x => x.GetDueWordsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync(
         [
             new DictionaryDueDto { DictionaryId = Guid.NewGuid(), MaterialId = Guid.NewGuid(), Title = "A", Due = 10, New = 50 },
             new DictionaryDueDto { DictionaryId = Guid.NewGuid(), MaterialId = Guid.NewGuid(), Title = "B", Due = 5, New = 0 },
         ]);
-        _repo.Setup(x => x.GetDueQuestionsAsync(_userId, It.IsAny<DateTime>())).ReturnsAsync(
+        _repo.Setup(x => x.GetDueQuestionsAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>())).ReturnsAsync(
             [new MaterialDueDto { MaterialId = Guid.NewGuid(), Title = "M", Due = 4 }]);
 
         var today = await _sut.GetTodayAsync();
@@ -78,16 +129,17 @@ public class ReviewServiceTests
         today.DueWords.ShouldBe(15);
         today.NewWords.ShouldBe(50);
         today.DueQuestions.ShouldBe(4);
-        // 15 due + 20 new words at 8 s, 4 questions at 30 s = 400 s → 7 minutes
-        today.WordsInSession.ShouldBe(35);
-        today.EstimatedMinutes.ShouldBe(7);
+        // Only the 15 words studied before: new ones are met in their dictionary, not in "Today".
+        // 15 words at 8 s and 4 questions at 30 s = 240 s → 4 minutes
+        today.WordsInSession.ShouldBe(15);
+        today.EstimatedMinutes.ShouldBe(4);
         today.LocalDate.ShouldBe("2026-10-30");
     }
 
     [Fact]
     public async Task NothingDue_NoQuestionSession()
     {
-        _repo.Setup(x => x.GetDueQuestionsForSessionAsync(_userId, It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync([]);
+        _repo.Setup(x => x.GetDueQuestionsForSessionAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync([]);
 
         await Should.ThrowAsync<ConflictException>(() => _sut.StartQuestionsAsync(new QuestionReviewSessionCreateDto()));
     }
@@ -111,7 +163,7 @@ public class ReviewServiceTests
                 question.Options.Add(new Option { Id = Guid.NewGuid(), Name = name, Position = position, IsCorrect = position == 0 });
             return question;
         }).ToList();
-        _repo.Setup(x => x.GetDueQuestionsForSessionAsync(_userId, It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync(questions);
+        _repo.Setup(x => x.GetDueQuestionsForSessionAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync(questions);
 
         var session = await _sut.StartQuestionsAsync(new QuestionReviewSessionCreateDto());
 
@@ -197,31 +249,29 @@ public class FlashcardTodaySessionTests
     };
 
     [Fact]
-    public async Task DueWordsFromAllDictionaries_ThenNewUpToTheLimit()
+    public async Task OnlyDueWordsStudiedBefore_FromAllDictionaries()
     {
         var due = Enumerable.Range(0, 3).Select(i => Entry(Guid.NewGuid())).ToList();
-        var fresh = Enumerable.Range(0, 2).Select(i => Entry(Guid.NewGuid())).ToList();
         var dueBy = DateTime.UtcNow.AddHours(5);
-        _repo.Setup(x => x.GetDueEntriesAsync(_userId, dueBy, 10)).ReturnsAsync(due);
-        _repo.Setup(x => x.GetNewEntriesAsync(_userId, 4)).ReturnsAsync(fresh);
+        var dayStart = DateTime.UtcNow.AddHours(-19);
+        _repo.Setup(x => x.GetDueEntriesAsync(_userId, dueBy, dayStart, 10)).ReturnsAsync(due);
 
         var session = await _sut.StartTodaySessionAsync(
-            new FlashcardSessionCreateDto { Mode = FlashcardSessionMode.Due }, dueBy, newLimit: 4, maxCards: 10);
+            new FlashcardSessionCreateDto { Mode = FlashcardSessionMode.Due }, dueBy, dayStart, maxCards: 10);
 
         session.DictionaryId.ShouldBeNull();
         session.Scope.ShouldBe(FlashcardSessionScope.Today);
-        session.Cards.Count.ShouldBe(5);
-        _repo.Verify(x => x.GetNewEntriesAsync(_userId, 4));
+        // New words never join: a dictionary just added from the library brings nothing here yet
+        session.Cards.Count.ShouldBe(3);
         _repo.Verify(x => x.AddSessionAsync(It.Is<FlashcardSession>(s => s.DictionaryId == null && s.Scope == FlashcardSessionScope.Today)));
     }
 
     [Fact]
     public async Task EmptyQueue_IsAConflict()
     {
-        _repo.Setup(x => x.GetDueEntriesAsync(_userId, It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync([]);
-        _repo.Setup(x => x.GetNewEntriesAsync(_userId, It.IsAny<int>())).ReturnsAsync([]);
+        _repo.Setup(x => x.GetDueEntriesAsync(_userId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int>())).ReturnsAsync([]);
 
         await Should.ThrowAsync<ConflictException>(() => _sut.StartTodaySessionAsync(
-            new FlashcardSessionCreateDto { Mode = FlashcardSessionMode.Due }, DateTime.UtcNow, 20, 100));
+            new FlashcardSessionCreateDto { Mode = FlashcardSessionMode.Due }, DateTime.UtcNow, DateTime.UtcNow.AddHours(-1), 100));
     }
 }

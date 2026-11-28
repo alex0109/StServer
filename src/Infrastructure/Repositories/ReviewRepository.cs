@@ -16,6 +16,21 @@ public class ReviewRepository : IReviewRepository
         _db = db;
     }
 
+    public async Task<List<Application.Review.ReviewLogPoint>> GetReviewLogAsync(Guid userId, DateTime fromUtc)
+    {
+        var words = await _db.FlashcardReviews
+            .Where(r => r.UserId == userId && r.ReviewedAt >= fromUtc)
+            .Select(r => new Application.Review.ReviewLogPoint(r.ReviewedAt, r.Rating, true))
+            .ToListAsync();
+
+        var questions = await _db.QuestionReviews
+            .Where(r => r.UserId == userId && r.ReviewedAt >= fromUtc)
+            .Select(r => new Application.Review.ReviewLogPoint(r.ReviewedAt, r.Rating, false))
+            .ToListAsync();
+
+        return [.. words, .. questions];
+    }
+
     public async Task<int> CountOverdueWordsAsync(Guid userId, DateTime dueBeforeUtc)
     {
         return await _db.DictionaryEntryProgresses
@@ -25,7 +40,7 @@ public class ReviewRepository : IReviewRepository
                              && !p.Entry.IsArchived);
     }
 
-    public async Task<List<MaterialDueDto>> GetDueQuestionsAsync(Guid userId, DateTime dueByUtc)
+    public async Task<List<MaterialDueDto>> GetDueQuestionsAsync(Guid userId, DateTime dueByUtc, DateTime notReviewedSinceUtc)
     {
         return await _db.Materials
             .Where(m => m.UserId == userId)
@@ -37,7 +52,9 @@ public class ReviewRepository : IReviewRepository
                                              && q.DeletedAt == null
                                              && q.Progress != null
                                              && q.Progress.State != FlashcardState.New
-                                             && q.Progress.Due <= dueByUtc),
+                                             && q.Progress.Due <= dueByUtc
+                                             && (q.Progress.LastReviewAt == null
+                                                 || q.Progress.LastReviewAt < notReviewedSinceUtc)),
             })
             .Where(x => x.Due > 0)
             .OrderByDescending(x => x.Due)
@@ -54,7 +71,7 @@ public class ReviewRepository : IReviewRepository
                              && p.Question.DeletedAt == null);
     }
 
-    public async Task<List<Question>> GetDueQuestionsForSessionAsync(Guid userId, DateTime dueByUtc, int take)
+    public async Task<List<Question>> GetDueQuestionsForSessionAsync(Guid userId, DateTime dueByUtc, DateTime notReviewedSinceUtc, int take)
     {
         return await _db.Questions
             .Include(q => q.Options)
@@ -65,7 +82,8 @@ public class ReviewRepository : IReviewRepository
                         && q.DeletedAt == null
                         && q.Progress != null
                         && q.Progress.State != FlashcardState.New
-                        && q.Progress.Due <= dueByUtc)
+                        && q.Progress.Due <= dueByUtc
+                        && (q.Progress.LastReviewAt == null || q.Progress.LastReviewAt < notReviewedSinceUtc))
             .OrderBy(q => q.Progress!.Due)
             .Take(take)
             .AsSplitQuery()

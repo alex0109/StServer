@@ -13,6 +13,9 @@ public interface ILibraryService
     // A copy among the user's materials, marked as imported from the library
     Task<MaterialResponseDto?> ImportAsync(Guid itemId);
 
+    // The material to start learning from: the copy the user already has, or a new one
+    Task<LibraryStartDto?> StartAsync(Guid itemId);
+
     Task<List<LibraryRequestDto>> GetMyRequestsAsync();
 
     Task<LibraryRequestDto> CreateRequestAsync(LibraryRequestCreateDto dto);

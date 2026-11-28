@@ -15,6 +15,7 @@ public static class ReviewEndpoints
             .RequireRateLimiting("api");
 
         reviewGroup.MapGet("/today", GetToday);
+        reviewGroup.MapGet("/today/summary", GetDaySummary);
         reviewGroup.MapGet("/deadlines", GetDeadlines);
         reviewGroup.MapPost("/today/words", StartWords);
         reviewGroup.MapPost("/today/questions", StartQuestions);
@@ -26,6 +27,9 @@ public static class ReviewEndpoints
 
         static async Task<IResult> GetToday(IReviewService service) =>
             TypedResults.Ok(await service.GetTodayAsync());
+
+        static async Task<IResult> GetDaySummary(IReviewService service) =>
+            TypedResults.Ok(await service.GetDaySummaryAsync());
 
         // Word reviews and undo go through the usual flashcard session endpoints
         static async Task<IResult> StartWords(FlashcardSessionCreateDto dto, IReviewService service)

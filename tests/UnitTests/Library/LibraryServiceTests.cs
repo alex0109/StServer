@@ -300,6 +300,50 @@ public class LibraryServiceTests
     }
 
     [Fact]
+    public async Task Start_MakesACopyOnce_ThenOpensIt()
+    {
+        var item = await PublishedItemAsync();
+
+        var first = await AsUser(_reader).StartAsync(item.Id);
+        first.ShouldNotBeNull();
+        first.IsNew.ShouldBeTrue();
+        first.MaterialId.ShouldBe(_added.Single().Id);
+
+        // The copy is now among the reader's materials
+        _library.Materials.Add(_added.Single());
+        var second = await AsUser(_reader).StartAsync(item.Id);
+
+        second.ShouldNotBeNull();
+        second.IsNew.ShouldBeFalse();
+        second.MaterialId.ShouldBe(first.MaterialId);
+        _added.Count.ShouldBe(1);
+        item.ImportsCount.ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task Start_ByTheAuthor_OpensTheirOwnMaterial()
+    {
+        var item = await PublishedItemAsync();
+
+        var start = await AsUser(_author).StartAsync(item.Id);
+
+        start.ShouldNotBeNull();
+        start.IsNew.ShouldBeFalse();
+        start.MaterialId.ShouldBe(item.SourceMaterialId!.Value);
+        _added.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task Start_RemovedItem_IsNotFound()
+    {
+        var item = await PublishedItemAsync();
+        item.Status = LibraryItemStatus.Removed;
+
+        (await AsUser(_reader).StartAsync(item.Id)).ShouldBeNull();
+        _added.ShouldBeEmpty();
+    }
+
+    [Fact]
     public async Task Import_RespectsTheMaterialsLimit()
     {
         var item = await PublishedItemAsync();
@@ -439,6 +483,14 @@ public class LibraryServiceTests
                 x.AuthorUserId == authorUserId && x.Title == title && x.Status == LibraryItemStatus.Published));
 
         public Task<bool> HasImportedAsync(Guid itemId, Guid userId) => Task.FromResult(false);
+
+        public Task<Guid?> FindCopyAsync(Guid itemId, Guid userId, Guid? sourceMaterialId) =>
+            Task.FromResult(Materials
+                .Where(m => m.UserId == userId && (m.Id == sourceMaterialId || m.ImportedFromLibraryItemId == itemId))
+                .OrderBy(m => m.Id == sourceMaterialId ? 0 : 1)
+                .ThenByDescending(m => m.CreatedAt)
+                .Select(m => (Guid?)m.Id)
+                .FirstOrDefault());
 
         public Task AddItemAsync(LibraryItem item)
         {

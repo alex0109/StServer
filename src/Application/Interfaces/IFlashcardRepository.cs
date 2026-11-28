@@ -10,8 +10,8 @@ public interface IFlashcardRepository
     Task<DictionaryEntry?> GetEntryWithProgressAsync(Guid entryId, Guid userId);
 
     // Across all of the user's dictionaries, archived words left out
-    Task<List<DictionaryEntry>> GetDueEntriesAsync(Guid userId, DateTime dueByUtc, int take);
-    Task<List<DictionaryEntry>> GetNewEntriesAsync(Guid userId, int take);
+    // Studied at least once, due by dueByUtc and not answered since notReviewedSinceUtc
+    Task<List<DictionaryEntry>> GetDueEntriesAsync(Guid userId, DateTime dueByUtc, DateTime notReviewedSinceUtc, int take);
     Task<List<DictionaryEntry>> GetEntriesWithProgressAsync(Guid userId, IReadOnlyCollection<Guid> entryIds);
     // Words of the user that have a review state
     Task<List<Guid>> GetEntryIdsWithProgressAsync(Guid userId);

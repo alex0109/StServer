@@ -37,7 +37,7 @@ public class FlashcardRepository : IFlashcardRepository
             .FirstOrDefaultAsync(e => e.Id == entryId && e.Dictionary.UserId == userId);
     }
 
-    public async Task<List<DictionaryEntry>> GetDueEntriesAsync(Guid userId, DateTime dueByUtc, int take)
+    public async Task<List<DictionaryEntry>> GetDueEntriesAsync(Guid userId, DateTime dueByUtc, DateTime notReviewedSinceUtc, int take)
     {
         return await _context.DictionaryEntries
             .Include(e => e.Progress)
@@ -45,23 +45,9 @@ public class FlashcardRepository : IFlashcardRepository
                         && !e.IsArchived
                         && e.Progress != null
                         && e.Progress.State != FlashcardState.New
-                        && e.Progress.Due <= dueByUtc)
+                        && e.Progress.Due <= dueByUtc
+                        && (e.Progress.LastReviewAt == null || e.Progress.LastReviewAt < notReviewedSinceUtc))
             .OrderBy(e => e.Progress!.Due)
-            .Take(take)
-            .ToListAsync();
-    }
-
-    public async Task<List<DictionaryEntry>> GetNewEntriesAsync(Guid userId, int take)
-    {
-        if (take <= 0) return [];
-
-        return await _context.DictionaryEntries
-            .Include(e => e.Progress)
-            .Where(e => e.Dictionary.UserId == userId
-                        && !e.IsArchived
-                        && (e.Progress == null || e.Progress.State == FlashcardState.New))
-            .OrderBy(e => e.CreatedAt)
-            .ThenBy(e => e.Position)
             .Take(take)
             .ToListAsync();
     }
